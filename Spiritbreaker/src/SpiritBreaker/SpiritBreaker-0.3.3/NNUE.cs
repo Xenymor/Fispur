@@ -1,13 +1,15 @@
-﻿using Spiritbreaker.API;
-using System;
-using System.ComponentModel;
-using System.Drawing;
-using System.IO;
-using System.Reflection;
-using System.Runtime.Intrinsics.X86;
 
-namespace Spiritbreaker
+
+namespace Spiritbreaker.SpiritBreaker0_3_3
 {
+    using Spiritbreaker.API;
+    using System;
+    using System.ComponentModel;
+    using System.Drawing;
+    using System.IO;
+    using System.Reflection;
+    using System.Runtime.Intrinsics.X86;
+
     public static class NNUE
     {
         const int INPUT = 768;
