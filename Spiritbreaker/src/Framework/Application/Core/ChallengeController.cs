@@ -18,8 +18,8 @@ namespace Spiritbreaker.Application
         public enum PlayerType
         {
             Human,
-            MyBot,
-            EvilBot
+            SpiritBreaker_Exp,
+            SpiritBreaker
         }
 
         // Game state
@@ -73,7 +73,7 @@ namespace Spiritbreaker.Application
             botMatchStartFens = FileHelper.ReadResourceFile("Fens.txt").Split('\n').Where(fen => fen.Length > 0).ToArray();
             botTaskWaitHandle = new AutoResetEvent(false);
 
-            StartNewGame(PlayerType.Human, PlayerType.MyBot);
+            StartNewGame(PlayerType.Human, PlayerType.SpiritBreaker_Exp);
         }
 
         public void StartNewGame(PlayerType whiteType, PlayerType blackType)
@@ -208,8 +208,8 @@ namespace Spiritbreaker.Application
         {
             return type switch
             {
-                PlayerType.MyBot => new ChessPlayer(new SpiritBreaker(), type, GameDurationMilliseconds),
-                PlayerType.EvilBot => new ChessPlayer(new EvilBot(), type, GameDurationMilliseconds),
+                PlayerType.SpiritBreaker_Exp => new ChessPlayer(new SpiritBreaker(), type, GameDurationMilliseconds),
+                PlayerType.SpiritBreaker => new ChessPlayer(new SpiritBreaker0_2_1(), type, GameDurationMilliseconds),
                 _ => new ChessPlayer(new HumanPlayer(boardUI), type)
             };
         }

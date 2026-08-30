@@ -10,24 +10,30 @@ namespace Spiritbreaker.Application
         public static void DrawButtons(ChallengeController controller)
         {
             Vector2 buttonPos = UIHelper.Scale(new Vector2(260, 210));
-            Vector2 buttonSize = UIHelper.Scale(new Vector2(260, 55));
+            Vector2 buttonSize = UIHelper.Scale(new Vector2(400, 55));
             float spacing = buttonSize.Y * 1.2f;
             float breakSpacing = spacing * 0.6f;
 
             // Game Buttons
-            if (NextButtonInRow("Human vs MyBot", ref buttonPos, spacing, buttonSize))
+            if (NextButtonInRow("Human vs SpiritBreaker (exp)", ref buttonPos, spacing, buttonSize))
             {
-                var whiteType = controller.HumanWasWhiteLastGame ? ChallengeController.PlayerType.MyBot : ChallengeController.PlayerType.Human;
-                var blackType = !controller.HumanWasWhiteLastGame ? ChallengeController.PlayerType.MyBot : ChallengeController.PlayerType.Human;
+                var whiteType = controller.HumanWasWhiteLastGame ? ChallengeController.PlayerType.SpiritBreaker_Exp : ChallengeController.PlayerType.Human;
+                var blackType = !controller.HumanWasWhiteLastGame ? ChallengeController.PlayerType.SpiritBreaker_Exp : ChallengeController.PlayerType.Human;
+                controller.StartNewGame(whiteType, blackType);
+            }
+            if (NextButtonInRow("Human vs SpiritBreaker", ref buttonPos, spacing, buttonSize))
+            {
+                var whiteType = controller.HumanWasWhiteLastGame ? ChallengeController.PlayerType.SpiritBreaker : ChallengeController.PlayerType.Human;
+                var blackType = !controller.HumanWasWhiteLastGame ? ChallengeController.PlayerType.SpiritBreaker : ChallengeController.PlayerType.Human;
                 controller.StartNewGame(whiteType, blackType);
             }
             if (NextButtonInRow("MyBot vs MyBot", ref buttonPos, spacing, buttonSize))
             {
-                controller.StartNewBotMatch(ChallengeController.PlayerType.MyBot, ChallengeController.PlayerType.MyBot);
+                controller.StartNewBotMatch(ChallengeController.PlayerType.SpiritBreaker_Exp, ChallengeController.PlayerType.SpiritBreaker_Exp);
             }
             if (NextButtonInRow("MyBot vs EvilBot", ref buttonPos, spacing, buttonSize))
             {
-                controller.StartNewBotMatch(ChallengeController.PlayerType.MyBot, ChallengeController.PlayerType.EvilBot);
+                controller.StartNewBotMatch(ChallengeController.PlayerType.SpiritBreaker_Exp, ChallengeController.PlayerType.SpiritBreaker);
             }
 
             // Page buttons
