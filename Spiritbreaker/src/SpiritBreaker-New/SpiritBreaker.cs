@@ -33,6 +33,8 @@ namespace Spiritbreaker
             int depth = 1;
             int eval = 0;
 
+            NNUE.UpdateAccumulators(board);
+
             while (timer.MillisecondsElapsedThisTurn < time / 2)
             {
                 eval = AlphaBeta(board, 0, depth, -10_000_00, 10_000_00);
@@ -99,8 +101,24 @@ namespace Spiritbreaker
             foreach (Move move in moves)
             {
                 board.MakeMove(move);
+                if (move.IsCastles || move.IsEnPassant)
+                {
+                    NNUE.UpdateAccumulators(board);
+                }
+                else
+                {
+                    NNUE.makeMove(move, !board.IsWhiteToMove);
+                }
                 int score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha);
                 board.UndoMove(move);
+                if (move.IsCastles || move.IsEnPassant)
+                {
+                    NNUE.UpdateAccumulators(board);
+                }
+                else
+                {
+                    NNUE.undoMove(move, board.IsWhiteToMove);
+                }
 
                 if (score >= beta)
                 {

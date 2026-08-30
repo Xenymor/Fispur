@@ -1,5 +1,7 @@
 using Spiritbreaker.API;
 using System;
+using System.ComponentModel;
+using System.Drawing;
 using System.IO;
 using System.Reflection;
 
@@ -19,6 +21,9 @@ namespace Spiritbreaker
         static readonly short[] l1w = new short[2 * HL];
         static readonly short l1b;
 
+        static int[] accW;
+        static int[] accB;
+
         static NNUE()
         {
             Stream? s = Assembly.GetExecutingAssembly().GetManifestResourceStream("net0.3.0.bin");
@@ -28,6 +33,9 @@ namespace Spiritbreaker
             for (int i = 0; i < l0b.Length; i++) l0b[i] = r.ReadInt16();
             for (int i = 0; i < l1w.Length; i++) l1w[i] = r.ReadInt16();
             l1b = r.ReadInt16();
+
+            accW = new int[HL];
+            accB = new int[HL];
         }
 
         static int SCReLU(int x)
@@ -36,33 +44,9 @@ namespace Spiritbreaker
             return c * c;
         }
 
+
         public static int Evaluate(Board board)
         {
-            Span<int> accW = stackalloc int[HL];
-            Span<int> accB = stackalloc int[HL];
-            for (int h = 0; h < HL; h++) { accW[h] = l0b[h]; accB[h] = l0b[h]; }
-
-            for (int colour = 0; colour <= 1; colour++)
-            {
-                bool white = colour == 0;
-                for (PieceType type = PieceType.Pawn; type <= PieceType.King; type++)
-                {
-                    int pc = (int)type - 1;                
-                    ulong bb = board.GetPieceBitboard(type, white);
-                    while (bb != 0)
-                    {
-                        int sq = BitboardHelper.ClearAndGetIndexOfLSB(ref bb);   
-                        int wBase = (384 * colour + 64 * pc + sq) * HL;
-                        int bBase = (384 * (1 - colour) + 64 * pc + (sq ^ 56)) * HL;
-                        for (int h = 0; h < HL; h++)
-                        {
-                            accW[h] += l0w[wBase + h];
-                            accB[h] += l0w[bBase + h];
-                        }
-                    }
-                }
-            }
-
             Span<int> boys = board.IsWhiteToMove ? accW : accB;
             Span<int> opps = board.IsWhiteToMove ? accB : accW;
 
@@ -74,6 +58,122 @@ namespace Spiritbreaker
             }
 
             return (int)((sum / QA + l1b) * SCALE / QAB);
+        }
+
+        public static void UpdateAccumulators(Board board)
+        {
+            for (int h = 0; h < HL; h++) { accW[h] = l0b[h]; accB[h] = l0b[h]; }
+
+            for (int color = 0; color <= 1; color++)
+            {
+                bool white = color == 0;
+                for (PieceType type = PieceType.Pawn; type <= PieceType.King; type++)
+                {
+                    int pc = (int)type - 1;
+                    ulong bb = board.GetPieceBitboard(type, white);
+                    while (bb != 0)
+                    {
+                        int sq = BitboardHelper.ClearAndGetIndexOfLSB(ref bb);
+                        int wBase = (384 * color + 64 * pc + sq) * HL;
+                        int bBase = (384 * (1 - color) + 64 * pc + (sq ^ 56)) * HL;
+                        for (int h = 0; h < HL; h++)
+                        {
+                            accW[h] += l0w[wBase + h];
+                            accB[h] += l0w[bBase + h];
+                        }
+                    }
+                }
+            }
+        }
+
+        internal static void makeMove(Move move, bool isWhite)
+        {
+            //TODO handle castling + en passant
+
+            int color = isWhite ? 0 : 1;
+            int pc = (int)move.MovePieceType - 1;
+            int destPc = (int)(move.IsPromotion ? move.PromotionPieceType : move.MovePieceType) - 1;
+
+            int wPc = 384 * color + 64 * pc;
+            int wSrc = (wPc + move.StartSquare.Index) * HL;
+            int destWPc = 384 * color + 64 * destPc;
+            int wDest = (destWPc + move.TargetSquare.Index) * HL;
+
+            int bPc = 384 * (1 - color) + 64 * pc;
+            int bSrc = (bPc + (move.StartSquare.Index ^ 56)) * HL;
+            int destBPc = 384 * (1 - color) + 64 * destPc;
+            int bDest = (destBPc + (move.TargetSquare.Index ^ 56)) * HL;
+
+            removePiece(wSrc, bSrc);
+            addPiece(wDest, bDest);
+
+            if (move.IsCapture)
+            {
+                color = 1 - color;
+                pc = (int)move.CapturePieceType - 1;
+
+                wPc = 384 * color + 64 * pc;
+                wDest = (wPc + move.TargetSquare.Index) * HL;
+
+                bPc = 384 * (1 - color) + 64 * pc;
+                bDest = (bPc + (move.TargetSquare.Index ^ 56)) * HL;
+
+                removePiece(wDest, bDest);
+            }
+        }
+
+        internal static void undoMove(Move move, bool isWhite)
+        {
+            //TODO handle castling + en passant
+
+            int color = isWhite ? 0 : 1;
+            int pc = (int)move.MovePieceType - 1;
+            int destPc = (int)(move.IsPromotion ? move.PromotionPieceType : move.MovePieceType) - 1;
+
+            int wPc = 384 * color + 64 * pc;
+            int wSrc = (wPc + move.StartSquare.Index) * HL;
+            int destWPc = 384 * color + 64 * destPc;
+            int wDest = (destWPc + move.TargetSquare.Index) * HL;
+
+            int bPc = 384 * (1 - color) + 64 * pc;
+            int bSrc = (bPc + (move.StartSquare.Index ^ 56)) * HL;
+            int destBPc = 384 * (1 - color) + 64 * destPc;
+            int bDest = (destBPc + (move.TargetSquare.Index ^ 56)) * HL;
+
+            addPiece(wSrc, bSrc);
+            removePiece(wDest, bDest);
+
+            if (move.IsCapture)
+            {
+                color = 1 - color;
+                pc = (int)move.CapturePieceType - 1;
+
+                wPc = 384 * color + 64 * pc;
+                wDest = (wPc + move.TargetSquare.Index) * HL;
+
+                bPc = 384 * (1 - color) + 64 * pc;
+                bDest = (bPc + (move.TargetSquare.Index ^ 56)) * HL;
+
+                addPiece(wDest, bDest);
+            }
+        }
+
+        private static void addPiece(int wPos, int bPos)
+        {
+            for (int i = 0; i < HL; i++)
+            {
+                accW[i] += l0w[wPos + i];
+                accB[i] += l0w[bPos + i];
+            }
+        }
+
+        private static void removePiece(int wPos, int bPos)
+        {
+            for (int i = 0; i < HL; i++)
+            {
+                accW[i] -= l0w[wPos + i];
+                accB[i] -= l0w[bPos + i];
+            }
         }
     }
 }
