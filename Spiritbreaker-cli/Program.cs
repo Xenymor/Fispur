@@ -25,6 +25,8 @@ internal class Program
                 switch (tokens[0])
                 {
                     case "uci":
+                        Console.WriteLine("id name " + spiritBreaker.GetName());
+                        Console.WriteLine("id author " + spiritBreaker.GetAuthor());
                         Console.WriteLine("uciok");
                         break;
 
@@ -44,21 +46,27 @@ internal class Program
                         break;
 
                     case "position":
+                        int moveStart = Array.IndexOf(tokens, "moves");
+
                         if (tokens.Length >= 2 && tokens[1].Equals("startpos"))
                         {
-                            // Handle starting position setup
                             board.board.LoadStartPosition();
-                            if (tokens.Length > 2 && tokens[2].Equals("moves"))
-                            {
-                                for (int i = 3; i < tokens.Length; i++)
-                                {
-                                    board.MakeMove(new Spiritbreaker.API.Move(tokens[i], board));
-                                }
-                            }
                         }
-                        else if (tokens.Length >= 2)
+                        else if (tokens.Length >= 3 && tokens[1].Equals("fen"))
                         {
-                            board.board.LoadPosition(command.Replace("position ", "").Replace("\"", ""));
+                            // FEN is the fields after "fen", up to "moves" (if present)
+                            int fenEnd = moveStart == -1 ? tokens.Length : moveStart;
+                            string fen = string.Join(" ", tokens, 2, fenEnd - 2);
+                            board.board.LoadPosition(fen);
+                        }
+
+                        // Apply the moves listed after "moves", if any
+                        if (moveStart != -1)
+                        {
+                            for (int i = moveStart + 1; i < tokens.Length; i++)
+                            {
+                                board.MakeMove(new Spiritbreaker.API.Move(tokens[i], board));
+                            }
                         }
                         break;
 

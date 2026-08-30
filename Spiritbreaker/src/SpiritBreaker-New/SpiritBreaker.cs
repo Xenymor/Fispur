@@ -5,6 +5,16 @@ using System.Numerics;
 
 public class SpiritBreaker : IChessBot
 {
+    public string GetAuthor()
+    {
+        return "Xenymor";
+    }
+
+    public string GetName()
+    {
+        return "Spiritbreaker 0.0.1";
+    }
+
     public Move Think(Board board, Timer timer)
     {
         Move[] moves = board.GetLegalMoves();
@@ -47,4 +57,6 @@ public class SpiritBreaker : IChessBot
 
         return score;
     }
+
+    
 }

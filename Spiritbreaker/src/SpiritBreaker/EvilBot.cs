@@ -7,6 +7,16 @@ namespace Spiritbreaker.Example
     // Plays randomly otherwise.
     public class EvilBot : IChessBot
     {
+        public string GetAuthor()
+        {
+            return "Sebastian Lague";
+        }
+
+        public string GetName()
+        {
+            return "EvilBot";
+        }
+
         // Piece values: null, pawn, knight, bishop, rook, queen, king
         int[] pieceValues = { 0, 100, 300, 300, 500, 900, 10000 };
 
