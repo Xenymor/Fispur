@@ -147,7 +147,7 @@ namespace Spiritbreaker.Application
             try
             {
                 API.Timer timer = new(PlayerToMove.TimeRemainingMs, PlayerNotOnMove.TimeRemainingMs, GameDurationMilliseconds, IncrementMilliseconds);
-                API.Move move = PlayerToMove.Bot.Think(botBoard, timer);
+                API.Move move = PlayerToMove.Bot.Think(botBoard, timer).move;
                 return new Move(move.RawValue);
             }
             catch (Exception e)

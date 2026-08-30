@@ -3,12 +3,13 @@ using Spiritbreaker.API;
 using Spiritbreaker.Application;
 using Spiritbreaker.Chess;
 using Spiritbreaker.Example;
+using Spiritbreaker.src.SpiritBreaker;
 
 internal class Program
     {
         private static void Main(string[] args)
         {
-            IChessBot spiritBreaker = new EvilBot();
+            IChessBot spiritBreaker = new SpiritBreaker0_0_2();
             Type botType = spiritBreaker.GetType();
             Spiritbreaker.Chess.Board tempBoard = new Spiritbreaker.Chess.Board();
             tempBoard.LoadStartPosition();
@@ -47,6 +48,10 @@ internal class Program
 
                     case "position":
                         int moveStart = Array.IndexOf(tokens, "moves");
+
+                        tempBoard = new Spiritbreaker.Chess.Board();
+                        tempBoard.LoadStartPosition();
+                        board = new Spiritbreaker.API.Board(tempBoard);
 
                         if (tokens.Length >= 2 && tokens[1].Equals("startpos"))
                         {
@@ -89,9 +94,11 @@ internal class Program
                         }
 
                         // Call engine to calculate and return best move
-                        string bestMoveString = spiritBreaker.Think(board, new Spiritbreaker.API.Timer(time != -1 ? time : (board.IsWhiteToMove ? wtime : btime))).ToString();
+                        (Spiritbreaker.API.Move move, int eval) result = spiritBreaker.Think(board, new Spiritbreaker.API.Timer(time != -1 ? time : (board.IsWhiteToMove ? wtime : btime)));
+                        string bestMoveString = result.move.ToString();
                         string bestMoveFormattedString = bestMoveString.Substring(7, bestMoveString.Length - 8);
 
+                        //Console.WriteLine("info score cp " + result.eval);
                         Console.WriteLine("bestmove " + bestMoveFormattedString);
                         break;
 

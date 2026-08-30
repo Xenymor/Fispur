@@ -12,42 +12,83 @@ public class SpiritBreaker : IChessBot
 
     public string GetName()
     {
-        return "Spiritbreaker 0.0.1";
+        return "Spiritbreaker 0.0.3";
     }
 
-    public Move Think(Board board, Timer timer)
+
+    Move bestMove;
+    public (Move move, int eval) Think(Board board, Timer timer)
     {
         Move[] moves = board.GetLegalMoves();
+        bestMove = moves.Length == 0 ? Move.NullMove : moves[0];
+        int eval = AlphaBeta(board, 0, 4, -10_000_00, 10_000_00);
+        return (bestMove, eval);
+    }
 
-        Move bestMove = Move.NullMove;
-        int bestScore = -1000_00;
+    private int AlphaBeta(Board board, int ply, int depthLeft, int alpha, int beta)
+    {
+        if (board.IsInCheckmate())
+        {
+            return -1000_00 + ply;
+        }
 
+        if (board.IsDraw())
+        {
+            return 0;
+        }
+
+        Move[] moves;
+        bool qSearch = false;
+        int eval;
+        bool inCheck = board.IsInCheck();
+
+        if (depthLeft <= 0)
+        {
+            qSearch = true;
+            if (!inCheck)
+            {
+                eval = Eval(board);
+                if (eval >= beta)
+                {
+                    return eval;
+                }
+                if (eval > alpha)
+                {
+                    alpha = eval;
+                }
+            }
+        }
+
+        moves = board.GetLegalMoves(qSearch && !inCheck);
         foreach (Move move in moves)
         {
             board.MakeMove(move);
-            if (board.IsInCheckmate())
-            {
-                bestMove = move;
-                break;
-            }
-            int score = eval(board);
-            if (score > bestScore)
-            {
-                bestScore = score;
-                bestMove = move;
-            }
+            int score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha);
             board.UndoMove(move);
+
+            if (score >= beta)
+            {
+                return score;
+            }
+            if (score > alpha)
+            {
+                if (ply == 0)
+                {
+                    bestMove = move;
+                }
+                alpha = score;
+            }
         }
 
-        return bestMove;
+        return alpha;
     }
 
     int[] pieceVal = { 1_00, 3_00, 3_50, 5_00, 9_00, 100_00 };
-    private int eval(Board board)
+    private int Eval(Board board)
     {
         int score = 0;
         for (int c = 0; c <= 1; c++) {
-            bool isWhite = board.IsWhiteToMove ? c == 1 : c == 0;
+            bool isWhite = board.IsWhiteToMove ? c == 0 : c == 1;
             for (PieceType type = PieceType.Pawn; type <= PieceType.King; type++) {
                 ulong bitBoard = board.GetPieceBitboard(type, isWhite);
                 score += BitOperations.PopCount(bitBoard) * pieceVal[(int)type - 1];

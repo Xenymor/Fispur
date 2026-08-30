@@ -47,6 +47,10 @@ internal class Program
                 case "position":
                     int moveStart = Array.IndexOf(tokens, "moves");
 
+                    tempBoard = new Spiritbreaker.Chess.Board();
+                    tempBoard.LoadStartPosition();
+                    board = new Spiritbreaker.API.Board(tempBoard);
+
                     if (tokens.Length >= 2 && tokens[1].Equals("startpos"))
                     {
                         board.board.LoadStartPosition();
@@ -88,9 +92,11 @@ internal class Program
                     }
 
                     // Call engine to calculate and return best move
-                    string bestMoveString = spiritBreaker.Think(board, new Spiritbreaker.API.Timer(time != -1 ? time : (board.IsWhiteToMove ? wtime : btime))).ToString();
+                    (Spiritbreaker.API.Move move, int eval) result = spiritBreaker.Think(board, new Spiritbreaker.API.Timer(time != -1 ? time : (board.IsWhiteToMove ? wtime : btime)));
+                    string bestMoveString = result.move.ToString();
                     string bestMoveFormattedString = bestMoveString.Substring(7, bestMoveString.Length - 8);
 
+                    //Console.WriteLine("info score cp " + result.eval);
                     Console.WriteLine("bestmove " + bestMoveFormattedString);
                     break;
 

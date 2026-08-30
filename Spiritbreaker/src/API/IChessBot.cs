@@ -5,6 +5,6 @@ namespace Spiritbreaker.API
     {
         string GetAuthor();
         string GetName();
-        Move Think(Board board, Timer timer);
+        (Move move, int eval) Think(Board board, Timer timer);
     }
 }
