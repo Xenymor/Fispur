@@ -13,7 +13,7 @@ public class SpiritBreaker : IChessBot
 
     public string GetName()
     {
-        return "Spiritbreaker 0.0.3";
+        return "Spiritbreaker 0.1.1";
     }
 
 
@@ -22,7 +22,17 @@ public class SpiritBreaker : IChessBot
     {
         Move[] moves = board.GetLegalMoves();
         bestMove = moves.Length == 0 ? Move.NullMove : moves[0];
-        int eval = AlphaBeta(board, 0, 4, -10_000_00, 10_000_00);
+
+        long time = timer.MillisecondsRemaining / 20 + timer.IncrementMilliseconds / 2;
+        int depth = 1;
+        int eval = 0;
+
+        while (timer.MillisecondsElapsedThisTurn < time / 2)
+        {
+            eval = AlphaBeta(board, 0, depth, -10_000_00, 10_000_00);
+            depth++;
+        }
+
         return (bestMove, eval);
     }
 
@@ -62,7 +72,7 @@ public class SpiritBreaker : IChessBot
 
         moves = board.GetLegalMoves(qSearch && !inCheck);
 
-        moves = moves.OrderByDescending(move => move.IsCapture ? (int)move.CapturePieceType * 1_000 - (int)move.MovePieceType : (int)move.MovePieceType).ToArray();
+        moves = moves.OrderByDescending(move => move.IsCapture ? (int)move.CapturePieceType * 1_000 - (int)move.MovePieceType : move.MovePieceType == PieceType.King ? 0 : (int)move.MovePieceType).ToArray();
         
 
         foreach (Move move in moves)
