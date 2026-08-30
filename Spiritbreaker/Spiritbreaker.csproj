@@ -10,12 +10,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Training\Nets\net.bin" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Training\Nets\net.bin">
-      <LogicalName>net.bin</LogicalName>
+    <EmbeddedResource Include="Training\Nets\net0.3.0.bin">
+      <LogicalName>net0.3.0.bin</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 

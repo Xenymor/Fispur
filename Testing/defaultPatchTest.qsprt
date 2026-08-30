@@ -8,14 +8,14 @@ restart=auto
 
 [engine]
 id=sprt-tournament
-name=Spiritbreaker-cli.exe
+name=Spiritbreaker 0.2.1
 cmd=C:\Users\timon\Documents\Programmieren\C#\Spiritbreaker\Spiritbreaker-cli\bin\Debug\net8.0\Spiritbreaker-cli.exe
 dir=.
 proto=uci
 
 [engine]
 id=sprt-tournament
-name=Spiritbreaker-New-cli.exe
+name=Spiritbreaker 0.3.0
 cmd=C:\Users\timon\Documents\Programmieren\C#\Spiritbreaker\Spiritbreaker-New-cli\bin\Debug\net8.0\Spiritbreaker-New-cli.exe
 dir=.
 proto=uci
@@ -40,16 +40,14 @@ start=1
 srand=815
 policy=default
 
-[round]
+[pgnoutput]
 id=sprt-tournament
-round=1
-engineA=Spiritbreaker-New-cli.exe
-engineB=Spiritbreaker-cli.exe
-games====1==10101=====000============001===0=0====10========0=0==========0==========11====01====1==0==0===========0==============0===1==0==============1=====010========01=0===1==========1=========11=======01=================1======00=0=================10=1==0=0=====0======1===========1=0=0=======1===0====0==0=0=0=====0==1==10======00====1=0=====00================0=0011=====00=====================1==0=======0===0=0=====0====0===============1========10====1====0=0011==0=0==========0==0===============================0=========1====0===0=======1========1=0==0=1===01==0?======1==?======?=?=======0?=0??????
-wincauses=checkmate:42
-drawcauses=stalemate:4
-drawcauses=threefold repetition:454
-drawcauses=50-move rule:2
-drawcauses=insufficient material:16
-losscauses=checkmate:73
+file=C:\Users\timon\Documents\Programmieren\C#\Spiritbreaker\Testing\sprt-games.pgn
+append=false
+finished=false
+min=false
+clock=true
+eval=true
+depth=true
+pv=true
 

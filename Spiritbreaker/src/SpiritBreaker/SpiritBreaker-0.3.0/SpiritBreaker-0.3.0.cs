@@ -1,13 +1,16 @@
-﻿using Spiritbreaker.API;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Numerics;
+﻿
 
-namespace Spiritbreaker
+namespace Spiritbreaker.SpiritBreaker0_3_0
 {
-    public class SpiritBreaker : IChessBot
+
+    using Spiritbreaker;
+    using Spiritbreaker.API;
+    using System;
+    using System.Collections.Generic;
+    using System.Data;
+    using System.Linq;
+
+    public class SpiritBreaker0_3_0 : IChessBot
     {
 
         public string GetAuthor()
@@ -17,7 +20,7 @@ namespace Spiritbreaker
 
         public string GetName()
         {
-            return "Spiritbreaker 0.3.1";
+            return "Spiritbreaker 0.3.0";
         }
 
 
