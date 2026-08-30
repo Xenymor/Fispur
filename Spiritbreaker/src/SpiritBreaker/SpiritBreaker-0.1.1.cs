@@ -4,7 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Numerics;
 
-public class SpiritBreaker : IChessBot
+public class SpiritBreaker0_1_1 : IChessBot
 {
     public string GetAuthor()
     {
@@ -13,7 +13,7 @@ public class SpiritBreaker : IChessBot
 
     public string GetName()
     {
-        return "Spiritbreaker 0.2.0";
+        return "Spiritbreaker 0.1.1";
     }
 
 
@@ -73,7 +73,7 @@ public class SpiritBreaker : IChessBot
         moves = board.GetLegalMoves(qSearch && !inCheck);
 
         moves = moves.OrderByDescending(move => move.IsCapture ? (int)move.CapturePieceType * 1_000 - (int)move.MovePieceType : move.MovePieceType == PieceType.King ? 0 : (int)move.MovePieceType).ToArray();
-        
+
 
         foreach (Move move in moves)
         {
@@ -102,9 +102,11 @@ public class SpiritBreaker : IChessBot
     private int Eval(Board board)
     {
         int score = 0;
-        for (int c = 0; c <= 1; c++) {
+        for (int c = 0; c <= 1; c++)
+        {
             bool isWhite = board.IsWhiteToMove ? c == 0 : c == 1;
-            for (PieceType type = PieceType.Pawn; type <= PieceType.King; type++) {
+            for (PieceType type = PieceType.Pawn; type <= PieceType.King; type++)
+            {
                 ulong bitBoard = board.GetPieceBitboard(type, isWhite);
                 score += BitOperations.PopCount(bitBoard) * pieceVal[(int)type - 1];
             }
@@ -114,5 +116,5 @@ public class SpiritBreaker : IChessBot
         return score;
     }
 
-    
+
 }
