@@ -1,6 +1,7 @@
 ﻿using Spiritbreaker.API;
 using System;
 using System.Data;
+using System.Linq;
 using System.Numerics;
 
 public class SpiritBreaker : IChessBot
@@ -60,6 +61,10 @@ public class SpiritBreaker : IChessBot
         }
 
         moves = board.GetLegalMoves(qSearch && !inCheck);
+
+        moves = moves.OrderByDescending(move => move.IsCapture ? (int)move.CapturePieceType * 1_000 - (int)move.MovePieceType : (int)move.MovePieceType).ToArray();
+        
+
         foreach (Move move in moves)
         {
             board.MakeMove(move);
