@@ -194,13 +194,13 @@ namespace Spiritbreaker.Application
                 boardUI.SetPerspective(PlayerWhite.IsHuman);
                 HumanWasWhiteLastGame = PlayerWhite.IsHuman;
             }
-            else if (PlayerWhite.Bot is MyBot && PlayerBlack.Bot is MyBot)
+            else if (PlayerWhite.Bot is SpiritBreaker && PlayerBlack.Bot is SpiritBreaker)
             {
                 boardUI.SetPerspective(true);
             }
             else
             {
-                boardUI.SetPerspective(PlayerWhite.Bot is MyBot);
+                boardUI.SetPerspective(PlayerWhite.Bot is SpiritBreaker);
             }
         }
 
@@ -208,7 +208,7 @@ namespace Spiritbreaker.Application
         {
             return type switch
             {
-                PlayerType.MyBot => new ChessPlayer(new MyBot(), type, GameDurationMilliseconds),
+                PlayerType.MyBot => new ChessPlayer(new SpiritBreaker(), type, GameDurationMilliseconds),
                 PlayerType.EvilBot => new ChessPlayer(new EvilBot(), type, GameDurationMilliseconds),
                 _ => new ChessPlayer(new HumanPlayer(boardUI), type)
             };
@@ -216,7 +216,7 @@ namespace Spiritbreaker.Application
 
         static (int totalTokenCount, int debugTokenCount) GetTokenCount()
         {
-            string path = Path.Combine(Directory.GetCurrentDirectory(), "src", "My Bot", "MyBot.cs");
+            string path = Path.Combine(Directory.GetCurrentDirectory(), "src", "SpiritBreaker-New", "SpiritBreaker.cs");
 
             using StreamReader reader = new(path);
             string txt = reader.ReadToEnd();

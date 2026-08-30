@@ -10,6 +10,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spiritbreaker-cli", "Spiritbreaker-cli\Spiritbreaker-cli.csproj", "{E7107C1C-8608-4E02-829F-90487FDA6133}"
+	ProjectSection(ProjectDependencies) = postProject
+		{2803E64F-15AC-430B-A5A2-69C00EA7505F} = {2803E64F-15AC-430B-A5A2-69C00EA7505F}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spiritbreaker-New-cli", "Spiritbreaker-New-cli\Spiritbreaker-New-cli.csproj", "{D88182FA-DB95-4E68-A62A-52FCA74045AE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,6 +27,14 @@ Global
 		{2803E64F-15AC-430B-A5A2-69C00EA7505F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2803E64F-15AC-430B-A5A2-69C00EA7505F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2803E64F-15AC-430B-A5A2-69C00EA7505F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E7107C1C-8608-4E02-829F-90487FDA6133}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E7107C1C-8608-4E02-829F-90487FDA6133}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E7107C1C-8608-4E02-829F-90487FDA6133}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E7107C1C-8608-4E02-829F-90487FDA6133}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D88182FA-DB95-4E68-A62A-52FCA74045AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D88182FA-DB95-4E68-A62A-52FCA74045AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D88182FA-DB95-4E68-A62A-52FCA74045AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D88182FA-DB95-4E68-A62A-52FCA74045AE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
