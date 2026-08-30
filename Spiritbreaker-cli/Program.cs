@@ -9,7 +9,7 @@ internal class Program
     {
         private static void Main(string[] args)
         {
-            IChessBot spiritBreaker = new Spiritbreaker.SpiritBreaker0_3_1.SpiritBreaker0_3_1();
+            IChessBot spiritBreaker = new Spiritbreaker.SpiritBreaker0_3_2.SpiritBreaker0_3_2();
             Type botType = spiritBreaker.GetType();
             Spiritbreaker.Chess.Board tempBoard = new Spiritbreaker.Chess.Board();
             tempBoard.LoadStartPosition();
