@@ -10,6 +10,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Training\Nets\net.bin" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Training\Nets\net.bin">
+      <LogicalName>net.bin</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Raylib-cs" Version="4.5.0.2" />
   </ItemGroup>
 
