@@ -5,7 +5,7 @@ using System.Data;
 using System.Linq;
 using System.Numerics;
 
-public class SpiritBreaker : IChessBot
+public class SpiritBreaker0_2_0 : IChessBot
 {
     public string GetAuthor()
     {
@@ -14,7 +14,7 @@ public class SpiritBreaker : IChessBot
 
     public string GetName()
     {
-        return "Spiritbreaker 0.2.1";
+        return "Spiritbreaker 0.2.0";
     }
 
 
@@ -77,21 +77,11 @@ public class SpiritBreaker : IChessBot
         (int score, int alpha, int beta, int depthLeft, Move move) entry;
         bool hasEntry = transpositionTable.TryGetValue(board.ZobristKey, out entry);
 
-        if (
-            hasEntry && ply != 0 && depthLeft <= entry.depthLeft 
-            && (entry.score >= entry.beta && entry.score >= beta 
-                || entry.score > entry.alpha && entry.score < entry.beta 
-                || entry.score < entry.alpha && entry.score < alpha)
-            )
-        {
-            return entry.score;
-        }
-
         moves = board.GetLegalMoves(qSearch && !inCheck);
 
         moves = moves.OrderByDescending(move => hasEntry && entry.move.Equals(move) ? 10_000_000 : move.IsCapture ? (int)move.CapturePieceType * 1_000 - (int)move.MovePieceType : move.MovePieceType == PieceType.King ? 0 : (int)move.MovePieceType).ToArray();
         Move bestMove = Move.NullMove;
-        int bestScore = -10_000_00;
+        int bestScore = 0;
 
         foreach (Move move in moves)
         {
@@ -125,11 +115,12 @@ public class SpiritBreaker : IChessBot
                 {
                     transpositionTable[board.ZobristKey] = (bestScore, alpha, beta, depthLeft, bestMove);
                 }
-            } else
+            }
+            else
             {
                 transpositionTable[board.ZobristKey] = (bestScore, alpha, beta, depthLeft, bestMove);
             }
-           
+
         }
 
         return alpha;
@@ -139,9 +130,11 @@ public class SpiritBreaker : IChessBot
     private int Eval(Board board)
     {
         int score = 0;
-        for (int c = 0; c <= 1; c++) {
+        for (int c = 0; c <= 1; c++)
+        {
             bool isWhite = board.IsWhiteToMove ? c == 0 : c == 1;
-            for (PieceType type = PieceType.Pawn; type <= PieceType.King; type++) {
+            for (PieceType type = PieceType.Pawn; type <= PieceType.King; type++)
+            {
                 ulong bitBoard = board.GetPieceBitboard(type, isWhite);
                 score += BitOperations.PopCount(bitBoard) * pieceVal[(int)type - 1];
             }
@@ -151,5 +144,5 @@ public class SpiritBreaker : IChessBot
         return score;
     }
 
-    
+
 }
