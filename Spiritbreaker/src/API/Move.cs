@@ -19,7 +19,7 @@ namespace Spiritbreaker.API
 		public ushort RawValue => move.Value;
 		public static readonly Move NullMove = new();
 
-		readonly Chess.Move move;
+		public readonly Chess.Move move;
 		readonly ushort pieceTypeData;
 
 		/// <summary>
@@ -72,5 +72,6 @@ namespace Spiritbreaker.API
 		public static bool operator !=(Move lhs, Move rhs) => !lhs.Equals(rhs);
 		public override bool Equals(object? obj) => base.Equals(obj);
 		public override int GetHashCode() => RawValue;
-	}
+
+    }
 }
