@@ -17,7 +17,7 @@ namespace Spiritbreaker
 
         public string GetName()
         {
-            return "Spiritbreaker 0.3.3";
+            return "Spiritbreaker 0.3.4";
         }
 
 
@@ -105,7 +105,7 @@ namespace Spiritbreaker
 
                 int score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha);
 
-                NNUE.undoMove(move, !board.IsWhiteToMove);
+                NNUE.undoMove();
                 board.UndoMove(move);
 
                 if (score >= beta)

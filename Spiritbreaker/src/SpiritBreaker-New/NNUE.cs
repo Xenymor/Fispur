@@ -17,13 +17,17 @@ namespace Spiritbreaker
         const int QAB = QA * QB;          
         const int SCALE = 400;
 
+        const int MAX_PLY = 256;
+
         static readonly short[] l0w = new short[INPUT * HL];  
         static readonly short[] l0b = new short[HL];
         static readonly short[] l1w = new short[2 * HL];
         static readonly short l1b;
 
-        static short[] accWhite;
-        static short[] accBlack;
+        static short[][] accWhite;
+        static short[][] accBlack;
+
+        static int currPly = 0;
 
         static NNUE()
         {
@@ -35,8 +39,14 @@ namespace Spiritbreaker
             for (int i = 0; i < l1w.Length; i++) l1w[i] = r.ReadInt16();
             l1b = r.ReadInt16();
 
-            accWhite = new short[HL];
-            accBlack = new short[HL];
+            accWhite = new short[MAX_PLY][];
+            accBlack = new short[MAX_PLY][];
+
+            for (int i = 0; i < MAX_PLY; i++)
+            {
+                accWhite[i] = new short[HL];
+                accBlack[i] = new short[HL];
+            }
         }
 
         static int SCReLU(int x)
@@ -48,8 +58,8 @@ namespace Spiritbreaker
 
         public static int Evaluate(Board board)
         {
-            Span<short> boys = board.IsWhiteToMove ? accWhite : accBlack;
-            Span<short> opps = board.IsWhiteToMove ? accBlack : accWhite;
+            Span<short> boys = board.IsWhiteToMove ? accWhite[currPly] : accBlack[currPly];
+            Span<short> opps = board.IsWhiteToMove ? accBlack[currPly] : accWhite[currPly];
 
             long sum = 0;
             for (int h = 0; h < HL; h++)
@@ -63,7 +73,11 @@ namespace Spiritbreaker
 
         public static void UpdateAccumulators(Board board)
         {
-            for (int h = 0; h < HL; h++) { accWhite[h] = l0b[h]; accBlack[h] = l0b[h]; }
+            currPly = 0;
+            short[] currAccWhite = accWhite[currPly];
+            short[] currAccBlack = accBlack[currPly];
+
+            for (int h = 0; h < HL; h++) { currAccWhite[h] = l0b[h]; currAccBlack[h] = l0b[h]; }
 
             for (int color = 0; color <= 1; color++)
             {
@@ -79,8 +93,8 @@ namespace Spiritbreaker
                         int bBase = (384 * (1 - color) + 64 * pc + (sq ^ 56)) * HL;
                         for (int h = 0; h < HL; h++)
                         {
-                            accWhite[h] += l0w[wBase + h];
-                            accBlack[h] += l0w[bBase + h];
+                            currAccWhite[h] += l0w[wBase + h];
+                            currAccBlack[h] += l0w[bBase + h];
                         }
                     }
                 }
@@ -89,11 +103,14 @@ namespace Spiritbreaker
 
         internal static void makeMove(Move move, bool isWhite)
         {
+            accWhite[currPly].CopyTo(accWhite[currPly + 1], 0);
+            accBlack[currPly].CopyTo(accBlack[currPly + 1], 0);
+            currPly++;
+
             int color = isWhite ? 0 : 1;
             int pc = (int)move.MovePieceType - 1;
             int destPc = (int)(move.IsPromotion ? move.PromotionPieceType : move.MovePieceType) - 1;
 
-            // Move the piece itself (start -> target), applying promotion via destPc.
             getIndexes(color, pc, move.StartSquare.Index, out int wSrc, out int bSrc);
             getIndexes(color, destPc, move.TargetSquare.Index, out int wDest, out int bDest);
 
@@ -102,7 +119,6 @@ namespace Spiritbreaker
 
             if (move.IsEnPassant)
             {
-                // The captured pawn sits on the mover's start rank, on the target file.
                 int capSq = move.TargetSquare.Index + (isWhite ? -8 : 8);
                 getIndexes(1 - color, (int)PieceType.Pawn - 1, capSq, out int wCap, out int bCap);
                 removePiece(wCap, bCap);
@@ -115,7 +131,6 @@ namespace Spiritbreaker
 
             if (move.IsCastles)
             {
-                // King move is already applied above; also relocate the rook.
                 bool kingside = move.TargetSquare.Index > move.StartSquare.Index;
                 int rookFrom = kingside ? move.TargetSquare.Index + 1 : move.TargetSquare.Index - 2;
                 int rookTo = kingside ? move.TargetSquare.Index - 1 : move.TargetSquare.Index + 1;
@@ -128,47 +143,11 @@ namespace Spiritbreaker
             }
         }
 
-        internal static void undoMove(Move move, bool isWhite)
+        internal static void undoMove()
         {
-            int color = isWhite ? 0 : 1;
-            int pc = (int)move.MovePieceType - 1;
-            int destPc = (int)(move.IsPromotion ? move.PromotionPieceType : move.MovePieceType) - 1;
-
-            // Reverse the piece move (target -> start), applying promotion via destPc.
-            getIndexes(color, pc, move.StartSquare.Index, out int wSrc, out int bSrc);
-            getIndexes(color, destPc, move.TargetSquare.Index, out int wDest, out int bDest);
-            addPiece(wSrc, bSrc);
-            removePiece(wDest, bDest);
-
-            if (move.IsEnPassant)
-            {
-                // Restore the captured pawn on the mover's start rank, target file.
-                int capSq = move.TargetSquare.Index + (isWhite ? -8 : 8);
-                getIndexes(1 - color, (int)PieceType.Pawn - 1, capSq, out int wCap, out int bCap);
-                addPiece(wCap, bCap);
-            }
-            else if (move.IsCapture)
-            {
-                getIndexes(1 - color, (int)move.CapturePieceType - 1, move.TargetSquare.Index, out int wCap, out int bCap);
-                addPiece(wCap, bCap);
-            }
-
-            if (move.IsCastles)
-            {
-                // King move is already reversed above; also move the rook back.
-                bool kingside = move.TargetSquare.Index > move.StartSquare.Index;
-                int rookFrom = kingside ? move.TargetSquare.Index + 1 : move.TargetSquare.Index - 2;
-                int rookTo = kingside ? move.TargetSquare.Index - 1 : move.TargetSquare.Index + 1;
-                int rpc = (int)PieceType.Rook - 1;
-                getIndexes(color, rpc, rookFrom, out int wRookFrom, out int bRookFrom);
-                getIndexes(color, rpc, rookTo, out int wRookTo, out int bRookTo);
-                addPiece(wRookFrom, bRookFrom);
-                removePiece(wRookTo, bRookTo);
-            }
+            currPly--;
         }
 
-        // Computes the flattened accumulator input offsets for a piece of the given
-        // color/type on the given square, from both the white and black perspectives.
         private static void getIndexes(int color, int pc, int sq, out int wPos, out int bPos)
         {
             wPos = (384 * color + 64 * pc + sq) * HL;
@@ -177,19 +156,19 @@ namespace Spiritbreaker
 
         private static unsafe void addPiece(int wPos, int bPos)
         {
-            fixed (short* aw = accWhite, ab = accBlack, w = l0w)
+            fixed (short* aw = accWhite[currPly], ab = accBlack[currPly], w = l0w)
             {
-                AddInPlaceAvx2(&aw[0], &w[wPos], HL);
-                AddInPlaceAvx2(&ab[0], &w[bPos], HL);
+                AddInPlaceAvx2(aw, &w[wPos], HL);
+                AddInPlaceAvx2(ab, &w[bPos], HL);
             }
         }
 
         private static unsafe void removePiece(int wPos, int bPos)
         {
-            fixed (short* aw = accWhite, ab = accBlack, w = l0w)
+            fixed (short* aw = accWhite[currPly], ab = accBlack[currPly], w = l0w)
             {
-                SubtractInPlaceAvx2(&aw[0], &w[wPos], HL);
-                SubtractInPlaceAvx2(&ab[0], &w[bPos], HL);
+                SubtractInPlaceAvx2(aw, &w[wPos], HL);
+                SubtractInPlaceAvx2(ab, &w[bPos], HL);
             }
         }
 
