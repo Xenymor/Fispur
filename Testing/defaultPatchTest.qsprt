@@ -8,15 +8,17 @@ restart=auto
 
 [engine]
 id=sprt-tournament
-name=Spiritbreaker 0.2.1
-cmd=C:\Users\timon\Documents\Programmieren\C#\Spiritbreaker\Spiritbreaker-cli\bin\Debug\net8.0\Spiritbreaker-cli.exe
+name=Spiritbreaker 0.3.4
+author=Xenymor
+cmd=C:\Users\timon\Documents\Programmieren\C#\Spiritbreaker\Spiritbreaker-cli\bin\Release\net8.0\Spiritbreaker-cli.exe
 dir=.
 proto=uci
 
 [engine]
 id=sprt-tournament
-name=Spiritbreaker 0.3.0
-cmd=C:\Users\timon\Documents\Programmieren\C#\Spiritbreaker\Spiritbreaker-New-cli\bin\Debug\net8.0\Spiritbreaker-New-cli.exe
+name=Spiritbreaker 0.3.5
+author=Xenymor
+cmd=C:\Users\timon\Documents\Programmieren\C#\Spiritbreaker\Spiritbreaker-New-cli\bin\Release\net8.0\Spiritbreaker-New-cli.exe
 dir=.
 proto=uci
 gauntlet=true
@@ -29,7 +31,7 @@ alpha=0.095000
 beta=0.095000
 maxgames=10000
 model=normalized
-pentanomial=false
+pentanomial=true
 
 [openings]
 id=sprt-tournament

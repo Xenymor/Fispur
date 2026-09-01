@@ -17,13 +17,13 @@ namespace Spiritbreaker
 
         public string GetName()
         {
-            return "Spiritbreaker 0.5.0";
+            return "Spiritbreaker 0.5.1";
         }
 
 
         Move bestMove;
         Dictionary<ulong, (int score, int alpha, int beta, int depthLeft, Move move)> transpositionTable = new Dictionary<ulong, (int score, int alpha, int beta, int depthLeft, Move move)>();
-        long[] historyHeuristic = new long[2*64*64];
+        int[] historyHeuristic = new int[2*64*64];
 
         public (Move move, int eval) Think(Board board, Timer timer)
         {
@@ -128,7 +128,17 @@ namespace Spiritbreaker
                 {
                     if (!qSearch && !move.IsCapture)
                     {
-                        historyHeuristic[getHistoryHeuristicInd(board, move)] += depthLeft * depthLeft;
+                        int bonus = Math.Min(1536, 300 * depthLeft - 250);
+
+                        ref int h = ref historyHeuristic[getHistoryHeuristicInd(board, move)];
+                        h += bonus - h * bonus / 16384;
+
+                        for (int j = 0; j < i; j++)
+                        {
+                            if (moves[j].IsCapture) continue;
+                            ref int p = ref historyHeuristic[getHistoryHeuristicInd(board, moves[j])];
+                            p += -bonus - p * bonus / 16384;
+                        }
                     }
 
                     transpositionTable[board.ZobristKey] = (score, ogAlpha, beta, depthLeft, move);
