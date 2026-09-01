@@ -69,7 +69,7 @@ namespace Spiritbreaker.SpiritBreaker0_7_0
         long hardLimit;
         Move rootBestMove;
 
-        public SpiritBreaker()
+        public SpiritBreaker0_7_0()
         {
             SetHashSize(DEFAULT_HASH_MB);
         }
