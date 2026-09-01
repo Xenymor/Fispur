@@ -209,7 +209,7 @@ namespace Spiritbreaker.Application
             return type switch
             {
                 PlayerType.SpiritBreaker_Exp => new ChessPlayer(new SpiritBreaker(), type, GameDurationMilliseconds),
-                PlayerType.SpiritBreaker => new ChessPlayer(new Spiritbreaker.SpiritBreaker0_3_4.SpiritBreaker0_3_4(), type, GameDurationMilliseconds),
+                PlayerType.SpiritBreaker => new ChessPlayer(new Spiritbreaker.SpiritBreaker0_4_0.SpiritBreaker0_4_0(), type, GameDurationMilliseconds),
                 _ => new ChessPlayer(new HumanPlayer(boardUI), type)
             };
         }

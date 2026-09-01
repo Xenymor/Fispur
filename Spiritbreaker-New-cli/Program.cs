@@ -30,7 +30,7 @@ internal class Program
                     break;
 
                 case "ucinewgame":
-                    spiritBreaker = (IChessBot)botType.GetConstructor(new Type[0]).Invoke(new object[0]);
+                    spiritBreaker = (IChessBot)botType.GetConstructor([]).Invoke([]);
                     tempBoard = new Spiritbreaker.Chess.Board();
                     tempBoard.LoadStartPosition();
                     board = new Spiritbreaker.API.Board(tempBoard);
