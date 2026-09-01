@@ -1,14 +1,18 @@
-﻿using Spiritbreaker.API;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Numerics;
-using System.Runtime.CompilerServices;
+﻿
 
-namespace Spiritbreaker
+namespace Spiritbreaker.SpiritBreaker0_8_0
 {
-    public class SpiritBreaker : IChessBot
+
+    using Spiritbreaker;
+    using Spiritbreaker.API;
+    using System;
+    using System.Collections.Generic;
+    using System.Data;
+    using System.Linq;
+    using System.Numerics;
+    using System.Runtime.CompilerServices;
+
+    public class SpiritBreaker0_8_0 : IChessBot
     {
 
         public string GetAuthor()
@@ -65,7 +69,7 @@ namespace Spiritbreaker
         long hardLimit;
         Move rootBestMove;
 
-        public SpiritBreaker()
+        public SpiritBreaker0_8_0()
         {
             SetHashSize(DEFAULT_HASH_MB);
         }
