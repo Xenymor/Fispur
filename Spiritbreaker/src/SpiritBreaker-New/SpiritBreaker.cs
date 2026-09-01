@@ -17,7 +17,7 @@ namespace Spiritbreaker
 
         public string GetName()
         {
-            return "Spiritbreaker 0.6.0";
+            return "Spiritbreaker 0.7.0";
         }
 
 
@@ -130,14 +130,22 @@ namespace Spiritbreaker
 
             moves = board.GetLegalMoves(qSearch && !inCheck);
 
-            moves = board.GetLegalMoves(qSearch && !inCheck);
+            Span<int> scores = stackalloc int[moves.Length];
+            for (int i = 0; i < moves.Length; i++)
+                scores[i] = scoreMove(board, moves[i], hasEntry ? entry.move : Move.NullMove);
 
-            moves = moves.OrderByDescending(move => hasEntry && entry.move.Equals(move) ? long.MaxValue : move.IsCapture ? (long.MaxValue / 2 + (int)move.CapturePieceType * 1_000L - (int)move.MovePieceType) : historyHeuristic[getHistoryHeuristicInd(board, move)]).ToArray();
             Move bestMove = Move.NullMove;
             int bestScore = qSearch && !inCheck ? eval : -10_000_00;
 
             for (int i = 0; i < moves.Length; i++)
             {
+                int best = i;
+                for (int j = i + 1; j < moves.Length; j++)
+                    if (scores[j] > scores[best]) best = j;
+
+                (moves[i], moves[best]) = (moves[best], moves[i]);
+                (scores[i], scores[best]) = (scores[best], scores[i]);
+
                 Move move = moves[i];
                 board.MakeMove(move);
                 NNUE.makeMove(move, !board.IsWhiteToMove);
@@ -215,6 +223,15 @@ namespace Spiritbreaker
             }
 
             return bestScore;
+        }
+
+        private int scoreMove(Board board, Move move, Move ttMove)
+        {
+            if (move.Equals(ttMove))
+                return int.MaxValue;
+            if (move.IsCapture)
+                return 1_000_000 + (int)move.CapturePieceType * 100 - (int)move.MovePieceType;
+            return historyHeuristic[getHistoryHeuristicInd(board, move)];
         }
 
         private static int getHistoryHeuristicInd(Board board, Move move)
