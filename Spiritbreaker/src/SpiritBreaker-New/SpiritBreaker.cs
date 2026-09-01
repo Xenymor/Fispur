@@ -17,7 +17,7 @@ namespace Spiritbreaker
 
         public string GetName()
         {
-            return "Spiritbreaker 0.3.4";
+            return "Spiritbreaker 0.4.0";
         }
 
 
@@ -47,6 +47,8 @@ namespace Spiritbreaker
 
         private int AlphaBeta(Board board, int ply, int depthLeft, int alpha, int beta)
         {
+            int ogAlpha = alpha;
+
             if (board.IsInCheckmate())
             {
                 return -1000_00 + ply;
@@ -58,16 +60,15 @@ namespace Spiritbreaker
             }
 
             Move[] moves;
-            bool qSearch = false;
-            int eval;
+            bool qSearch = depthLeft <= 0;
+            int eval = 0;
             bool inCheck = board.IsInCheck();
 
-            if (depthLeft <= 0)
+            if (qSearch)
             {
-                qSearch = true;
+                eval = NNUE.Evaluate(board);
                 if (!inCheck)
                 {
-                    eval = NNUE.Evaluate(board);
                     if (eval >= beta)
                     {
                         return eval;
@@ -96,27 +97,42 @@ namespace Spiritbreaker
 
             moves = moves.OrderByDescending(move => hasEntry && entry.move.Equals(move) ? 10_000_000 : move.IsCapture ? (int)move.CapturePieceType * 1_000 - (int)move.MovePieceType : move.MovePieceType == PieceType.King ? 0 : (int)move.MovePieceType).ToArray();
             Move bestMove = Move.NullMove;
-            int bestScore = -10_000_00;
+            int bestScore = qSearch && !inCheck ? eval : -10_000_00;
 
-            foreach (Move move in moves)
+            for (int i = 0; i < moves.Length; i++)
             {
+                Move move = moves[i];
                 board.MakeMove(move);
                 NNUE.makeMove(move, !board.IsWhiteToMove);
 
-                int score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha);
+                int score;
+                if (i == 0)
+                {
+                    score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha);
+                } else
+                {
+                    score = -AlphaBeta(board, ply + 1, depthLeft - 1, -(alpha + 1), -alpha);
+                    if (score > alpha && score < beta)
+                    {
+                        score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha);
+                    }
+                }
 
                 NNUE.undoMove();
                 board.UndoMove(move);
 
                 if (score >= beta)
                 {
-                    transpositionTable[board.ZobristKey] = (score, alpha, beta, depthLeft, move);
+                    transpositionTable[board.ZobristKey] = (score, ogAlpha, beta, depthLeft, move);
                     return score;
                 }
-                bestScore = Math.Max(score, bestScore);
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestMove = move;
+                }
                 if (score > alpha)
                 {
-                    bestMove = move;
                     alpha = score;
                 }
             }
@@ -132,17 +148,17 @@ namespace Spiritbreaker
                 {
                     if (depthLeft > entry.depthLeft)
                     {
-                        transpositionTable[board.ZobristKey] = (bestScore, alpha, beta, depthLeft, bestMove);
+                        transpositionTable[board.ZobristKey] = (bestScore, ogAlpha, beta, depthLeft, bestMove);
                     }
                 }
                 else
                 {
-                    transpositionTable[board.ZobristKey] = (bestScore, alpha, beta, depthLeft, bestMove);
+                    transpositionTable[board.ZobristKey] = (bestScore, ogAlpha, beta, depthLeft, bestMove);
                 }
 
             }
 
-            return alpha;
+            return bestScore;
         }
     }
 }
