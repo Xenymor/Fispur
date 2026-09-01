@@ -7,9 +7,9 @@ internal class Program
 {
     private static void Main(string[] args)
     {
-        IChessBot spiritBreaker = new Spiritbreaker.SpiritBreaker0_8_0.SpiritBreaker0_8_0();
+        IChessBot spiritBreaker = new Spiritbreaker.SpiritBreaker0_9_0.SpiritBreaker0_9_0();
         Type botType = spiritBreaker.GetType();
-        int hashMb = Spiritbreaker.SpiritBreaker0_8_0.SpiritBreaker0_8_0.DEFAULT_HASH_MB;
+        int hashMb = Spiritbreaker.SpiritBreaker0_9_0.SpiritBreaker0_9_0.DEFAULT_HASH_MB;
         Spiritbreaker.Chess.Board tempBoard = new Spiritbreaker.Chess.Board();
         tempBoard.LoadStartPosition();
         Spiritbreaker.API.Board board = new Spiritbreaker.API.Board(tempBoard);
@@ -28,8 +28,8 @@ internal class Program
                     Console.WriteLine("id name " + spiritBreaker.GetName());
                     Console.WriteLine("id author " + spiritBreaker.GetAuthor());
                     Console.WriteLine("option name Hash type spin default "
-                        + Spiritbreaker.SpiritBreaker0_8_0.SpiritBreaker0_8_0.DEFAULT_HASH_MB
-                        + " min 1 max " + Spiritbreaker.SpiritBreaker0_8_0.SpiritBreaker0_8_0.MAX_HASH_MB);
+                        + Spiritbreaker.SpiritBreaker0_9_0.SpiritBreaker0_9_0.DEFAULT_HASH_MB
+                        + " min 1 max " + Spiritbreaker.SpiritBreaker0_9_0.SpiritBreaker0_9_0.MAX_HASH_MB);
                     Console.WriteLine("uciok");
                     break;
 
@@ -46,15 +46,15 @@ internal class Program
                             if (optionName.Equals("Hash", StringComparison.OrdinalIgnoreCase)
                                 && int.TryParse(optionValue, out int mb))
                             {
-                                hashMb = Math.Clamp(mb, 1, Spiritbreaker.SpiritBreaker0_8_0.SpiritBreaker0_8_0.MAX_HASH_MB);
-                                (spiritBreaker as Spiritbreaker.SpiritBreaker0_8_0.SpiritBreaker0_8_0)?.SetHashSize(hashMb);
+                                hashMb = Math.Clamp(mb, 1, Spiritbreaker.SpiritBreaker0_9_0.SpiritBreaker0_9_0.MAX_HASH_MB);
+                                (spiritBreaker as Spiritbreaker.SpiritBreaker0_9_0.SpiritBreaker0_9_0)?.SetHashSize(hashMb);
                             }
                         }
                     }
                     break;
 
                 case "ucinewgame":
-                    if (spiritBreaker is Spiritbreaker.SpiritBreaker0_8_0.SpiritBreaker0_8_0 currentBot)
+                    if (spiritBreaker is Spiritbreaker.SpiritBreaker0_9_0.SpiritBreaker0_9_0 currentBot)
                     {
                         currentBot.NewGame();
                     }
