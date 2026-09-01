@@ -17,15 +17,18 @@ namespace Spiritbreaker
 
         public string GetName()
         {
-            return "Spiritbreaker 0.4.0";
+            return "Spiritbreaker 0.5.0";
         }
 
 
         Move bestMove;
         Dictionary<ulong, (int score, int alpha, int beta, int depthLeft, Move move)> transpositionTable = new Dictionary<ulong, (int score, int alpha, int beta, int depthLeft, Move move)>();
+        long[] historyHeuristic = new long[2*64*64];
 
         public (Move move, int eval) Think(Board board, Timer timer)
         {
+            Array.Fill(historyHeuristic, 0);
+
             Move[] moves = board.GetLegalMoves();
             bestMove = moves.Length == 0 ? Move.NullMove : moves[0];
 
@@ -95,7 +98,7 @@ namespace Spiritbreaker
 
             moves = board.GetLegalMoves(qSearch && !inCheck);
 
-            moves = moves.OrderByDescending(move => hasEntry && entry.move.Equals(move) ? 10_000_000 : move.IsCapture ? (int)move.CapturePieceType * 1_000 - (int)move.MovePieceType : move.MovePieceType == PieceType.King ? 0 : (int)move.MovePieceType).ToArray();
+            moves = moves.OrderByDescending(move => hasEntry && entry.move.Equals(move) ? long.MaxValue : move.IsCapture ? (long.MaxValue/2 + (int)move.CapturePieceType*1_000L - (int)move.MovePieceType) : historyHeuristic[getHistoryHeuristicInd(board, move)]).ToArray();
             Move bestMove = Move.NullMove;
             int bestScore = qSearch && !inCheck ? eval : -10_000_00;
 
@@ -123,6 +126,11 @@ namespace Spiritbreaker
 
                 if (score >= beta)
                 {
+                    if (!qSearch && !move.IsCapture)
+                    {
+                        historyHeuristic[getHistoryHeuristicInd(board, move)] += depthLeft * depthLeft;
+                    }
+
                     transpositionTable[board.ZobristKey] = (score, ogAlpha, beta, depthLeft, move);
                     return score;
                 }
@@ -159,6 +167,11 @@ namespace Spiritbreaker
             }
 
             return bestScore;
+        }
+
+        private static int getHistoryHeuristicInd(Board board, Move move)
+        {
+            return (board.IsWhiteToMove ? 0 : 1) * 64 * 64 + (move.StartSquare.Index | move.TargetSquare.Index << 6);
         }
     }
 }
