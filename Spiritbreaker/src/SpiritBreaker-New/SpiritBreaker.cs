@@ -18,7 +18,7 @@ namespace Spiritbreaker
 
         public string GetName()
         {
-            return "Spiritbreaker 0.8.0";
+            return "Spiritbreaker 0.9.0";
         }
 
         private static string ScoreToUCI(int score)
@@ -159,27 +159,6 @@ namespace Spiritbreaker
                     return 0;
             }
 
-            Move[] moves;
-            bool qSearch = depthLeft <= 0;
-            int eval = 0;
-            bool inCheck = board.IsInCheck();
-
-            if (qSearch)
-            {
-                eval = NNUE.Evaluate(board);
-                if (!inCheck)
-                {
-                    if (eval >= beta)
-                    {
-                        return eval;
-                    }
-                    if (eval > alpha)
-                    {
-                        alpha = eval;
-                    }
-                }
-            }
-
             ulong zobrist = board.ZobristKey;
             ref TTEntry entry = ref transpositionTable[zobrist & ttMask];
             bool hasEntry = entry.bound != BOUND_NONE && entry.key == (uint)(zobrist >> 32);
@@ -192,6 +171,34 @@ namespace Spiritbreaker
                     || (entry.bound == BOUND_UPPER && ttScore <= alpha))
                 {
                     return ttScore;
+                }
+            }
+
+            Move[] moves;
+            bool qSearch = depthLeft <= 0;
+            bool inCheck = board.IsInCheck();
+            int eval = inCheck ? -int.MaxValue : NNUE.Evaluate(board);
+            bool pvNode = beta - alpha > 1;
+
+            int margin = 100 * depthLeft;
+
+            if (!qSearch && !inCheck && !pvNode && depthLeft <= 8 && Math.Abs(beta) < MATE_BOUND && eval >= beta + margin)
+            {
+                return eval;
+            }
+
+            if (qSearch)
+            {
+                if (!inCheck)
+                {
+                    if (eval >= beta)
+                    {
+                        return eval;
+                    }
+                    if (eval > alpha)
+                    {
+                        alpha = eval;
+                    }
                 }
             }
 
