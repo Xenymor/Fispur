@@ -107,25 +107,32 @@ internal class Program
                 case "go":
                     int wtime = 60_000;
                     int btime = 60_000;
+                    int winc = 0;
+                    int binc = 0;
                     int time = -1;
                     for (int i = 1; i < tokens.Length - 1; i++)
                     {
-                        if (tokens[i] == "wtime")
-                            wtime = int.Parse(tokens[i + 1]);
-                        else if (tokens[i] == "btime")
-                            btime = int.Parse(tokens[i + 1]);
-                        else if (tokens[i] == "time")
-                            time = int.Parse(tokens[i + 1]);
-                        else if (tokens[i] == "movetime")
-                            time = int.Parse(tokens[i + 1]) * 12;
-
+                        switch (tokens[i])
+                        {
+                            case "wtime": wtime = int.Parse(tokens[i + 1]); break;
+                            case "btime": btime = int.Parse(tokens[i + 1]); break;
+                            case "winc": winc = int.Parse(tokens[i + 1]); break;
+                            case "binc": binc = int.Parse(tokens[i + 1]); break;
+                            case "time": time = int.Parse(tokens[i + 1]); break;
+                            case "movetime": time = int.Parse(tokens[i + 1]) * 20; break;
+                        }
                     }
 
-                    (Spiritbreaker.API.Move move, int eval) result = spiritBreaker.Think(board, new Spiritbreaker.API.Timer(time != -1 ? time : (board.IsWhiteToMove ? wtime : btime)));
+                    bool whiteToMove = board.IsWhiteToMove;
+                    int remaining = time != -1 ? time : (whiteToMove ? wtime : btime);
+                    int oppRemaining = whiteToMove ? btime : wtime;
+                    int increment = time != -1 ? 0 : (whiteToMove ? winc : binc);
+
+                    var timer = new Spiritbreaker.API.Timer(remaining, oppRemaining, remaining, increment);
+                    (Spiritbreaker.API.Move move, int eval) result = spiritBreaker.Think(board, timer);
                     string bestMoveString = result.move.ToString();
                     string bestMoveFormattedString = bestMoveString.Substring(7, bestMoveString.Length - 8);
 
-                    //Console.WriteLine("info score cp " + result.eval);
                     Console.WriteLine("bestmove " + bestMoveFormattedString);
                     break;
 

@@ -60,6 +60,14 @@ management: spends roughly `remaining/20 + increment/2` ms per move.
 is passed to the engine as `X * 12`. `bestmove` is parsed out of `Move.ToString()`
 via a substring. `ucinewgame` reflectively re-news the bot instance.
 
+`Spiritbreaker-cli` additionally exposes a `Version` UCI option
+(`option name Version type combo default 0.9.0 var 0.0.2 ... var 0.9.0`).
+`setoption name Version value 0.5.1` swaps the running bot to that snapshot
+(lazily instantiated), re-applies the current `Hash` and resets the board.
+The version registry lives in `Program.cs` (`Versions` array) - add a line
+there when a new snapshot is archived. Hash/`NewGame` support is probed by
+reflection, so pre-0.7.0 snapshots (which have neither) still work.
+
 ## Supporting folders
 
 - **`Openings/`** — `UHO_4060_v2.epd` (opening/test positions, ~15 MB),
