@@ -17,32 +17,55 @@ namespace Spiritbreaker
 
         public string GetName()
         {
-            return "Spiritbreaker 0.5.1";
+            return "Spiritbreaker 0.6.0";
         }
 
 
         Move bestMove;
         Dictionary<ulong, (int score, int alpha, int beta, int depthLeft, Move move)> transpositionTable = new Dictionary<ulong, (int score, int alpha, int beta, int depthLeft, Move move)>();
-        int[] historyHeuristic = new int[2*64*64];
+        int[] historyHeuristic = new int[2 * 64 * 64];
+
+        Timer timer;
+        bool stopSearch;
+        long nodes;
+        long hardLimit;
+        Move rootBestMove;
 
         public (Move move, int eval) Think(Board board, Timer timer)
         {
+            this.timer = timer;
+            stopSearch = false;
+            nodes = 0;
+
+
             Array.Fill(historyHeuristic, 0);
 
             Move[] moves = board.GetLegalMoves();
             bestMove = moves.Length == 0 ? Move.NullMove : moves[0];
+            rootBestMove = bestMove;
 
-            long time = timer.MillisecondsRemaining / 20 + timer.IncrementMilliseconds / 2;
-            int depth = 1;
+            long softLimit = timer.MillisecondsRemaining / 20 + timer.IncrementMilliseconds / 2;
+            hardLimit = Math.Min(softLimit * 4, timer.MillisecondsRemaining - 50);
+
             int eval = 0;
 
             NNUE.UpdateAccumulators(board);
 
-            while (timer.MillisecondsElapsedThisTurn < time / 2)
+            for (int depth = 1; depth <= 128; depth++)
             {
-                eval = AlphaBeta(board, 0, depth, -10_000_00, 10_000_00);
-                Console.WriteLine("info currmove " + Chess.MoveUtility.GetMoveNameUCI(bestMove.move) + " depth " + depth + " score cp " + eval + " time " + timer.MillisecondsElapsedThisTurn);
-                depth++;
+                int score = AlphaBeta(board, 0, depth, -10_000_00, 10_000_00);
+
+                if (stopSearch)
+                    break;
+
+                eval = score;
+                bestMove = rootBestMove;
+                Console.WriteLine("info depth " + depth + " score cp " + eval
+                    + " nodes " + nodes + " time " + timer.MillisecondsElapsedThisTurn
+                    + " pv " + Chess.MoveUtility.GetMoveNameUCI(bestMove.move));
+
+                if (timer.MillisecondsElapsedThisTurn >= softLimit / 2)
+                    break;
             }
 
             return (bestMove, eval);
@@ -50,16 +73,25 @@ namespace Spiritbreaker
 
         private int AlphaBeta(Board board, int ply, int depthLeft, int alpha, int beta)
         {
-            int ogAlpha = alpha;
-
-            if (board.IsInCheckmate())
-            {
-                return -1000_00 + ply;
-            }
-
-            if (board.IsDraw())
+            if (stopSearch)
             {
                 return 0;
+            }
+
+            if ((++nodes & 2047) == 0 && timer.MillisecondsElapsedThisTurn >= hardLimit)
+            {
+                stopSearch = true;
+                return 0;
+            }
+
+            int ogAlpha = alpha;
+
+            if (ply > 0)
+            {
+                if (board.IsInCheckmate())
+                    return -1000_00 + ply;
+                if (board.IsDraw())
+                    return 0;
             }
 
             Move[] moves;
@@ -98,7 +130,9 @@ namespace Spiritbreaker
 
             moves = board.GetLegalMoves(qSearch && !inCheck);
 
-            moves = moves.OrderByDescending(move => hasEntry && entry.move.Equals(move) ? long.MaxValue : move.IsCapture ? (long.MaxValue/2 + (int)move.CapturePieceType*1_000L - (int)move.MovePieceType) : historyHeuristic[getHistoryHeuristicInd(board, move)]).ToArray();
+            moves = board.GetLegalMoves(qSearch && !inCheck);
+
+            moves = moves.OrderByDescending(move => hasEntry && entry.move.Equals(move) ? long.MaxValue : move.IsCapture ? (long.MaxValue / 2 + (int)move.CapturePieceType * 1_000L - (int)move.MovePieceType) : historyHeuristic[getHistoryHeuristicInd(board, move)]).ToArray();
             Move bestMove = Move.NullMove;
             int bestScore = qSearch && !inCheck ? eval : -10_000_00;
 
@@ -112,7 +146,8 @@ namespace Spiritbreaker
                 if (i == 0)
                 {
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha);
-                } else
+                }
+                else
                 {
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1, -(alpha + 1), -alpha);
                     if (score > alpha && score < beta)
@@ -123,6 +158,9 @@ namespace Spiritbreaker
 
                 NNUE.undoMove();
                 board.UndoMove(move);
+
+                if (stopSearch)
+                    return 0;
 
                 if (score >= beta)
                 {
@@ -157,7 +195,7 @@ namespace Spiritbreaker
 
             if (ply == 0)
             {
-                this.bestMove = bestMove;
+                rootBestMove = bestMove;
             }
 
             if (!qSearch)
