@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace Spiritbreaker
 {
@@ -20,9 +21,42 @@ namespace Spiritbreaker
             return "Spiritbreaker 0.7.0";
         }
 
+        private static string ScoreToUCI(int score)
+        {
+            if (Math.Abs(score) <= MATE_BOUND)
+                return "cp " + score;
+
+            int plies = MATE - Math.Abs(score);
+            int moves = (plies + 1) / 2;
+
+            return "mate " + (score > 0 ? moves : -moves);
+        }
+
+        const int INFINITY = 10_000_00;
+        const int MATE = 1000_00;
+
+        const int MATE_BOUND = MATE - 256;
+
+        const byte BOUND_NONE = 0;
+        const byte BOUND_LOWER = 1;  
+        const byte BOUND_UPPER = 2;
+        const byte BOUND_EXACT = 3;
+
+        public const int DEFAULT_HASH_MB = 256;
+        public const int MAX_HASH_MB = 1024;
+
+        struct TTEntry
+        {
+            public uint key; //first 32 bit
+            public int score;
+            public Move move;
+            public byte depth;
+            public byte bound;
+        }
 
         Move bestMove;
-        Dictionary<ulong, (int score, int alpha, int beta, int depthLeft, Move move)> transpositionTable = new Dictionary<ulong, (int score, int alpha, int beta, int depthLeft, Move move)>();
+        TTEntry[] transpositionTable;
+        ulong ttMask;
         int[] historyHeuristic = new int[2 * 64 * 64];
 
         Timer timer;
@@ -30,6 +64,37 @@ namespace Spiritbreaker
         long nodes;
         long hardLimit;
         Move rootBestMove;
+
+        public SpiritBreaker()
+        {
+            SetHashSize(DEFAULT_HASH_MB);
+        }
+
+        public void SetHashSize(int megabytes)
+        {
+            megabytes = Math.Clamp(megabytes, 1, MAX_HASH_MB);
+
+            long entries = ((long)megabytes * 1024 * 1024) / Unsafe.SizeOf<TTEntry>();
+
+            int bits = 0;
+            while (1L << (bits + 1) <= entries)
+                bits++;
+            int count = 1 << bits;
+
+            if (transpositionTable != null && transpositionTable.Length == count)
+            {
+                NewGame();
+                return;
+            }
+
+            transpositionTable = new TTEntry[count];
+            ttMask = (ulong)(count - 1);
+        }
+
+        public void NewGame()
+        {
+            Array.Clear(transpositionTable, 0, transpositionTable.Length);
+        }
 
         public (Move move, int eval) Think(Board board, Timer timer)
         {
@@ -53,14 +118,14 @@ namespace Spiritbreaker
 
             for (int depth = 1; depth <= 128; depth++)
             {
-                int score = AlphaBeta(board, 0, depth, -10_000_00, 10_000_00);
+                int score = AlphaBeta(board, 0, depth, -INFINITY, INFINITY);
 
                 if (stopSearch)
                     break;
 
                 eval = score;
                 bestMove = rootBestMove;
-                Console.WriteLine("info depth " + depth + " score cp " + eval
+                Console.WriteLine("info depth " + depth + " score " + ScoreToUCI(eval)
                     + " nodes " + nodes + " time " + timer.MillisecondsElapsedThisTurn
                     + " pv " + Chess.MoveUtility.GetMoveNameUCI(bestMove.move));
 
@@ -89,7 +154,7 @@ namespace Spiritbreaker
             if (ply > 0)
             {
                 if (board.IsInCheckmate())
-                    return -1000_00 + ply;
+                    return -MATE + ply;
                 if (board.IsDraw())
                     return 0;
             }
@@ -115,27 +180,31 @@ namespace Spiritbreaker
                 }
             }
 
-            (int score, int alpha, int beta, int depthLeft, Move move) entry;
-            bool hasEntry = transpositionTable.TryGetValue(board.ZobristKey, out entry);
+            ulong zobrist = board.ZobristKey;
+            ref TTEntry entry = ref transpositionTable[zobrist & ttMask];
+            bool hasEntry = entry.bound != BOUND_NONE && entry.key == (uint)(zobrist >> 32);
 
-            if (
-                hasEntry && ply != 0 && depthLeft <= entry.depthLeft
-                && (entry.score >= entry.beta && entry.score >= beta
-                    || entry.score > entry.alpha && entry.score < entry.beta
-                    || entry.score < entry.alpha && entry.score < alpha)
-                )
+            if (hasEntry && ply > 0 && entry.depth >= depthLeft)
             {
-                return entry.score;
+                int ttScore = ScoreFromTT(entry.score, ply);
+                if (entry.bound == BOUND_EXACT
+                    || (entry.bound == BOUND_LOWER && ttScore >= beta)
+                    || (entry.bound == BOUND_UPPER && ttScore <= alpha))
+                {
+                    return ttScore;
+                }
             }
+
+            Move ttMove = hasEntry ? entry.move : Move.NullMove;
 
             moves = board.GetLegalMoves(qSearch && !inCheck);
 
             Span<int> scores = stackalloc int[moves.Length];
             for (int i = 0; i < moves.Length; i++)
-                scores[i] = scoreMove(board, moves[i], hasEntry ? entry.move : Move.NullMove);
+                scores[i] = scoreMove(board, moves[i], ttMove);
 
             Move bestMove = Move.NullMove;
-            int bestScore = qSearch && !inCheck ? eval : -10_000_00;
+            int bestScore = qSearch && !inCheck ? eval : -INFINITY;
 
             for (int i = 0; i < moves.Length; i++)
             {
@@ -187,7 +256,7 @@ namespace Spiritbreaker
                         }
                     }
 
-                    transpositionTable[board.ZobristKey] = (score, ogAlpha, beta, depthLeft, move);
+                    StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move);
                     return score;
                 }
                 if (score > bestScore)
@@ -208,22 +277,40 @@ namespace Spiritbreaker
 
             if (!qSearch)
             {
-                if (hasEntry)
-                {
-                    if (depthLeft > entry.depthLeft)
-                    {
-                        transpositionTable[board.ZobristKey] = (bestScore, ogAlpha, beta, depthLeft, bestMove);
-                    }
-                }
-                else
-                {
-                    transpositionTable[board.ZobristKey] = (bestScore, ogAlpha, beta, depthLeft, bestMove);
-                }
-
+                StoreTT(zobrist, bestScore, depthLeft, ply,
+                    bestScore <= ogAlpha ? BOUND_UPPER : BOUND_EXACT, bestMove);
             }
 
             return bestScore;
         }
+
+        private void StoreTT(ulong zobrist, int score, int depthLeft, int ply, byte bound, Move move)
+        {
+            ref TTEntry entry = ref transpositionTable[zobrist & ttMask];
+            uint key = (uint)(zobrist >> 32);
+            byte depth = (byte)Math.Clamp(depthLeft, 0, 255);
+
+            if (entry.bound != BOUND_NONE && entry.key == key && depth < entry.depth)
+            {
+                return;
+            }
+
+            entry.key = key;
+            entry.score = ScoreToTT(score, ply);
+            entry.move = move;
+            entry.depth = depth;
+            entry.bound = bound;
+        }
+
+        private static int ScoreToTT(int score, int ply)
+            => score > MATE_BOUND ? score + ply
+             : score < -MATE_BOUND ? score - ply
+             : score;
+
+        private static int ScoreFromTT(int score, int ply)
+            => score > MATE_BOUND ? score - ply
+             : score < -MATE_BOUND ? score + ply
+             : score;
 
         private int scoreMove(Board board, Move move, Move ttMove)
         {

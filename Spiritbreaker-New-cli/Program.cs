@@ -9,6 +9,7 @@ internal class Program
     {
         IChessBot spiritBreaker = new Spiritbreaker.SpiritBreaker();
         Type botType = spiritBreaker.GetType();
+        int hashMb = Spiritbreaker.SpiritBreaker.DEFAULT_HASH_MB;
         Spiritbreaker.Chess.Board tempBoard = new Spiritbreaker.Chess.Board();
         tempBoard.LoadStartPosition();
         Spiritbreaker.API.Board board = new Spiritbreaker.API.Board(tempBoard);
@@ -26,11 +27,41 @@ internal class Program
                 case "uci":
                     Console.WriteLine("id name " + spiritBreaker.GetName());
                     Console.WriteLine("id author " + spiritBreaker.GetAuthor());
+                    Console.WriteLine("option name Hash type spin default "
+                        + Spiritbreaker.SpiritBreaker.DEFAULT_HASH_MB
+                        + " min 1 max " + Spiritbreaker.SpiritBreaker.MAX_HASH_MB);
                     Console.WriteLine("uciok");
                     break;
 
+                case "setoption":
+                    {
+                        int nameIdx = Array.IndexOf(tokens, "name");
+                        int valueIdx = Array.IndexOf(tokens, "value");
+
+                        if (nameIdx != -1 && valueIdx > nameIdx)
+                        {
+                            string optionName = string.Join(" ", tokens, nameIdx + 1, valueIdx - nameIdx - 1);
+                            string optionValue = string.Join(" ", tokens, valueIdx + 1, tokens.Length - valueIdx - 1);
+
+                            if (optionName.Equals("Hash", StringComparison.OrdinalIgnoreCase)
+                                && int.TryParse(optionValue, out int mb))
+                            {
+                                hashMb = Math.Clamp(mb, 1, Spiritbreaker.SpiritBreaker.MAX_HASH_MB);
+                                (spiritBreaker as Spiritbreaker.SpiritBreaker)?.SetHashSize(hashMb);
+                            }
+                        }
+                    }
+                    break;
+
                 case "ucinewgame":
-                    spiritBreaker = (IChessBot)botType.GetConstructor([]).Invoke([]);
+                    if (spiritBreaker is Spiritbreaker.SpiritBreaker currentBot)
+                    {
+                        currentBot.NewGame();
+                    }
+                    else
+                    {
+                        spiritBreaker = (IChessBot)botType.GetConstructor([]).Invoke([]);
+                    }
                     tempBoard = new Spiritbreaker.Chess.Board();
                     tempBoard.LoadStartPosition();
                     board = new Spiritbreaker.API.Board(tempBoard);
@@ -74,7 +105,6 @@ internal class Program
                     break;
 
                 case "go":
-                    // Parse time controls and other parameters
                     int wtime = 60_000;
                     int btime = 60_000;
                     int time = -1;
@@ -91,7 +121,6 @@ internal class Program
 
                     }
 
-                    // Call engine to calculate and return best move
                     (Spiritbreaker.API.Move move, int eval) result = spiritBreaker.Think(board, new Spiritbreaker.API.Timer(time != -1 ? time : (board.IsWhiteToMove ? wtime : btime)));
                     string bestMoveString = result.move.ToString();
                     string bestMoveFormattedString = bestMoveString.Substring(7, bestMoveString.Length - 8);
