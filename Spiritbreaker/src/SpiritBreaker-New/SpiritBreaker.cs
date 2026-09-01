@@ -18,7 +18,7 @@ namespace Spiritbreaker
 
         public string GetName()
         {
-            return "Spiritbreaker 0.7.0";
+            return "Spiritbreaker 0.8.0";
         }
 
         private static string ScoreToUCI(int score)
@@ -226,7 +226,16 @@ namespace Spiritbreaker
                 }
                 else
                 {
-                    score = -AlphaBeta(board, ply + 1, depthLeft - 1, -(alpha + 1), -alpha);
+                    int reduction = 0;
+                    if (depthLeft >= 3 && i >= 3 && !inCheck && !move.IsCapture && !move.IsPromotion)
+                    {
+                        reduction = Math.Clamp((int)(0.99 + Math.Log(depthLeft) * Math.Log(i) / 3.14), 0, depthLeft - 2);
+                    }
+                    score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha);
+                    if (reduction > 0 && score > alpha)
+                    {
+                        score = -AlphaBeta(board, ply + 1, depthLeft - 1, -(alpha + 1), -alpha);
+                    }
                     if (score > alpha && score < beta)
                     {
                         score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha);
