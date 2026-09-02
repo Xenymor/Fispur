@@ -39,7 +39,7 @@ internal class Program
     private const int FALLBACK_DEFAULT_HASH_MB = 256;
     private const int FALLBACK_MAX_HASH_MB = 1024;
 
-    private const string DEFAULT_VERSION = "0.9.0";
+    private const string DEFAULT_VERSION = "0.10.0";
 
     private static readonly EngineVersion[] Versions =
     [
@@ -60,6 +60,7 @@ internal class Program
         new EngineVersion("0.7.0", typeof(Spiritbreaker.SpiritBreaker0_7_0.SpiritBreaker0_7_0)),
         new EngineVersion("0.8.0", typeof(Spiritbreaker.SpiritBreaker0_8_0.SpiritBreaker0_8_0)),
         new EngineVersion("0.9.0", typeof(Spiritbreaker.SpiritBreaker0_9_0.SpiritBreaker0_9_0)),
+        new EngineVersion("0.10.0", typeof(Spiritbreaker.SpiritBreaker0_10_0.SpiritBreaker0_10_0)),
     ];
 
     private static void Main(string[] args)
