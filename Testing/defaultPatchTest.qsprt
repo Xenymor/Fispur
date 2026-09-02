@@ -8,17 +8,17 @@ restart=auto
 
 [engine]
 id=sprt-tournament
-name=Spiritbreaker 0.3.4
+name=Fispur 0.3.4
 author=Xenymor
-cmd=C:\Users\timon\Documents\Programmieren\C#\Spiritbreaker\Spiritbreaker-cli\bin\Release\net8.0\Spiritbreaker-cli.exe
+cmd=C:\Users\timon\Documents\Programmieren\C#\Spiritbreaker\Fispur-cli\bin\Release\net8.0\Fispur-cli.exe
 dir=.
 proto=uci
 
 [engine]
 id=sprt-tournament
-name=Spiritbreaker 0.3.5
+name=Fispur 0.3.5
 author=Xenymor
-cmd=C:\Users\timon\Documents\Programmieren\C#\Spiritbreaker\Spiritbreaker-New-cli\bin\Release\net8.0\Spiritbreaker-New-cli.exe
+cmd=C:\Users\timon\Documents\Programmieren\C#\Spiritbreaker\Fispur-cli-(exp)\bin\Release\net8.0\Fispur-cli-(exp).exe
 dir=.
 proto=uci
 gauntlet=true
