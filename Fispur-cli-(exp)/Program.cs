@@ -135,10 +135,6 @@ internal class Program
 
                     Console.WriteLine("bestmove " + bestMoveFormattedString);
                     break;
-
-                default:
-                    Console.WriteLine("?");
-                    break;
             }
         }
     }

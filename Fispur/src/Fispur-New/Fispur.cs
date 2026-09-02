@@ -18,7 +18,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.10.1";
+            return "Fispur 0.10.2";
         }
 
         private static string ScoreToUCI(int score)
@@ -207,7 +207,7 @@ namespace FispurEngine
                 bool isPawnEndgame = board.IsWhiteToMove ? ((board.WhitePiecesBitboard ^ board.GetPieceBitboard(PieceType.Pawn, true) ^ board.GetPieceBitboard(PieceType.King, true)) == 0)
                                                          : ((board.BlackPiecesBitboard ^ board.GetPieceBitboard(PieceType.Pawn, false) ^ board.GetPieceBitboard(PieceType.King, false)) == 0);
                 if (!isPawnEndgame) {
-                    int reduction = 3;
+                    int reduction = 3 + depthLeft / 4;
 
                     board.ForceSkipTurn();
                     int score = -AlphaBeta(board, ply + 1, depthLeft - reduction - 1, -beta, -beta + 1, canNull: false);

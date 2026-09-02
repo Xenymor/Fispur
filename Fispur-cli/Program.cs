@@ -209,10 +209,6 @@ internal class Program
                     //Console.WriteLine("info score cp " + result.eval);
                     Console.WriteLine("bestmove " + bestMoveFormattedString);
                     break;
-
-                default:
-                    Console.WriteLine("?");
-                    break;
             }
         }
     }
