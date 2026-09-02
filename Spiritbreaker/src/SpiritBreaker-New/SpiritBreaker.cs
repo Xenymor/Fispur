@@ -18,7 +18,7 @@ namespace Spiritbreaker
 
         public string GetName()
         {
-            return "Spiritbreaker 0.9.0";
+            return "Spiritbreaker 0.10.0";
         }
 
         private static string ScoreToUCI(int score)
@@ -136,7 +136,7 @@ namespace Spiritbreaker
             return (bestMove, eval);
         }
 
-        private int AlphaBeta(Board board, int ply, int depthLeft, int alpha, int beta)
+        private int AlphaBeta(Board board, int ply, int depthLeft, int alpha, int beta, bool canNull = true)
         {
             if (stopSearch)
             {
@@ -202,6 +202,27 @@ namespace Spiritbreaker
                 }
             }
 
+
+            if (!pvNode && !inCheck && canNull && depthLeft >= 3 && beta < MATE_BOUND) {
+                bool isPawnEndgame = board.IsWhiteToMove ? ((board.WhitePiecesBitboard ^ board.GetPieceBitboard(PieceType.Pawn, true) ^ board.GetPieceBitboard(PieceType.King, true)) == 0)
+                                                         : ((board.BlackPiecesBitboard ^ board.GetPieceBitboard(PieceType.Pawn, false) ^ board.GetPieceBitboard(PieceType.King, false)) == 0);
+                if (!isPawnEndgame) {
+                    int reduction = 3;
+
+                    board.ForceSkipTurn();
+                    int score = -AlphaBeta(board, ply + 1, depthLeft - reduction - 1, -beta, -beta + 1, canNull: false);
+                    board.UndoSkipTurn();
+
+                    if (stopSearch)
+                    {
+                        return 0;
+                    }
+                    if (score >= beta)
+                    {
+                        return score >= MATE_BOUND ? beta : score;
+                    }
+                }
+            }
             Move ttMove = hasEntry ? entry.move : Move.NullMove;
 
             moves = board.GetLegalMoves(qSearch && !inCheck);
