@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 
 namespace FispurEngine
@@ -54,19 +55,33 @@ namespace FispurEngine
         }
 
 
-        public static int Evaluate(Board board)
+        public static unsafe int Evaluate(Board board)
         {
-            Span<short> boys = board.IsWhiteToMove ? accWhite[currPly] : accBlack[currPly];
-            Span<short> opps = board.IsWhiteToMove ? accBlack[currPly] : accWhite[currPly];
+            short[] boysArr = board.IsWhiteToMove ? accWhite[currPly] : accBlack[currPly];
+            short[] oppsArr = board.IsWhiteToMove ? accBlack[currPly] : accWhite[currPly];
 
-            long sum = 0;
-            for (int h = 0; h < HL; h++)
+            fixed (short* boys = boysArr, opps = oppsArr, w = l1w)
             {
-                sum += (long)SCReLU(boys[h]) * l1w[h];
-                sum += (long)SCReLU(opps[h]) * l1w[HL + h];
-            }
+                Vector256<short> zero = Vector256<short>.Zero;
+                Vector256<short> qa = Vector256.Create((short)QA);
+                Vector256<int> sum = Vector256<int>.Zero;
 
-            return (int)((sum / QA + l1b) * SCALE / QAB);
+                for (int h = 0; h < HL; h += 16)
+                {
+                    Vector256<short> v = Avx2.Min(Avx2.Max(Avx.LoadVector256(boys + h), zero), qa);
+                    sum = Avx2.Add(sum, Avx2.MultiplyAddAdjacent(v, Avx2.MultiplyLow(v, Avx.LoadVector256(w + h))));
+
+                    Vector256<short> o = Avx2.Min(Avx2.Max(Avx.LoadVector256(opps + h), zero), qa);
+                    sum = Avx2.Add(sum, Avx2.MultiplyAddAdjacent(o, Avx2.MultiplyLow(o, Avx.LoadVector256(w + HL + h))));
+                }
+
+                Vector128<int> s = Sse2.Add(sum.GetLower(), sum.GetUpper());
+                s = Ssse3.HorizontalAdd(s, s);
+                s = Ssse3.HorizontalAdd(s, s);
+
+                long total = s.ToScalar();
+                return (int)((total / QA + l1b) * SCALE / QAB);
+            }
         }
 
         public static void UpdateAccumulators(Board board)
