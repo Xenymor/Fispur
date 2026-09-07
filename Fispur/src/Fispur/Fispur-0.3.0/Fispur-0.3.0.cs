@@ -27,7 +27,7 @@ namespace FispurEngine.Fispur0_3_0
         Move bestMove;
         Dictionary<ulong, (int score, int alpha, int beta, int depthLeft, Move move)> transpositionTable = new Dictionary<ulong, (int score, int alpha, int beta, int depthLeft, Move move)>();
 
-        public (Move move, int eval) Think(Board board, Timer timer)
+        public (Move move, int eval) Think(Board board, Timer timer, int maxDepth = -1)
         {
             Move[] moves = board.GetLegalMoves();
             bestMove = moves.Length == 0 ? Move.NullMove : moves[0];

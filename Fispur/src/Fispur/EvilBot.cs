@@ -20,7 +20,7 @@ namespace FispurEngine.Example
         // Piece values: null, pawn, knight, bishop, rook, queen, king
         int[] pieceValues = { 0, 100, 300, 300, 500, 900, 10000 };
 
-        public (Move move, int eval) Think(Board board, Timer timer)
+        public (Move move, int eval) Think(Board board, Timer timer, int depth = -1)
         {
             Move[] allMoves = board.GetLegalMoves();
 

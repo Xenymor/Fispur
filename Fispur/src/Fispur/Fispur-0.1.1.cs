@@ -18,7 +18,7 @@ public class Fispur0_1_1 : IChessBot
 
 
     Move bestMove;
-    public (Move move, int eval) Think(Board board, Timer timer)
+    public (Move move, int eval) Think(Board board, Timer timer, int maxDepth = -1)
     {
         Move[] moves = board.GetLegalMoves();
         bestMove = moves.Length == 0 ? Move.NullMove : moves[0];

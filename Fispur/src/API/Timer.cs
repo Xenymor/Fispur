@@ -24,6 +24,9 @@ namespace FispurEngine.API
         /// </summary>
         public int MillisecondsRemaining => Math.Max(0, millisRemainingAtStartOfTurn - MillisecondsElapsedThisTurn);
 
+        public bool isInfinite { get; }
+        public int moveTime { get; }
+
         /// <summary>
         /// Amount of time left on the clock for the other player (in milliseconds)
         /// </summary>
@@ -45,6 +48,24 @@ namespace FispurEngine.API
             GameStartTimeMilliseconds = startingMs;
             OpponentMillisecondsRemaining = opponentRemainingMs;
             IncrementMilliseconds = incrementMs;
+            this.moveTime = -1;
+            this.isInfinite = false;
+        }
+
+        public Timer(int remainingMs, int opponentRemainingMs, int startingMs, int incrementMs = 0, int time = -1, bool infinite = false) : this(remainingMs, opponentRemainingMs, startingMs, incrementMs)
+        {
+            if (infinite)
+            {
+                remainingMs = -1;
+            }
+            this.isInfinite = infinite;
+            this.moveTime = time;
+            millisRemainingAtStartOfTurn = remainingMs;
+            sw = System.Diagnostics.Stopwatch.StartNew();
+            GameStartTimeMilliseconds = startingMs;
+            OpponentMillisecondsRemaining = opponentRemainingMs;
+            IncrementMilliseconds = incrementMs;
+
         }
 
         public override string ToString()

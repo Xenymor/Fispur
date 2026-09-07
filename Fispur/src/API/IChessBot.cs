@@ -5,6 +5,6 @@ namespace FispurEngine.API
     {
         string GetAuthor();
         string GetName();
-        (Move move, int eval) Think(Board board, Timer timer);
+        (Move move, int eval) Think(Board board, Timer timer, int maxDepth = -1);
     }
 }

@@ -29,7 +29,7 @@ namespace FispurEngine.Fispur0_5_1
         Dictionary<ulong, (int score, int alpha, int beta, int depthLeft, Move move)> transpositionTable = new Dictionary<ulong, (int score, int alpha, int beta, int depthLeft, Move move)>();
         int[] historyHeuristic = new int[2*64*64];
 
-        public (Move move, int eval) Think(Board board, Timer timer)
+        public (Move move, int eval) Think(Board board, Timer timer, int maxDepth = -1)
         {
             Array.Fill(historyHeuristic, 0);
 

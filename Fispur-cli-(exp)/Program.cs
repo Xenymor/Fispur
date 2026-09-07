@@ -1,7 +1,5 @@
 ﻿
 using FispurEngine.API;
-using FispurEngine.Application;
-using FispurEngine.Chess;
 
 internal class Program
 {
@@ -12,7 +10,7 @@ internal class Program
         int hashMb = FispurEngine.Fispur.DEFAULT_HASH_MB;
         FispurEngine.Chess.Board tempBoard = new FispurEngine.Chess.Board();
         tempBoard.LoadStartPosition();
-        FispurEngine.API.Board board = new FispurEngine.API.Board(tempBoard);
+        Board board = new Board(tempBoard);
         while (true)
         {
             string command = Console.ReadLine();
@@ -34,26 +32,26 @@ internal class Program
                     break;
 
                 case "setoption":
+                    StopAndWait();
+                    int nameIdx = Array.IndexOf(tokens, "name");
+                    int valueIdx = Array.IndexOf(tokens, "value");
+
+                    if (nameIdx != -1 && valueIdx > nameIdx)
                     {
-                        int nameIdx = Array.IndexOf(tokens, "name");
-                        int valueIdx = Array.IndexOf(tokens, "value");
+                        string optionName = string.Join(" ", tokens, nameIdx + 1, valueIdx - nameIdx - 1);
+                        string optionValue = string.Join(" ", tokens, valueIdx + 1, tokens.Length - valueIdx - 1);
 
-                        if (nameIdx != -1 && valueIdx > nameIdx)
+                        if (optionName.Equals("Hash", StringComparison.OrdinalIgnoreCase)
+                            && int.TryParse(optionValue, out int mb))
                         {
-                            string optionName = string.Join(" ", tokens, nameIdx + 1, valueIdx - nameIdx - 1);
-                            string optionValue = string.Join(" ", tokens, valueIdx + 1, tokens.Length - valueIdx - 1);
-
-                            if (optionName.Equals("Hash", StringComparison.OrdinalIgnoreCase)
-                                && int.TryParse(optionValue, out int mb))
-                            {
-                                hashMb = Math.Clamp(mb, 1, FispurEngine.Fispur.MAX_HASH_MB);
-                                (fispur as FispurEngine.Fispur)?.SetHashSize(hashMb);
-                            }
+                            hashMb = Math.Clamp(mb, 1, FispurEngine.Fispur.MAX_HASH_MB);
+                            (fispur as FispurEngine.Fispur)?.SetHashSize(hashMb);
                         }
                     }
                     break;
 
                 case "ucinewgame":
+                    StopAndWait();
                     if (fispur is FispurEngine.Fispur currentBot)
                     {
                         currentBot.NewGame();
@@ -72,10 +70,12 @@ internal class Program
                     break;
 
                 case "quit":
+                    StopAndWait();
                     Environment.Exit(0);
                     break;
 
                 case "position":
+                    StopAndWait();
                     int moveStart = Array.IndexOf(tokens, "moves");
 
                     tempBoard = new FispurEngine.Chess.Board();
@@ -110,43 +110,138 @@ internal class Program
                     int winc = 0;
                     int binc = 0;
                     int time = -1;
-                    for (int i = 1; i < tokens.Length - 1; i++)
+                    int depth = -1;
+                    int nodes = -1;
+                    bool infinite = false;
+
+                    for (int i = 1; i < tokens.Length; i++)
                     {
+                        bool hasValue = i + 1 < tokens.Length;
                         switch (tokens[i])
                         {
-                            case "wtime": wtime = int.Parse(tokens[i + 1]); break;
-                            case "btime": btime = int.Parse(tokens[i + 1]); break;
-                            case "winc": winc = int.Parse(tokens[i + 1]); break;
-                            case "binc": binc = int.Parse(tokens[i + 1]); break;
-                            case "time": time = int.Parse(tokens[i + 1]); break;
-                            case "movetime": time = int.Parse(tokens[i + 1]) * 20; break;
+                            case "wtime": 
+                                if (hasValue)
+                                {
+                                    wtime = int.Parse(tokens[i + 1]);
+                                }
+                                break;
+                            case "btime":
+                                if (hasValue)
+                                {
+                                    btime = int.Parse(tokens[i + 1]);
+                                }
+                                break;
+                            case "winc":
+                                if (hasValue)
+                                {
+                                    winc = int.Parse(tokens[i + 1]);
+                                }
+                                break;
+                            case "binc":
+                                if (hasValue)
+                                {
+                                    binc = int.Parse(tokens[i + 1]);
+                                }
+                                break;
+                            case "time":
+                                if (hasValue)
+                                {
+                                    time = int.Parse(tokens[i + 1]);
+                                }
+                                break;
+                            case "movetime":
+                                if (hasValue)
+                                {
+                                    time = int.Parse(tokens[i + 1]);
+                                }
+                                break;
+                            case "depth":
+                                if (hasValue)
+                                {
+                                    depth = int.Parse(tokens[i + 1]);
+                                }
+                                break;
+                            case "infinite":
+                                infinite = true;
+                                break;
+                            
                         }
                     }
 
                     bool whiteToMove = board.IsWhiteToMove;
-                    int remaining = time != -1 ? time : (whiteToMove ? wtime : btime);
+                    int remaining = time != -1 ? -1 : (whiteToMove ? wtime : btime);
                     int oppRemaining = whiteToMove ? btime : wtime;
                     int increment = time != -1 ? 0 : (whiteToMove ? winc : binc);
 
-                    var timer = new FispurEngine.API.Timer(remaining, oppRemaining, remaining, increment);
-                    (FispurEngine.API.Move move, int eval) result = fispur.Think(board, timer);
-                    string bestMoveString = result.move.ToString();
-                    string bestMoveFormattedString = bestMoveString.Substring(7, bestMoveString.Length - 8);
+                    var timer = new FispurEngine.API.Timer(remaining, oppRemaining, remaining, increment, time, infinite || depth != -1);
 
-                    Console.WriteLine("bestmove " + bestMoveFormattedString);
+                    StartSearch(board, timer, depth);
+
+                    break;
+
+                case "stop":
+                    StopAndWait();
                     break;
             }
         }
     }
 
-    private static FispurEngine.Chess.Move GetMove(string v)
+    static readonly object outLock = new();
+    static readonly FispurEngine.Fispur bot = new();
+    static Thread? searchThread;
+
+    static void Say(string s)
     {
-        return new FispurEngine.Chess.Move(GetSquareIndex(v[0] + "" + v[1]), GetSquareIndex(v[2] + "" + v[3]));
+        lock (outLock)
+        {
+            Console.WriteLine(s);
+        }
     }
 
-    private static int GetSquareIndex(string fieldString)
+    static bool Searching
     {
-        return new Square(fieldString).Index;
+        get
+        {
+            return searchThread is { IsAlive: true };
+        }
+    }
+
+    static void StopAndWait()
+    {
+        if (!Searching) return;
+        bot.Stop();
+        searchThread!.Join();
+        searchThread = null;
+    }
+
+    static void StartSearch(Board board, FispurEngine.API.Timer timer, int depth)
+    {
+        StopAndWait();         
+        bot.PrepareSearch();
+
+        searchThread = new Thread(() =>
+        {
+            try
+            {
+                var result = bot.Think(board, timer, depth);
+                Say("bestmove " + Uci(result.move));
+            }
+            catch (Exception e)
+            {
+                Say("info string search crashed: " + e);
+                Say("bestmove 0000");
+            }
+        }, 32 * 1024 * 1024)
+        { IsBackground = true };
+
+        searchThread.Start();
+    }
+
+    private static string Uci(Move move)
+    {
+        string bestMoveString = move.ToString();
+        string bestMoveFormattedString = bestMoveString.Substring(7, bestMoveString.Length - 8);
+        return bestMoveFormattedString;
     }
 }
 

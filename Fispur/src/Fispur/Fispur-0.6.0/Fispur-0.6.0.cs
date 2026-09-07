@@ -35,7 +35,7 @@ namespace FispurEngine.Fispur0_6_0
         long hardLimit;
         Move rootBestMove;
 
-        public (Move move, int eval) Think(Board board, Timer timer)
+        public (Move move, int eval) Think(Board board, Timer timer, int maxDepth = -1)
         {
             this.timer = timer;
             stopSearch = false;

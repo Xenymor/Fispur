@@ -1,9 +1,5 @@
 ﻿using FispurEngine.API;
 using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace FispurEngine
@@ -18,7 +14,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.10.2";
+            return "Fispur 0.10.3";
         }
 
         private static string ScoreToUCI(int score)
@@ -45,6 +41,9 @@ namespace FispurEngine
         public const int DEFAULT_HASH_MB = 256;
         public const int MAX_HASH_MB = 1024;
 
+
+        public const int MAX_DEPTH = 256;
+
         struct TTEntry
         {
             public uint key; //first 32 bit
@@ -60,7 +59,6 @@ namespace FispurEngine
         int[] historyHeuristic = new int[2 * 64 * 64];
 
         Timer timer;
-        bool stopSearch;
         long nodes;
         long hardLimit;
         Move rootBestMove;
@@ -68,6 +66,17 @@ namespace FispurEngine
         public Fispur()
         {
             SetHashSize(DEFAULT_HASH_MB);
+        }
+
+        volatile bool stopSearch;
+        public void Stop()
+        {
+            stopSearch = true;
+        }
+
+        public void PrepareSearch()
+        {
+            stopSearch = false;
         }
 
         public void SetHashSize(int megabytes)
@@ -96,12 +105,11 @@ namespace FispurEngine
             Array.Clear(transpositionTable, 0, transpositionTable.Length);
         }
 
-        public (Move move, int eval) Think(Board board, Timer timer)
+        public (Move move, int eval) Think(Board board, Timer timer, int maxDepth)
         {
             this.timer = timer;
             stopSearch = false;
             nodes = 0;
-
 
             Array.Fill(historyHeuristic, 0);
 
@@ -109,14 +117,21 @@ namespace FispurEngine
             bestMove = moves.Length == 0 ? Move.NullMove : moves[0];
             rootBestMove = bestMove;
 
-            long softLimit = timer.MillisecondsRemaining / 20 + timer.IncrementMilliseconds / 2;
-            hardLimit = Math.Min(softLimit * 4, timer.MillisecondsRemaining - 50);
+            long softLimit = timer.moveTime != -1 ? timer.moveTime : timer.MillisecondsRemaining / 20 + timer.IncrementMilliseconds / 2;
+            hardLimit = timer.moveTime != -1 ? timer.moveTime : Math.Min(softLimit * 4, timer.MillisecondsRemaining - 50);
+
+            if (timer.isInfinite)
+            {
+                softLimit = long.MaxValue;
+                hardLimit = long.MaxValue;
+            }
 
             int eval = 0;
 
             NNUE.UpdateAccumulators(board);
 
-            for (int depth = 1; depth <= 128; depth++)
+            int currMaxDepth = maxDepth < 0 ? MAX_DEPTH : Math.Min(MAX_DEPTH, maxDepth);
+            for (int depth = 1; depth <= currMaxDepth; depth++)
             {
                 int score = AlphaBeta(board, 0, depth, -INFINITY, INFINITY);
 
@@ -129,7 +144,13 @@ namespace FispurEngine
                     + " nodes " + nodes + " time " + timer.MillisecondsElapsedThisTurn
                     + " pv " + Chess.MoveUtility.GetMoveNameUCI(bestMove.move));
 
-                if (timer.MillisecondsElapsedThisTurn >= softLimit / 2)
+                if (timer.isInfinite)
+                {
+                    softLimit = long.MaxValue;
+                    hardLimit = long.MaxValue;
+                }
+
+                if (timer.isInfinite && stopSearch || !timer.isInfinite && ((timer.moveTime == -1 && timer.MillisecondsElapsedThisTurn >= softLimit / 2) || (timer.moveTime != -1 && timer.MillisecondsElapsedThisTurn >= timer.moveTime)))
                     break;
             }
 
@@ -229,7 +250,9 @@ namespace FispurEngine
 
             Span<int> scores = stackalloc int[moves.Length];
             for (int i = 0; i < moves.Length; i++)
-                scores[i] = scoreMove(board, moves[i], ttMove);
+            {
+                scores[i] = scoreMove(board, ply, moves[i], ttMove);
+            }
 
             Move bestMove = Move.NullMove;
             int bestScore = qSearch && !inCheck ? eval : -INFINITY;
@@ -238,7 +261,12 @@ namespace FispurEngine
             {
                 int best = i;
                 for (int j = i + 1; j < moves.Length; j++)
-                    if (scores[j] > scores[best]) best = j;
+                {
+                    if (scores[j] > scores[best])
+                    {
+                        best = j;
+                    }
+                }
 
                 (moves[i], moves[best]) = (moves[best], moves[i]);
                 (scores[i], scores[best]) = (scores[best], scores[i]);
@@ -278,6 +306,7 @@ namespace FispurEngine
 
                 if (score >= beta)
                 {
+
                     if (!qSearch && !move.IsCapture)
                     {
                         int bonus = Math.Min(1536, 300 * depthLeft - 250);
@@ -294,6 +323,7 @@ namespace FispurEngine
                     }
 
                     StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move);
+
                     return score;
                 }
                 if (score > bestScore)
@@ -338,7 +368,6 @@ namespace FispurEngine
             entry.depth = depth;
             entry.bound = bound;
         }
-
         private static int ScoreToTT(int score, int ply)
             => score > MATE_BOUND ? score + ply
              : score < -MATE_BOUND ? score - ply
@@ -349,14 +378,30 @@ namespace FispurEngine
              : score < -MATE_BOUND ? score + ply
              : score;
 
-        private int scoreMove(Board board, Move move, Move ttMove)
+        private int scoreMove(Board board, int ply, Move move, Move ttMove)
         {
             if (move.Equals(ttMove))
+            {
                 return int.MaxValue;
+            }
+
             if (move.IsCapture)
-                return 1_000_000 + (int)move.CapturePieceType * 100 - (int)move.MovePieceType;
+            {
+                int victim = (int)move.CapturePieceType;
+                int attacker = (int)move.MovePieceType;
+                
+                if (victim >= attacker)
+                {
+                    return 1_000_000 + 100 * victim - attacker;
+                } else
+                {
+                    return 1_000_000 + 100 * victim - attacker;
+                }
+            }
+
             return historyHeuristic[getHistoryHeuristicInd(board, move)];
         }
+
 
         private static int getHistoryHeuristicInd(Board board, Move move)
         {

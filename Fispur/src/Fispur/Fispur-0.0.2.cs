@@ -25,7 +25,7 @@ namespace FispurEngine.src.Fispur
 
 
         Move bestMove;
-        public (Move move, int eval) Think(Board board, Timer timer)
+        public (Move move, int eval) Think(Board board, Timer timer, int depth = -1)
         {
             Move[] moves = board.GetLegalMoves();
             bestMove = moves.Length == 0 ? Move.NullMove : moves[0];

@@ -100,7 +100,7 @@ namespace FispurEngine.Fispur0_10_1
             Array.Clear(transpositionTable, 0, transpositionTable.Length);
         }
 
-        public (Move move, int eval) Think(Board board, Timer timer)
+        public (Move move, int eval) Think(Board board, Timer timer, int maxDepth = -1)
         {
             this.timer = timer;
             stopSearch = false;
