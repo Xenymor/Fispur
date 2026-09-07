@@ -39,7 +39,7 @@ internal class Program
     private const int FALLBACK_DEFAULT_HASH_MB = 256;
     private const int FALLBACK_MAX_HASH_MB = 1024;
 
-    private const string DEFAULT_VERSION = "0.10.2";
+    private const string DEFAULT_VERSION = "0.10.3";
 
     private static readonly EngineVersion[] Versions =
     [
@@ -63,6 +63,7 @@ internal class Program
         new EngineVersion("0.10.0", typeof(FispurEngine.Fispur0_10_0.Fispur0_10_0)),
         new EngineVersion("0.10.1", typeof(FispurEngine.Fispur0_10_1.Fispur0_10_1)),
         new EngineVersion("0.10.2", typeof(FispurEngine.Fispur0_10_2.Fispur0_10_2)),
+        new EngineVersion("0.10.3", typeof(FispurEngine.Fispur0_10_3.Fispur0_10_3)),
     ];
 
     private static void Main(string[] args)
@@ -98,6 +99,7 @@ internal class Program
                     break;
 
                 case "setoption":
+                    StopAndWait();
                     {
                         int nameIdx = Array.IndexOf(tokens, "name");
                         int valueIdx = Array.IndexOf(tokens, "value");
@@ -139,6 +141,7 @@ internal class Program
                     break;
 
                 case "ucinewgame":
+                    StopAndWait();
                     if (!InvokeNewGame(fispur))
                     {
                         fispur = version.Create();
@@ -154,10 +157,12 @@ internal class Program
                     break;
 
                 case "quit":
+                    StopAndWait();
                     Environment.Exit(0);
                     break;
 
                 case "position":
+                    StopAndWait();
                     int moveStart = Array.IndexOf(tokens, "moves");
 
                     tempBoard = new FispurEngine.Chess.Board();
@@ -189,29 +194,154 @@ internal class Program
                 case "go":
                     int wtime = 60_000;
                     int btime = 60_000;
+                    int winc = 0;
+                    int binc = 0;
                     int time = -1;
-                    for (int i = 1; i < tokens.Length - 1; i++)
-                    {
-                        if (tokens[i] == "wtime")
-                            wtime = int.Parse(tokens[i + 1]);
-                        else if (tokens[i] == "btime")
-                            btime = int.Parse(tokens[i + 1]);
-                        else if (tokens[i] == "time")
-                            time = int.Parse(tokens[i + 1]);
-                        else if (tokens[i] == "movetime")
-                            time = int.Parse(tokens[i + 1]) * 12;
+                    int depth = -1;
+                    bool infinite = false;
 
+                    for (int i = 1; i < tokens.Length; i++)
+                    {
+                        bool hasValue = i + 1 < tokens.Length;
+                        switch (tokens[i])
+                        {
+                            case "wtime":
+                                if (hasValue)
+                                {
+                                    wtime = int.Parse(tokens[i + 1]);
+                                }
+                                break;
+                            case "btime":
+                                if (hasValue)
+                                {
+                                    btime = int.Parse(tokens[i + 1]);
+                                }
+                                break;
+                            case "winc":
+                                if (hasValue)
+                                {
+                                    winc = int.Parse(tokens[i + 1]);
+                                }
+                                break;
+                            case "binc":
+                                if (hasValue)
+                                {
+                                    binc = int.Parse(tokens[i + 1]);
+                                }
+                                break;
+                            case "time":
+                                if (hasValue)
+                                {
+                                    time = int.Parse(tokens[i + 1]);
+                                }
+                                break;
+                            case "movetime":
+                                if (hasValue)
+                                {
+                                    time = int.Parse(tokens[i + 1]);
+                                }
+                                break;
+                            case "depth":
+                                if (hasValue)
+                                {
+                                    depth = int.Parse(tokens[i + 1]);
+                                }
+                                break;
+                            case "infinite":
+                                infinite = true;
+                                break;
+                        }
                     }
 
-                    (FispurEngine.API.Move move, int eval) result = fispur.Think(board, new FispurEngine.API.Timer(time != -1 ? time : (board.IsWhiteToMove ? wtime : btime)));
-                    string bestMoveString = result.move.ToString();
-                    string bestMoveFormattedString = bestMoveString.Substring(7, bestMoveString.Length - 8);
+                    bool whiteToMove = board.IsWhiteToMove;
+                    int remaining = time != -1 ? -1 : (whiteToMove ? wtime : btime);
+                    int oppRemaining = whiteToMove ? btime : wtime;
+                    int increment = time != -1 ? 0 : (whiteToMove ? winc : binc);
 
-                    //Console.WriteLine("info score cp " + result.eval);
-                    Console.WriteLine("bestmove " + bestMoveFormattedString);
+                    FispurEngine.API.Timer timer = new FispurEngine.API.Timer(
+                        remaining, oppRemaining, remaining, increment, time, infinite || depth != -1);
+
+                    StartSearch(fispur, board, timer, depth);
+                    break;
+
+                case "stop":
+                    StopAndWait();
                     break;
             }
         }
+    }
+
+    private static readonly object outLock = new();
+    private static Thread? searchThread;
+    private static IChessBot? searchingBot;
+
+    private static bool Searching => searchThread is { IsAlive: true };
+
+    private static void Say(string s)
+    {
+        lock (outLock)
+        {
+            Console.WriteLine(s);
+        }
+    }
+
+    /// <summary>
+    /// Stops a running search and waits for its thread to finish. Snapshots
+    /// older than 0.10.3 have no Stop() - there the search is simply awaited.
+    /// </summary>
+    private static void StopAndWait()
+    {
+        if (!Searching)
+        {
+            searchThread = null;
+            searchingBot = null;
+            return;
+        }
+
+        InvokeVoid(searchingBot!, "Stop");
+        searchThread!.Join();
+        searchThread = null;
+        searchingBot = null;
+    }
+
+    private static void StartSearch(IChessBot bot, FispurEngine.API.Board board, FispurEngine.API.Timer timer, int depth)
+    {
+        StopAndWait();
+        InvokeVoid(bot, "PrepareSearch");
+
+        searchingBot = bot;
+        searchThread = new Thread(() =>
+        {
+            try
+            {
+                (FispurEngine.API.Move move, int eval) result = bot.Think(board, timer, depth);
+                Say("bestmove " + Uci(result.move));
+            }
+            catch (Exception e)
+            {
+                Say("info string search crashed: " + e);
+                Say("bestmove 0000");
+            }
+        }, 32 * 1024 * 1024)
+        { IsBackground = true };
+
+        searchThread.Start();
+    }
+
+    private static string Uci(FispurEngine.API.Move move)
+    {
+        string bestMoveString = move.ToString();
+        return bestMoveString.Substring(7, bestMoveString.Length - 8);
+    }
+
+    /// <summary>
+    /// Calls a parameterless void method if the snapshot has one - older
+    /// versions expose neither Stop() nor PrepareSearch().
+    /// </summary>
+    private static void InvokeVoid(IChessBot bot, string methodName)
+    {
+        MethodInfo? method = bot.GetType().GetMethod(methodName, Type.EmptyTypes);
+        method?.Invoke(bot, []);
     }
 
     /// <summary>

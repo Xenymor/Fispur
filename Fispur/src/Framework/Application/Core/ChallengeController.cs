@@ -209,7 +209,7 @@ namespace FispurEngine.Application
             return type switch
             {
                 PlayerType.Fispur_Exp => new ChessPlayer(new Fispur(), type, GameDurationMilliseconds),
-                PlayerType.Fispur => new ChessPlayer(new FispurEngine.Fispur0_10_2.Fispur0_10_2(), type, GameDurationMilliseconds),
+                PlayerType.Fispur => new ChessPlayer(new FispurEngine.Fispur0_10_3.Fispur0_10_3(), type, GameDurationMilliseconds),
                 _ => new ChessPlayer(new HumanPlayer(boardUI), type)
             };
         }
