@@ -10,7 +10,7 @@ namespace FispurEngine
     public static class NNUE
     {
         const int INPUT = 768;
-        const int HL = 128;              
+        const int HL = 512;              
         const int QA = 255;
         const int QB = 64;
         const int QAB = QA * QB;          
@@ -30,7 +30,7 @@ namespace FispurEngine
 
         static NNUE()
         {
-            Stream? s = Assembly.GetExecutingAssembly().GetManifestResourceStream("net0.3.0.bin");
+            Stream? s = Assembly.GetExecutingAssembly().GetManifestResourceStream("net0.12.0.bin");
 
             using var r = new BinaryReader(s);
             for (int i = 0; i < l0w.Length; i++) l0w[i] = r.ReadInt16();
