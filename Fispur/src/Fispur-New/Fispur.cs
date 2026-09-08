@@ -14,7 +14,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.12.0";
+            return "Fispur 0.13.0";
         }
 
         private static string ScoreToUCI(int score)
@@ -103,8 +103,11 @@ namespace FispurEngine
         public void NewGame()
         {
             Array.Clear(transpositionTable, 0, transpositionTable.Length);
+            eval = 0;
         }
 
+
+        int eval = 0;
         public (Move move, int eval) Think(Board board, Timer timer, int maxDepth)
         {
             this.timer = timer;
@@ -126,16 +129,52 @@ namespace FispurEngine
                 hardLimit = long.MaxValue;
             }
 
-            int eval = 0;
-
             NNUE.UpdateAccumulators(board);
 
+            if (moves.Length == 1 && !timer.isInfinite)
+            {
+                return (bestMove, NNUE.Evaluate(board));
+            }
+
             int currMaxDepth = maxDepth < 0 ? MAX_DEPTH : Math.Min(MAX_DEPTH, maxDepth);
+            int dl, dh;
             for (int depth = 1; depth <= currMaxDepth; depth++)
             {
-                int score = AlphaBeta(board, 0, depth, -INFINITY, INFINITY);
+                dl = -50; dh = 50;
+                int score;
+                bool failed = false;
 
-                if (stopSearch)
+                if (depth >= 5)
+                {
+                    while (true)
+                    {
+                        int alpha = dl <= -500 ? -int.MaxValue : eval + dl, beta = dh >= 500 ? int.MaxValue : eval + dh;
+                        score = AlphaBeta(board, 0, depth, alpha, beta);
+
+                        if (score <= alpha)
+                        {
+                            dl *= 2;
+                        }
+                        else if (score >= beta)
+                        {
+                            dh *= 2;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                        if (timer.MillisecondsElapsedThisTurn >= softLimit || stopSearch)
+                        {
+                            failed = true;
+                            break;
+                        }
+                    }
+                } else
+                {
+                    score = AlphaBeta(board, 0, depth, -int.MaxValue, int.MaxValue);
+                }
+
+                if (stopSearch || failed)
                     break;
 
                 eval = score;
@@ -150,7 +189,10 @@ namespace FispurEngine
                     hardLimit = long.MaxValue;
                 }
 
-                if (timer.isInfinite && stopSearch || !timer.isInfinite && ((timer.moveTime == -1 && timer.MillisecondsElapsedThisTurn >= softLimit / 2) || (timer.moveTime != -1 && timer.MillisecondsElapsedThisTurn >= timer.moveTime)))
+                if (timer.isInfinite && stopSearch 
+                    || !timer.isInfinite && ((timer.moveTime == -1 && timer.MillisecondsElapsedThisTurn >= softLimit / 2) 
+                    || (timer.moveTime != -1 && timer.MillisecondsElapsedThisTurn >= timer.moveTime))
+                    || Math.Abs(eval) >= MATE_BOUND && !timer.isInfinite)
                     break;
             }
 
