@@ -1,10 +1,14 @@
-﻿using FispurEngine.API;
-using System;
-using System.Runtime.CompilerServices;
+﻿
 
-namespace FispurEngine
+namespace FispurEngine.Fispur0_13_1
 {
-    public class Fispur : IChessBot
+
+    using FispurEngine;
+    using FispurEngine.API;
+    using System;
+    using System.Runtime.CompilerServices;
+
+    public class Fispur0_13_1 : IChessBot
     {
 
         public string GetAuthor()
@@ -63,7 +67,7 @@ namespace FispurEngine
         long hardLimit;
         Move rootBestMove;
 
-        public Fispur()
+        public Fispur0_13_1()
         {
             SetHashSize(DEFAULT_HASH_MB);
         }
