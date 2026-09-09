@@ -19,7 +19,6 @@ internal class Program
             }
         }
 
-        IChessBot fispur = new FispurEngine.Fispur();
         Type botType = fispur.GetType();
         int hashMb = FispurEngine.Fispur.DEFAULT_HASH_MB;
         FispurEngine.Chess.Board tempBoard = new FispurEngine.Chess.Board();
@@ -59,21 +58,14 @@ internal class Program
                             && int.TryParse(optionValue, out int mb))
                         {
                             hashMb = Math.Clamp(mb, 1, FispurEngine.Fispur.MAX_HASH_MB);
-                            (fispur as FispurEngine.Fispur)?.SetHashSize(hashMb);
+                            fispur.SetHashSize(hashMb);
                         }
                     }
                     break;
 
                 case "ucinewgame":
                     StopAndWait();
-                    if (fispur is FispurEngine.Fispur currentBot)
-                    {
-                        currentBot.NewGame();
-                    }
-                    else
-                    {
-                        fispur = (IChessBot)botType.GetConstructor([]).Invoke([]);
-                    }
+                    fispur.NewGame();
                     tempBoard = new FispurEngine.Chess.Board();
                     tempBoard.LoadStartPosition();
                     board = new Board(tempBoard);
@@ -208,7 +200,7 @@ internal class Program
     }
 
     static readonly object outLock = new();
-    static readonly FispurEngine.Fispur bot = new();
+    static FispurEngine.Fispur fispur = new FispurEngine.Fispur();
     static Thread? searchThread;
 
     static void Say(string s)
@@ -230,21 +222,21 @@ internal class Program
     static void StopAndWait()
     {
         if (!Searching) return;
-        bot.Stop();
+        fispur.Stop();
         searchThread!.Join();
         searchThread = null;
     }
 
     static void StartSearch(Board board, FispurEngine.API.Timer timer, int depth)
     {
-        StopAndWait();         
-        bot.PrepareSearch();
+        StopAndWait();
+        fispur.PrepareSearch();
 
         searchThread = new Thread(() =>
         {
             try
             {
-                var result = bot.Think(board, timer, depth);
+                var result = fispur.Think(board, timer, depth);
                 Say("bestmove " + Uci(result.move));
             }
             catch (Exception e)
