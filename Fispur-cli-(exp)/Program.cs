@@ -112,7 +112,7 @@ internal class Program
                     {
                         for (int i = moveStart + 1; i < tokens.Length; i++)
                         {
-                            board.MakeMove(new FispurEngine.API.Move(tokens[i], board));
+                            board.MakeMove(new Move(tokens[i], board));
                         }
                     }
                     break;
