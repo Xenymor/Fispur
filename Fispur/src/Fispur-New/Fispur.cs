@@ -14,7 +14,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.13.1";
+            return "Fispur 0.13.2";
         }
 
         private static string ScoreToUCI(int score)
@@ -114,7 +114,10 @@ namespace FispurEngine
             stopSearch = false;
             nodes = 0;
 
-            Array.Fill(historyHeuristic, 0);
+            for (int i = 0; i < historyHeuristic.Length; i++)
+            {
+                historyHeuristic[i] /= 2;
+            }
 
             Move[] moves = board.GetLegalMoves();
             bestMove = moves.Length == 0 ? Move.NullMove : moves[0];
