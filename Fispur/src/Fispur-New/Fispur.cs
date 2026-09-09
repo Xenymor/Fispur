@@ -106,6 +106,14 @@ namespace FispurEngine
             eval = 0;
         }
 
+        public long Nodes => nodes;
+
+        public void ResetState()
+        {
+            NewGame();
+            Array.Clear(historyHeuristic, 0, historyHeuristic.Length);
+        }
+
 
         int eval = 0;
         public (Move move, int eval) Think(Board board, Timer timer, int maxDepth)

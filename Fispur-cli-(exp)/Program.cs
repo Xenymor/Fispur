@@ -5,6 +5,20 @@ internal class Program
 {
     private static void Main(string[] args)
     {
+        if (args.Length > 0)
+        {
+            string[] argTokens = string.Join(' ', args).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            int benchIdx = Array.FindIndex(argTokens, t => t.Equals("bench", StringComparison.OrdinalIgnoreCase));
+
+            if (benchIdx != -1)
+            {
+                Bench.Run(benchIdx + 1 < argTokens.Length && int.TryParse(argTokens[benchIdx + 1], out int argDepth)
+                    ? argDepth
+                    : Bench.DEFAULT_DEPTH);
+                return;
+            }
+        }
+
         IChessBot fispur = new FispurEngine.Fispur();
         Type botType = fispur.GetType();
         int hashMb = FispurEngine.Fispur.DEFAULT_HASH_MB;
@@ -62,11 +76,18 @@ internal class Program
                     }
                     tempBoard = new FispurEngine.Chess.Board();
                     tempBoard.LoadStartPosition();
-                    board = new FispurEngine.API.Board(tempBoard);
+                    board = new Board(tempBoard);
                     break;
 
                 case "isready":
                     Console.WriteLine("readyok");
+                    break;
+
+                case "bench":
+                    StopAndWait();
+                    Bench.Run(tokens.Length > 1 && int.TryParse(tokens[1], out int benchDepth)
+                        ? benchDepth
+                        : Bench.DEFAULT_DEPTH);
                     break;
 
                 case "quit":
