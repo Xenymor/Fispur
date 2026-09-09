@@ -6,6 +6,11 @@
     <RootNamespace>Fispur_cli_exp</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- OpenBench builds via `make EXE=<name>`, which needs the binary to carry that
+         exact name. A plain -p:AssemblyName= would also rename the referenced Fispur
+         project (global properties propagate), so the rename goes through OB_EXE,
+         which only this project reads. -->
+    <AssemblyName Condition="'$(OB_EXE)' != ''">$(OB_EXE)</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

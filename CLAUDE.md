@@ -95,6 +95,11 @@ reflection, so pre-0.7.0 snapshots (which have neither) still work.
 - GUI: run the `Fispur` project (Raylib window).
 - Engine for a UCI GUI/tester: build/run `Fispur-cli-(exp)` (current WIP) or
   `Fispur-cli` (archived snapshots, selectable via the `Version` option).
+- OpenBench: `make EXE=<name>` in the repo root publishes `Fispur-cli-(exp)` as a
+  single self-contained `<name>.exe` — that is the exact contract the OpenBench
+  worker expects. The `OB_EXE` property drives the rename and switches off the
+  GUI's asset copies, so nothing but the binary lands in the root. Server/worker
+  setup is documented in `Docs/OpenBench-Setup.md`.
 
 ## Conventions
 

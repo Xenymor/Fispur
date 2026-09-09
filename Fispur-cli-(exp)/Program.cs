@@ -41,6 +41,10 @@ internal class Program
                     Console.WriteLine("option name Hash type spin default "
                         + FispurEngine.Fispur.DEFAULT_HASH_MB
                         + " min 1 max " + FispurEngine.Fispur.MAX_HASH_MB);
+                    // Fispur searches on a single thread. The option only exists because
+                    // testers (fastchess via OpenBench) send "setoption name Threads value 1"
+                    // for every engine; setoption ignores anything it does not know.
+                    Console.WriteLine("option name Threads type spin default 1 min 1 max 1");
                     Console.WriteLine("uciok");
                     break;
 

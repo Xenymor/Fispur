@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <!-- OpenBench builds (OB_EXE set) only want the CLI's single file in the repo
+         root; as a library this project stops emitting its own host artifacts. -->
+    <OutputType Condition="'$(OB_EXE)' != ''">Library</OutputType>
     <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>FispurEngine</RootNamespace>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -35,7 +38,10 @@
     </Reference>
   </ItemGroup>
 
-  <ItemGroup>
+  <!-- The GUI copies bot sources and Raylib assets next to the binary. The OpenBench
+       build (OB_EXE set, see Fispur-cli-(exp)) publishes into the repo root and only
+       ships a single file, so it skips these copies. -->
+  <ItemGroup Condition="'$(OB_EXE)' == ''">
     <Compile Update="src\Fispur-New\Fispur.cs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
@@ -47,7 +53,7 @@
     </Compile>
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(OB_EXE)' == ''">
     <None Update="resources\Fens.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

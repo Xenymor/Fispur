@@ -401,3 +401,6 @@ FodyWeavers.xsd
 *.sln.iml
 /.github
 /Testing
+
+# OpenBench build output (make EXE=<name> publishes a single file into the repo root)
+/*.exe
