@@ -39,7 +39,7 @@ internal class Program
     private const int FALLBACK_DEFAULT_HASH_MB = 256;
     private const int FALLBACK_MAX_HASH_MB = 1024;
 
-    private const string DEFAULT_VERSION = "0.13.1";
+    private const string DEFAULT_VERSION = "0.13.2";
 
     private static readonly EngineVersion[] Versions =
     [
@@ -68,6 +68,7 @@ internal class Program
         new EngineVersion("0.12.0", typeof(FispurEngine.Fispur0_12_0.Fispur0_12_0)),
         new EngineVersion("0.13.0", typeof(FispurEngine.Fispur0_13_0.Fispur0_13_0)),
         new EngineVersion("0.13.1", typeof(FispurEngine.Fispur0_13_1.Fispur0_13_1)),
+        new EngineVersion("0.13.2", typeof(FispurEngine.Fispur0_13_2.Fispur0_13_2)),
     ];
 
     private static void Main(string[] args)
