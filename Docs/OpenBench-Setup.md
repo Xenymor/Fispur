@@ -16,6 +16,7 @@ die Partien mit fastchess. Der Server baut nie eine Engine.
 | [`Makefile`](../Makefile) | Der Build-Einstieg, den OpenBench aufruft: `make -j EXE=<name> CC=dotnet`. Publiziert `Fispur-cli-(exp)` self-contained als **eine** Datei mit dem Namen `<name>.exe`. |
 | [`Fispur-cli-(exp)/Bench.cs`](../Fispur-cli-(exp)/Bench.cs) | `bench`-Kommando, gibt `<nodes> nodes <nps> nps` aus — das Format, das OpenBench parst. |
 | [`Fispur-cli-(exp)/Program.cs`](../Fispur-cli-(exp)/Program.cs) | UCI-Schnittstelle inkl. `Hash`- und (Dummy-)`Threads`-Option, wie fastchess sie setzt. |
+| [`Scripts/setup-worker.ps1`](../Scripts/setup-worker.ps1) | Richtet einen Windows-Worker komplett ein (Abschnitt 7): Werkzeuge, Client, Zugangsdaten, Startverknüpfung. |
 
 Wichtige Randbedingungen, die daraus folgen:
 
@@ -269,9 +270,31 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 Mit `DEBUG = False` liefert Django keine statischen Dateien mehr aus — deshalb `STATIC_ROOT` setzen,
 `python3 manage.py collectstatic` laufen lassen und nginx darauf zeigen lassen.
 
+Liegt das Repo unter `/home/<user>/`, braucht nginx zusätzlich Leserechte: Ubuntu legt Home-Verzeichnisse
+mit `750` an, `www-data` kommt also nicht einmal hinein und liefert **403** auf jede `/static/`-Datei
+(404 hieße dagegen: `collectstatic` fehlt oder der `alias` ist falsch).
+
+```bash
+sudo apt install -y acl
+sudo setfacl -m u:www-data:--x /home/<user>
+sudo setfacl -R -m u:www-data:rX /home/<user>/OpenBench/staticfiles
+sudo setfacl -R -d -m u:www-data:rX /home/<user>/OpenBench/staticfiles
+```
+
+Die Default-ACL (`-d`) sorgt dafür, dass Dateien aus einem späteren `collectstatic` die Rechte erben.
+Alternative ohne ACLs: `STATIC_ROOT = '/var/www/openbench/static'` setzen und den `alias` dorthin zeigen
+lassen — außerhalb des Home-Verzeichnisses gibt es das Problem nicht.
+
 ### 6.3 nginx
 
-`/etc/nginx/sites-available/openbench`:
+```bash
+sudo apt install -y nginx
+```
+
+Erst dadurch entstehen `/etc/nginx/nginx.conf` und die Ordner `sites-available/` / `sites-enabled/`.
+Fehlt `nginx.conf`, ist nginx nicht installiert — dann scheitert weiter unten der Symlink.
+
+Als Datei anlegen (`sudo nano /etc/nginx/sites-available/openbench`), der Name ist frei wählbar:
 
 ```nginx
 server {
@@ -302,11 +325,28 @@ server {
 ```
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/openbench /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/openbench /etc/nginx/sites-enabled/openbench
+sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d deine-domain.de
 sudo ufw allow 80 && sudo ufw allow 443     # Port 8000 bleibt zu
 ```
+
+HTTPS mit Let's Encrypt (`python3-certbot-nginx` ist das Plugin hinter `--nginx`):
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d deine-domain.de
+```
+
+Certbot lässt sich von außen über Port 80 aufrufen (HTTP-01-Challenge), deshalb müssen **vorher** stimmen:
+DNS-A-Record auf die Server-IP (`dig +short deine-domain.de`), Port 80 offen — auch in der Firewall des
+Hosters — und `server_name` im Block gleich der Domain, sonst meldet certbot "no matching server block".
+Erneuerung prüfen: `sudo certbot renew --dry-run`.
+
+Die mitgelieferte `default`-Site ist `default_server` auf Port 80 und beantwortet alles, was nicht zum
+`server_name` passt — also auch Aufrufe über die nackte IP. Bleibt sie aktiv, siehst du beim Testen die
+nginx-Willkommensseite statt OpenBench. Willst du die IP dauerhaft erlauben, statt `default` zu entfernen:
+`server_name deine-domain.de <server-ip>;` — dann muss die IP auch in `ALLOWED_HOSTS`.
 
 Wenn du `use_x_accel_redirect: true` setzt, braucht `www-data` Leserechte auf `Media/`:
 
@@ -353,37 +393,70 @@ Manuell beenden: `pkill -TERM gunicorn` und das Ende der Prozesse abwarten — *
 
 ## 7. Windows-Worker einrichten
 
-Pro Rechner einmalig:
+Das übernimmt [`Scripts/setup-worker.ps1`](../Scripts/setup-worker.ps1) aus dem Fispur-Repo. PowerShell
+**als Administrator** öffnen — mit demselben Benutzerkonto, das den Worker später startet — und:
 
-1. **.NET SDK 8 (oder neuer)** installieren. Prüfen: `dotnet --version` muss in der Shell antworten,
-   in der später der Worker läuft — genau so ermittelt OpenBench die Compiler-Version.
-2. **make + g++** in den PATH. Der Worker verlangt beides, weil er sich fastchess selbst baut.
-   Bequemster Weg ist MSYS2:
-   ```
-   pacman -S make mingw-w64-x86_64-gcc
-   ```
-   Danach `C:\msys64\usr\bin` und `C:\msys64\mingw64\bin` in die PATH-Variable aufnehmen.
-3. **Python 3.8+** und die Client-Abhängigkeiten:
-   ```
-   pip install requests psutil py-cpuinfo
-   ```
-
-Worker starten (er lädt `worker.py` selbstständig aus deinem Fork nach):
-
-```
-python Client/client.py -U <user> -P <passwort> -S https://deine-domain.de -T 8 -N 1
+```powershell
+irm https://raw.githubusercontent.com/Xenymor/Fispur/main/Scripts/setup-worker.ps1 -OutFile setup-worker.ps1; .\setup-worker.ps1
 ```
 
-- `-T` = Threads insgesamt (i. d. R. physische Kerne), `-N` = Anzahl CPU-Sockets.
-- `--only Fispur` beschränkt den Worker auf deine Engine, `--fleet` für unbeaufsichtigte Rechner.
+Das Skript prüft jeden Schritt, bevor es ihn ausführt, und lässt sich deshalb gefahrlos wiederholen. Es
 
-Im Startlog muss stehen:
+- installiert per winget **.NET SDK 8**, **Python 3** und **MSYS2** und ruft `pacman` unbeaufsichtigt
+  für `make` und `mingw-w64-x86_64-gcc` auf,
+- legt unter `%LOCALAPPDATA%\FispurWorker` ein eigenes venv mit `requests`, `psutil`, `py-cpuinfo` an,
+- lädt `client.py` aus deinem OpenBench-Fork (mehr braucht der Client nicht — den Rest holt er sich
+  beim ersten Start selbst vom Server),
+- fragt Benutzername, Passwort, Server und Threads ab, verschlüsselt das Passwort per **DPAPI**
+  (gebunden an Konto **und** Rechner) und legt `start-worker.ps1` samt Desktop-Verknüpfung
+  „Fispur Worker" an.
+
+Nützliche Schalter:
+
+| Schalter | Wirkung |
+|---|---|
+| `-CheckOnly` | nur prüfen und berichten, nichts installieren oder schreiben |
+| `-SmokeTest` | Fispur einmal testweise bauen und benchen, bevor der Worker startet |
+| `-ConfigureOnly` | Installationen überspringen, nur Zugangsdaten/Startskript/Verknüpfung erneuern |
+| `-Server`, `-User` | Vorbelegung der Abfragen |
+| `-Force` | Installationsschritte auch bei bereits erkannten Werkzeugen wiederholen |
+| `-InstallRoot`, `-Msys2Root`, `-ClientSource` | abweichende Pfade bzw. Fork-URL |
+
+Gestartet wird der Worker über die Desktop-Verknüpfung. Im Startlog muss
 
 ```
 Fispur           | dotnet   (8.0.x)
 ```
 
-Steht dort `Missing`, findet der Worker `dotnet` nicht (PATH) oder der `compilers`-Eintrag passt nicht.
+stehen; kurz darauf erscheint der Rechner unter `https://deine-domain.de/machines/`. Steht dort
+`Missing`, findet der Worker `dotnet` nicht oder der `compilers`-Eintrag der Engine passt nicht.
+
+Zwei Entwurfsentscheidungen des Skripts, die man kennen sollte: MSYS2 landet **nicht** im globalen PATH
+(dessen `usr\bin\link.exe`, `find.exe` und `sort.exe` würden gleichnamige Windows- und MSVC-Werkzeuge
+verdecken), sondern nur im PATH des Worker-Prozesses. Und die Zugangsdaten gehen über die
+Umgebungsvariablen `OPENBENCH_*` an den Client statt über `-U`/`-P`, damit das Passwort nicht in der
+Prozessliste steht.
+
+### 7.1 Manuell, falls das Skript scheitert
+
+1. **.NET SDK 8 (oder neuer)** installieren. Prüfen: `dotnet --version` muss in der Shell antworten,
+   in der später der Worker läuft — genau so ermittelt OpenBench die Compiler-Version.
+2. **make + g++** bereitstellen, z. B. über MSYS2:
+   ```
+   pacman -S make mingw-w64-x86_64-gcc
+   ```
+   Danach `C:\msys64\usr\bin` und `C:\msys64\mingw64\bin` in den PATH der Worker-Shell aufnehmen.
+3. **Python 3.8+** und die Client-Abhängigkeiten:
+   ```
+   pip install requests psutil py-cpuinfo
+   ```
+4. `Client/client.py` aus deinem Fork in ein Arbeitsverzeichnis legen und starten:
+   ```
+   python client.py -U <user> -P <passwort> -S https://deine-domain.de -T 8 -N 1
+   ```
+
+`-T` = Threads insgesamt (i. d. R. physische Kerne), `-N` = Anzahl CPU-Sockets.
+`--only Fispur` beschränkt den Worker auf deine Engine, `--fleet` eignet sich für unbeaufsichtigte Rechner.
 
 ---
 
@@ -409,4 +482,7 @@ Steht dort `Missing`, findet der Worker `dotnet` nicht (PATH) oder der `compiler
 | Maschine bekommt keine Workloads | `cpuflags` (AVX2) fehlt auf der Maschine, oder `systems` passt nicht zum Worker-OS. |
 | Buch wird immer neu geladen / `Invalid sha` | SHA nicht über die LF-normalisierte EPD gebildet, oder ZIP enthält mehr als eine Datei. |
 | 400 / CSRF-Fehler nach HTTPS-Umzug | `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS` in `settings.py` nicht gesetzt. |
-| Seite ohne CSS nach `DEBUG = False` | `collectstatic` vergessen oder `location /static/` fehlt in nginx. |
+| Seite ohne CSS, `/static/*` liefert **404** | `collectstatic` vergessen oder `alias` in `location /static/` zeigt falsch. |
+| Seite ohne CSS, `/static/*` liefert **403** | `www-data` darf nicht ins Home-Verzeichnis — ACLs setzen (siehe 6.2). |
+| Endlosschleife `ERR_TOO_MANY_REDIRECTS` hinter Cloudflare | SSL-Modus „Flexible" plus HTTPS-Redirect am Origin. Nach `certbot` auf „Full (strict)" stellen. |
+| Cloudflare 521 / 525 | 521: Origin auf dem angesprochenen Port nicht erreichbar (Port-Rewrite per Origin Rule? SSL-Modus?). 525: Origin spricht dort kein TLS. |
