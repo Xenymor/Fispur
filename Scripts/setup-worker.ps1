@@ -17,6 +17,12 @@
 .PARAMETER User
     OpenBench-Benutzername (wird sonst abgefragt).
 
+.PARAMETER Password
+    OpenBench-Passwort im Klartext. Nur nutzen, wenn die interaktive Eingabe Ärger macht
+    (eingefügte Passwörter kommen dort je nach Konsole abgeschnitten an). Landet in der
+    PowerShell-History - danach mit Clear-History bzw. Löschen von
+    (Get-PSReadlineOption).HistorySavePath aufräumen.
+
 .PARAMETER InstallRoot
     Zielverzeichnis. Vorgabe: %LOCALAPPDATA%\FispurWorker
 
@@ -49,6 +55,7 @@
 param(
     [string] $Server       = 'https://test.xenymor.com',
     [string] $User         = '',
+    [string] $Password     = '',
     [string] $InstallRoot  = (Join-Path $env:LOCALAPPDATA 'FispurWorker'),
     [string] $ClientSource = 'https://raw.githubusercontent.com/Xenymor/OpenBench/master/Client/client.py',
     [string] $Msys2Root    = 'C:\msys64',
@@ -354,7 +361,31 @@ function Read-WorkerConfig {
     $url = Read-Host "Server-URL [$defaultServer]"
     if (-not $url) { $url = $defaultServer }
 
-    $secret = Read-Host 'OpenBench-Passwort' -AsSecureString
+    # Read-Host -AsSecureString liest zeichenweise von der Tastatur. Eingefügte Passwörter
+    # kommen je nach Konsolenhost gar nicht oder abgeschnitten an (ein mitkopierter
+    # Zeilenumbruch beendet die Eingabe). -Password umgeht das.
+    if ($Password) {
+        $secret = ConvertTo-SecureString $Password -AsPlainText -Force
+        Write-Info "Passwort aus -Password übernommen ($($Password.Length) Zeichen)"
+    } else {
+        Write-Info 'Strg+V fügt hier NICHTS ein (die Konsole liest rohe Tasten).'
+        Write-Info 'Zum Einfügen: Rechtsklick, im Windows Terminal Strg+Umschalt+V - oder tippen.'
+
+        $secret = $null
+        foreach ($attempt in 1..3) {
+            $candidate = Read-Host 'OpenBench-Passwort' -AsSecureString
+            $check = (New-Object System.Management.Automation.PSCredential('x', $candidate)).GetNetworkCredential().Password
+
+            if ($check.Length -ge 4) {
+                Write-Info "Passwort erfasst ($($check.Length) Zeichen) - stimmt die Länge?"
+                $secret = $candidate
+                break
+            }
+            Write-Warn "Nur $($check.Length) Zeichen erfasst - vermutlich ist das Einfügen fehlgeschlagen."
+        }
+
+        if (-not $secret) { throw 'Passwort dreimal zu kurz erfasst. Alternativ mit -Password übergeben.' }
+    }
     if ($secret.Length -eq 0) { throw 'Ohne Passwort geht es nicht.' }
 
     $threadDefault = if ($existing -and $existing.threads) { $existing.threads } else { $cores }
