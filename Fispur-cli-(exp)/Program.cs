@@ -246,13 +246,13 @@ internal class Program
 
     private static readonly SpsaOption[] SpsaOptions =
     {
-        new("LmrMinDepth",    1,    16, () => FispurEngine.Fispur.LmrMinDepth,    v => FispurEngine.Fispur.LmrMinDepth = v),
-        new("LmrMinMoves",    1,    16, () => FispurEngine.Fispur.LmrMinMoves,    v => FispurEngine.Fispur.LmrMinMoves = v),
-        new("LmrBase",        0,   400, () => FispurEngine.Fispur.LmrBase,        v => FispurEngine.Fispur.LmrBase = v),
-        new("LmrDivisor",    50,  1000, () => FispurEngine.Fispur.LmrDivisor,     v => FispurEngine.Fispur.LmrDivisor = v),
-        new("RfpMaxDepth",    1,    16, () => FispurEngine.Fispur.RfpMaxDepth,    v => FispurEngine.Fispur.RfpMaxDepth = v),
-        new("RfpMargin",     10,   500, () => FispurEngine.Fispur.RfpMargin,      v => FispurEngine.Fispur.RfpMargin = v),
-        new("HistoryDivisor", 512, 65536, () => FispurEngine.Fispur.HistoryDivisor, v => FispurEngine.Fispur.HistoryDivisor = v),
+        new("LmrMinDepth",      1,      16,     () => FispurEngine.Fispur.LmrMinDepth,    v => FispurEngine.Fispur.LmrMinDepth = v),
+        new("LmrMinMoves",      1,      16,     () => FispurEngine.Fispur.LmrMinMoves,    v => FispurEngine.Fispur.LmrMinMoves = v),
+        new("LmrBase",          0,      400,    () => FispurEngine.Fispur.LmrBase,        v => FispurEngine.Fispur.LmrBase = v),
+        new("LmrDivisor",       50,     1000,   () => FispurEngine.Fispur.LmrDivisor,     v => FispurEngine.Fispur.LmrDivisor = v),
+        new("RfpMaxDepth",      1,      16,     () => FispurEngine.Fispur.RfpMaxDepth,    v => FispurEngine.Fispur.RfpMaxDepth = v),
+        new("RfpMargin",        10,     500,    () => FispurEngine.Fispur.RfpMargin,      v => FispurEngine.Fispur.RfpMargin = v),
+        new("HistoryDivisor",   512,    65536,  () => FispurEngine.Fispur.HistoryDivisor, v => FispurEngine.Fispur.HistoryDivisor = v),
     };
 
     static readonly object outLock = new();
