@@ -93,6 +93,31 @@ python3 manage.py shell
 
 `enabled` erlaubt überhaupt sinnvolle Interaktion, `approver` gibt Testfreigabe und Netzverwaltung.
 
+> **Achtung: `createsuperuser` legt kein `Profile` an.** Nur die Registrierungs-View tut das. Ein so
+> erstellter Account kommt zwar in die Admin-Seiten und kann sich einloggen, aber „Create Test" endet
+> in einem **500** (`Profile.DoesNotExist`) und der Worker bekommt **„Bad Credentials"** — denn
+> `authenticate(..., requireEnabled=True)` sucht das Profil und meldet jeden Fehler dabei als
+> ungültige Zugangsdaten. Nachrüsten lässt sich das für alle Konten auf einmal:
+>
+> ```bash
+> python3 manage.py shell -c "from django.contrib.auth.models import User; from OpenBench.models import Profile; [Profile.objects.get_or_create(user=u, defaults={'enabled': True, 'approver': True}) for u in User.objects.all()]; print(list(Profile.objects.values_list('user__username','enabled','approver')))"
+> ```
+
+Wenn `DEBUG = False` gesetzt ist, siehst du solche 500er nirgends: Djangos Standard-Logging schickt
+`django.request`-Fehler nur an `mail_admins`. Ein Console-Handler in `settings.py` schafft Abhilfe und
+schreibt Tracebacks nach `journalctl -u openbench`:
+
+```python
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': { 'console': { 'class': 'logging.StreamHandler' } },
+    'loggers': {
+        'django.request': { 'handlers': ['console'], 'level': 'ERROR', 'propagate': False },
+    },
+}
+```
+
 ---
 
 ## 4. Instanz-Konfiguration (`Config/config.json`)
@@ -485,4 +510,5 @@ Prozessliste steht.
 | Seite ohne CSS, `/static/*` liefert **404** | `collectstatic` vergessen oder `alias` in `location /static/` zeigt falsch. |
 | Seite ohne CSS, `/static/*` liefert **403** | `www-data` darf nicht ins Home-Verzeichnis — ACLs setzen (siehe 6.2). |
 | Endlosschleife `ERR_TOO_MANY_REDIRECTS` hinter Cloudflare | SSL-Modus „Flexible" plus HTTPS-Redirect am Origin. Nach `certbot` auf „Full (strict)" stellen. |
+| 500 bei „Create Test", Worker meldet „Bad Credentials" | Dem Account fehlt das `Profile` (typisch nach `createsuperuser`) — siehe Abschnitt 3. |
 | Cloudflare 521 / 525 | 521: Origin auf dem angesprochenen Port nicht erreichbar (Port-Rewrite per Origin Rule? SSL-Modus?). 525: Origin spricht dort kein TLS. |
