@@ -45,6 +45,11 @@ internal class Program
                     // testers (fastchess via OpenBench) send "setoption name Threads value 1"
                     // for every engine; setoption ignores anything it does not know.
                     Console.WriteLine("option name Threads type spin default 1 min 1 max 1");
+                    foreach (SpsaOption option in SpsaOptions)
+                    {
+                        Console.WriteLine("option name " + option.Name + " type spin default "
+                            + option.Get() + " min " + option.Min + " max " + option.Max);
+                    }
                     Console.WriteLine("uciok");
                     break;
 
@@ -63,6 +68,17 @@ internal class Program
                         {
                             hashMb = Math.Clamp(mb, 1, FispurEngine.Fispur.MAX_HASH_MB);
                             fispur.SetHashSize(hashMb);
+                        }
+                        else if (int.TryParse(optionValue, out int tuned))
+                        {
+                            foreach (SpsaOption option in SpsaOptions)
+                            {
+                                if (optionName.Equals(option.Name, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    option.Set(Math.Clamp(tuned, option.Min, option.Max));
+                                    break;
+                                }
+                            }
                         }
                     }
                     break;
@@ -202,6 +218,42 @@ internal class Program
             }
         }
     }
+
+    /// <summary>
+    /// A search parameter that OpenBench may tune via SPSA. The tuner sends plain
+    /// "setoption name <Name> value <n>" commands, so every entry here is an integer;
+    /// real-valued parameters are carried scaled by 100 (see Fispur.LmrBase).
+    /// Adding a parameter means adding one line - the uci and setoption handlers
+    /// walk this table.
+    /// </summary>
+    private sealed class SpsaOption
+    {
+        public string Name { get; }
+        public int Min { get; }
+        public int Max { get; }
+        public Func<int> Get { get; }
+        public Action<int> Set { get; }
+
+        public SpsaOption(string name, int min, int max, Func<int> get, Action<int> set)
+        {
+            Name = name;
+            Min = min;
+            Max = max;
+            Get = get;
+            Set = set;
+        }
+    }
+
+    private static readonly SpsaOption[] SpsaOptions =
+    {
+        new("LmrMinDepth",    1,    16, () => FispurEngine.Fispur.LmrMinDepth,    v => FispurEngine.Fispur.LmrMinDepth = v),
+        new("LmrMinMoves",    1,    16, () => FispurEngine.Fispur.LmrMinMoves,    v => FispurEngine.Fispur.LmrMinMoves = v),
+        new("LmrBase",        0,   400, () => FispurEngine.Fispur.LmrBase,        v => FispurEngine.Fispur.LmrBase = v),
+        new("LmrDivisor",    50,  1000, () => FispurEngine.Fispur.LmrDivisor,     v => FispurEngine.Fispur.LmrDivisor = v),
+        new("RfpMaxDepth",    1,    16, () => FispurEngine.Fispur.RfpMaxDepth,    v => FispurEngine.Fispur.RfpMaxDepth = v),
+        new("RfpMargin",     10,   500, () => FispurEngine.Fispur.RfpMargin,      v => FispurEngine.Fispur.RfpMargin = v),
+        new("HistoryDivisor", 512, 65536, () => FispurEngine.Fispur.HistoryDivisor, v => FispurEngine.Fispur.HistoryDivisor = v),
+    };
 
     static readonly object outLock = new();
     static FispurEngine.Fispur fispur = new FispurEngine.Fispur();

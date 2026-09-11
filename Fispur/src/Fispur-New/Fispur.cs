@@ -44,6 +44,37 @@ namespace FispurEngine
 
         public const int MAX_DEPTH = 256;
 
+        // Search parameters exposed as UCI options so OpenBench can tune them with SPSA.
+        // The defaults are the values that were hardcoded before; changing one changes the
+        // bench, so a tuned value has to be committed together with its new bench.
+        //
+        // LmrBase and LmrDivisor carry a real number scaled by 100 (UCI spin options are
+        // integers). They are divided by 100.0 at the use site rather than multiplied by
+        // 0.01, because 99 / 100.0 is the same double as the literal 0.99 while
+        // 0.01 * 99 is not - and a single differing bit there would move a reduction and
+        // change the bench.
+
+        /// <summary>Minimum remaining depth before late moves are reduced.</summary>
+        public static int LmrMinDepth = 3;
+
+        /// <summary>Index of the first move that may be reduced (0-based, so 3 = fourth move).</summary>
+        public static int LmrMinMoves = 3;
+
+        /// <summary>Constant term of the reduction formula, scaled by 100.</summary>
+        public static int LmrBase = 99;
+
+        /// <summary>Divisor of log(depth) * log(moveIndex), scaled by 100.</summary>
+        public static int LmrDivisor = 314;
+
+        /// <summary>Highest depth at which reverse futility pruning is attempted.</summary>
+        public static int RfpMaxDepth = 8;
+
+        /// <summary>Margin per remaining ply for reverse futility pruning.</summary>
+        public static int RfpMargin = 100;
+
+        /// <summary>Divisor of the history gravity term; larger means slower saturation.</summary>
+        public static int HistoryDivisor = 16384;
+
         struct TTEntry
         {
             public uint key; //first 32 bit
@@ -253,9 +284,9 @@ namespace FispurEngine
 
             
 
-            int margin = 100 * depthLeft;
+            int margin = RfpMargin * depthLeft;
 
-            if (!qSearch && !inCheck && !pvNode && depthLeft <= 8 && Math.Abs(beta) < MATE_BOUND && eval >= beta + margin)
+            if (!qSearch && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + margin)
             {
                 return eval;
             }
@@ -340,9 +371,9 @@ namespace FispurEngine
                 else
                 {
                     int reduction = 0;
-                    if (depthLeft >= 3 && i >= 3 && !inCheck && !move.IsCapture && !move.IsPromotion)
+                    if (depthLeft >= LmrMinDepth && i >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = Math.Clamp((int)(0.99 + Math.Log(depthLeft) * Math.Log(i) / 3.14), 0, depthLeft - 2);
+                        reduction = Math.Clamp((int)(LmrBase / 100.0 + Math.Log(depthLeft) * Math.Log(i) / (LmrDivisor / 100.0)), 0, depthLeft - 2);
                     }
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha);
                     if (reduction > 0 && score > alpha)
@@ -369,13 +400,13 @@ namespace FispurEngine
                         int bonus = Math.Min(1536, 300 * depthLeft - 250);
 
                         ref int h = ref historyHeuristic[getHistoryHeuristicInd(board, move)];
-                        h += bonus - h * bonus / 16384;
+                        h += bonus - h * bonus / HistoryDivisor;
 
                         for (int j = 0; j < i; j++)
                         {
                             if (moves[j].IsCapture) continue;
                             ref int p = ref historyHeuristic[getHistoryHeuristicInd(board, moves[j])];
-                            p += -bonus - p * bonus / 16384;
+                            p += -bonus - p * bonus / HistoryDivisor;
                         }
                     }
 
