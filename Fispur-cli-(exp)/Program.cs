@@ -1,5 +1,6 @@
 ﻿
 using FispurEngine.API;
+using FispurEngine;
 
 internal class Program
 {
@@ -20,7 +21,7 @@ internal class Program
         }
 
         Type botType = fispur.GetType();
-        int hashMb = FispurEngine.Fispur.DEFAULT_HASH_MB;
+        int hashMb = Fispur.DEFAULT_HASH_MB;
         FispurEngine.Chess.Board tempBoard = new FispurEngine.Chess.Board();
         tempBoard.LoadStartPosition();
         Board board = new Board(tempBoard);
@@ -39,11 +40,8 @@ internal class Program
                     Console.WriteLine("id name " + fispur.GetName());
                     Console.WriteLine("id author " + fispur.GetAuthor());
                     Console.WriteLine("option name Hash type spin default "
-                        + FispurEngine.Fispur.DEFAULT_HASH_MB
-                        + " min 1 max " + FispurEngine.Fispur.MAX_HASH_MB);
-                    // Fispur searches on a single thread. The option only exists because
-                    // testers (fastchess via OpenBench) send "setoption name Threads value 1"
-                    // for every engine; setoption ignores anything it does not know.
+                        + Fispur.DEFAULT_HASH_MB
+                        + " min 1 max " + Fispur.MAX_HASH_MB);
                     Console.WriteLine("option name Threads type spin default 1 min 1 max 1");
                     foreach (SpsaOption option in SpsaOptions)
                     {
@@ -66,7 +64,7 @@ internal class Program
                         if (optionName.Equals("Hash", StringComparison.OrdinalIgnoreCase)
                             && int.TryParse(optionValue, out int mb))
                         {
-                            hashMb = Math.Clamp(mb, 1, FispurEngine.Fispur.MAX_HASH_MB);
+                            hashMb = Math.Clamp(mb, 1, Fispur.MAX_HASH_MB);
                             fispur.SetHashSize(hashMb);
                         }
                         else if (int.TryParse(optionValue, out int tuned))
@@ -113,7 +111,7 @@ internal class Program
 
                     tempBoard = new FispurEngine.Chess.Board();
                     tempBoard.LoadStartPosition();
-                    board = new FispurEngine.API.Board(tempBoard);
+                    board = new Board(tempBoard);
 
                     if (tokens.Length >= 2 && tokens[1].Equals("startpos"))
                     {
@@ -121,13 +119,11 @@ internal class Program
                     }
                     else if (tokens.Length >= 3 && tokens[1].Equals("fen"))
                     {
-                        // FEN is the fields after "fen", up to "moves" (if present)
                         int fenEnd = moveStart == -1 ? tokens.Length : moveStart;
                         string fen = string.Join(" ", tokens, 2, fenEnd - 2);
                         board.board.LoadPosition(fen);
                     }
 
-                    // Apply the moves listed after "moves", if any
                     if (moveStart != -1)
                     {
                         for (int i = moveStart + 1; i < tokens.Length; i++)
@@ -219,13 +215,6 @@ internal class Program
         }
     }
 
-    /// <summary>
-    /// A search parameter that OpenBench may tune via SPSA. The tuner sends plain
-    /// "setoption name <Name> value <n>" commands, so every entry here is an integer;
-    /// real-valued parameters are carried scaled by 100 (see Fispur.LmrBase).
-    /// Adding a parameter means adding one line - the uci and setoption handlers
-    /// walk this table.
-    /// </summary>
     private sealed class SpsaOption
     {
         public string Name { get; }
@@ -246,13 +235,14 @@ internal class Program
 
     private static readonly SpsaOption[] SpsaOptions =
     {
-        new("LmrMinDepth",      1,      16,     () => FispurEngine.Fispur.LmrMinDepth,    v => FispurEngine.Fispur.LmrMinDepth = v),
-        new("LmrMinMoves",      1,      16,     () => FispurEngine.Fispur.LmrMinMoves,    v => FispurEngine.Fispur.LmrMinMoves = v),
-        new("LmrBase",          0,      400,    () => FispurEngine.Fispur.LmrBase,        v => FispurEngine.Fispur.LmrBase = v),
-        new("LmrDivisor",       50,     1000,   () => FispurEngine.Fispur.LmrDivisor,     v => FispurEngine.Fispur.LmrDivisor = v),
-        new("RfpMaxDepth",      1,      16,     () => FispurEngine.Fispur.RfpMaxDepth,    v => FispurEngine.Fispur.RfpMaxDepth = v),
-        new("RfpMargin",        10,     500,    () => FispurEngine.Fispur.RfpMargin,      v => FispurEngine.Fispur.RfpMargin = v),
-        new("HistoryDivisor",   512,    65536,  () => FispurEngine.Fispur.HistoryDivisor, v => FispurEngine.Fispur.HistoryDivisor = v),
+        new("LmrMinDepth",      1,      16,     () => Fispur.LmrMinDepth,       v => Fispur.LmrMinDepth = v),
+        new("LmrMinMoves",      1,      16,     () => Fispur.LmrMinMoves,       v => Fispur.LmrMinMoves = v),
+        new("LmrBase",          0,      400,    () => Fispur.LmrBase,           v => Fispur.LmrBase = v),
+        new("LmrDivisor",       50,     1000,   () => Fispur.LmrDivisor,        v => Fispur.LmrDivisor = v),
+        new("RfpMaxDepth",      1,      16,     () => Fispur.RfpMaxDepth,       v => Fispur.RfpMaxDepth = v),
+        new("RfpMargin",        10,     500,    () => Fispur.RfpMargin,         v => Fispur.RfpMargin = v),
+        new("HistoryDivisor",   512,    65536,  () => Fispur.HistoryDivisor,    v => Fispur.HistoryDivisor = v),
+        new("MaxHistBonus",     10,     16000,  () => Fispur.MaxHistBonus,      v => Fispur.MaxHistBonus = v),
     };
 
     static readonly object outLock = new();

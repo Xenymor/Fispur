@@ -44,36 +44,21 @@ namespace FispurEngine
 
         public const int MAX_DEPTH = 256;
 
-        // Search parameters exposed as UCI options so OpenBench can tune them with SPSA.
-        // The defaults are the values that were hardcoded before; changing one changes the
-        // bench, so a tuned value has to be committed together with its new bench.
-        //
-        // LmrBase and LmrDivisor carry a real number scaled by 100 (UCI spin options are
-        // integers). They are divided by 100.0 at the use site rather than multiplied by
-        // 0.01, because 99 / 100.0 is the same double as the literal 0.99 while
-        // 0.01 * 99 is not - and a single differing bit there would move a reduction and
-        // change the bench.
-
-        /// <summary>Minimum remaining depth before late moves are reduced.</summary>
         public static int LmrMinDepth = 3;
-
-        /// <summary>Index of the first move that may be reduced (0-based, so 3 = fourth move).</summary>
         public static int LmrMinMoves = 3;
-
-        /// <summary>Constant term of the reduction formula, scaled by 100.</summary>
         public static int LmrBase = 99;
-
-        /// <summary>Divisor of log(depth) * log(moveIndex), scaled by 100.</summary>
         public static int LmrDivisor = 314;
-
-        /// <summary>Highest depth at which reverse futility pruning is attempted.</summary>
         public static int RfpMaxDepth = 8;
-
-        /// <summary>Margin per remaining ply for reverse futility pruning.</summary>
         public static int RfpMargin = 100;
-
-        /// <summary>Divisor of the history gravity term; larger means slower saturation.</summary>
         public static int HistoryDivisor = 16384;
+        public static int MaxHistBonus = 1536;
+        public static int HistBonusMult = 300;
+        public static int HistBonusBase = -250;
+        public static int NMPMinDepth = 3;
+        public static int NMPReductionB = 3;
+        public static int NMPReductionDiv = 4;
+        public static int ASPWindowDelta = 50;
+        public static int ASPWindowReset = 500;
 
         struct TTEntry
         {
@@ -182,7 +167,7 @@ namespace FispurEngine
             int dl, dh;
             for (int depth = 1; depth <= currMaxDepth; depth++)
             {
-                dl = -50; dh = 50;
+                dl = -ASPWindowDelta; dh = ASPWindowDelta;
                 int score;
                 bool failed = false;
 
@@ -190,7 +175,7 @@ namespace FispurEngine
                 {
                     while (true)
                     {
-                        int alpha = dl <= -500 ? -int.MaxValue : eval + dl, beta = dh >= 500 ? int.MaxValue : eval + dh;
+                        int alpha = dl <= -ASPWindowReset ? -int.MaxValue : eval + dl, beta = dh >= ASPWindowReset ? int.MaxValue : eval + dh;
                         score = AlphaBeta(board, 0, depth, alpha, beta);
 
                         if (score <= alpha)
@@ -307,11 +292,11 @@ namespace FispurEngine
             }
 
 
-            if (eval >= beta && !pvNode && !inCheck && canNull && depthLeft >= 3 && beta < MATE_BOUND) {
+            if (eval >= beta && !pvNode && !inCheck && canNull && depthLeft >= NMPMinDepth && beta < MATE_BOUND) {
                 bool isPawnEndgame = board.IsWhiteToMove ? ((board.WhitePiecesBitboard ^ board.GetPieceBitboard(PieceType.Pawn, true) ^ board.GetPieceBitboard(PieceType.King, true)) == 0)
                                                          : ((board.BlackPiecesBitboard ^ board.GetPieceBitboard(PieceType.Pawn, false) ^ board.GetPieceBitboard(PieceType.King, false)) == 0);
                 if (!isPawnEndgame) {
-                    int reduction = 3 + depthLeft / 4;
+                    int reduction = NMPReductionB + depthLeft / NMPReductionDiv;
 
                     board.ForceSkipTurn();
                     int score = -AlphaBeta(board, ply + 1, depthLeft - reduction - 1, -beta, -beta + 1, canNull: false);
@@ -327,6 +312,7 @@ namespace FispurEngine
                     }
                 }
             }
+
             Move ttMove = hasEntry ? entry.move : Move.NullMove;
 
             moves = board.GetLegalMoves(qSearch && !inCheck);
@@ -397,7 +383,7 @@ namespace FispurEngine
 
                     if (!qSearch && !move.IsCapture)
                     {
-                        int bonus = Math.Min(1536, 300 * depthLeft - 250);
+                        int bonus = Math.Min(MaxHistBonus, HistBonusMult * depthLeft + HistBonusBase);
 
                         ref int h = ref historyHeuristic[getHistoryHeuristicInd(board, move)];
                         h += bonus - h * bonus / HistoryDivisor;
