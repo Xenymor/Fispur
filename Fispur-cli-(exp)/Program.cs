@@ -226,7 +226,7 @@ internal class Program
         public int Max { get; }
         public Func<int> Get { get; }
         public Action<int> Set { get; }
-        public bool isPoisoned { get; }
+        public bool IsPoisoned { get; }
 
         public SpsaOption(string name, int min, int max, Func<int> get, Action<int> set, bool isPoisoned = false)
         {
@@ -235,6 +235,7 @@ internal class Program
             Max = max;
             Get = get;
             Set = set;
+            IsPoisoned = isPoisoned;
         }
 
     }
@@ -262,8 +263,8 @@ internal class Program
     {
         foreach (SpsaOption option in SpsaOptions)
         {
-            double cEnd = option.isPoisoned ? 0.1 : (option.Max - option.Min) / 20.0;
-            double rEnd = option.isPoisoned ? 0.001 : 0.002;
+            double cEnd = option.IsPoisoned ? 0.1 : (option.Max - option.Min) / 20.0;
+            double rEnd = option.IsPoisoned ? 0.001 : 0.002;
             Console.WriteLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
                 "{0}, int, {1:0.0}, {2:0.0}, {3:0.0}, {4:0.0##}, {5:0.0##}",
                 option.Name, option.Get(), option.Min, option.Max, cEnd, rEnd));
