@@ -255,6 +255,7 @@ namespace FispurEngine
             ulong zobrist = board.ZobristKey;
             ref TTEntry entry = ref transpositionTable[zobrist & ttMask];
             bool hasEntry = entry.bound != BOUND_NONE && entry.key == (uint)(zobrist >> 32);
+            Move ttMove = hasEntry ? entry.move : Move.NullMove;
 
             if (hasEntry && ply > 0 && entry.depth >= depthLeft)
             {
@@ -311,7 +312,6 @@ namespace FispurEngine
                 }
             }
 
-            Move ttMove = hasEntry ? entry.move : Move.NullMove;
             
             Move bestMove = Move.NullMove;
             int bestScore = qSearch && !inCheck ? eval : -INFINITY;
