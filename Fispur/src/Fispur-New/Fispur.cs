@@ -14,7 +14,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.13.2";
+            return "Fispur 0.13.3";
         }
 
         private static string ScoreToUCI(int score)
@@ -365,7 +365,7 @@ namespace FispurEngine
                 scores[i] = scoreMove(board, ply, moves[i], ttMove);
             }
 
-            for (int i = hasEntry && !qSearch ? 1 : 0; i < moves.Length; i++)
+            for (int i = 0; i < moves.Length; i++)
             {
                 int best = i;
                 for (int j = i + 1; j < moves.Length; j++)
@@ -378,6 +378,11 @@ namespace FispurEngine
 
                 (moves[i], moves[best]) = (moves[best], moves[i]);
                 (scores[i], scores[best]) = (scores[best], scores[i]);
+
+                if (hasEntry && !qSearch && i == 0)
+                {
+                    continue;
+                }
 
                 Move move = moves[i];
                 board.MakeMove(move);
