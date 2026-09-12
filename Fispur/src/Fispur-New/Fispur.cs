@@ -267,8 +267,6 @@ namespace FispurEngine
                 }
             }
 
-            
-
             int margin = RfpMargin * depthLeft;
 
             if (!qSearch && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + margin)
@@ -314,6 +312,45 @@ namespace FispurEngine
             }
 
             Move ttMove = hasEntry ? entry.move : Move.NullMove;
+            
+            Move bestMove = Move.NullMove;
+            int bestScore = qSearch && !inCheck ? eval : -INFINITY;
+
+            if (!qSearch && hasEntry)
+            {
+                board.MakeMove(ttMove);
+                NNUE.makeMove(ttMove, !board.IsWhiteToMove);
+
+                int score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha);
+
+                NNUE.undoMove();
+                board.UndoMove(ttMove);
+
+                if (score >= beta)
+                {
+                    if (!ttMove.IsCapture)
+                    {
+                        int bonus = Math.Min(MaxHistBonus, HistBonusMult * depthLeft + HistBonusBase);
+
+                        ref int h = ref historyHeuristic[getHistoryHeuristicInd(board, ttMove)];
+                        h += bonus - h * bonus / HistoryDivisor;
+                    }
+
+                    StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, ttMove);
+
+                    return score;
+                }
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestMove = ttMove;
+                }
+                if (score > alpha)
+                {
+                    alpha = score;
+                }
+            }
 
             moves = board.GetLegalMoves(qSearch && !inCheck);
 
@@ -328,10 +365,7 @@ namespace FispurEngine
                 scores[i] = scoreMove(board, ply, moves[i], ttMove);
             }
 
-            Move bestMove = Move.NullMove;
-            int bestScore = qSearch && !inCheck ? eval : -INFINITY;
-
-            for (int i = 0; i < moves.Length; i++)
+            for (int i = hasEntry && !qSearch ? 1 : 0; i < moves.Length; i++)
             {
                 int best = i;
                 for (int j = i + 1; j < moves.Length; j++)
