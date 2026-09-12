@@ -347,9 +347,17 @@ function Read-WorkerConfig {
     if (-not $cores)   { $cores   = [Environment]::ProcessorCount }
     if (-not $sockets) { $sockets = 1 }
 
-    $configPath = Join-Path $Root 'config.json'
+    # Bewusst NICHT config.json: fastchess schreibt sein Autosave unter genau diesem Namen ins
+    # Arbeitsverzeichnis des Clients (= $Root) und würde die Worker-Konfiguration überschreiben.
+    $configPath = Join-Path $Root 'worker-config.json'
     $existing   = $null
-    if (Test-Path $configPath) { $existing = Get-Content $configPath -Raw | ConvertFrom-Json }
+    # Ältere Installationen: config.json als Vorlage nehmen, sofern sie noch die Worker-Felder
+    # trägt und nicht schon von fastchess überschrieben wurde.
+    foreach ($candidate in @($configPath, (Join-Path $Root 'config.json'))) {
+        if (-not (Test-Path $candidate)) { continue }
+        $parsed = Get-Content $candidate -Raw | ConvertFrom-Json
+        if ($parsed.username) { $existing = $parsed; break }
+    }
 
     $defaultUser   = if ($User)    { $User }    elseif ($existing) { $existing.username } else { '' }
     $defaultServer = if ($Server)  { $Server }  elseif ($existing) { $existing.server }   else { '' }
@@ -431,8 +439,11 @@ function Write-StartScript {
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 
-$config = Get-Content (Join-Path $root 'config.json') -Raw | ConvertFrom-Json
+$config = Get-Content (Join-Path $root 'worker-config.json') -Raw | ConvertFrom-Json
 $cred   = Import-Clixml (Join-Path $root 'credentials.xml')
+if (-not $config.msys2Root -or -not $config.server) {
+    throw 'worker-config.json ist unvollständig - bitte setup-worker.ps1 -ConfigureOnly erneut ausführen.'
+}
 
 # MSYS2 nur für diesen Prozess in den PATH. Global gesetzt würden usr\bin\link.exe,
 # find.exe und sort.exe die gleichnamigen Windows-Werkzeuge verdecken und andere

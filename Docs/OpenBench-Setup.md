@@ -433,8 +433,8 @@ Das Skript prüft jeden Schritt, bevor es ihn ausführt, und lässt sich deshalb
 - lädt `client.py` aus deinem OpenBench-Fork (mehr braucht der Client nicht — den Rest holt er sich
   beim ersten Start selbst vom Server),
 - fragt Benutzername, Passwort, Server und Threads ab, verschlüsselt das Passwort per **DPAPI**
-  (gebunden an Konto **und** Rechner) und legt `start-worker.ps1` samt Desktop-Verknüpfung
-  „Fispur Worker" an.
+  (gebunden an Konto **und** Rechner), speichert die übrigen Einstellungen in `worker-config.json`
+  und legt `start-worker.ps1` samt Desktop-Verknüpfung „Fispur Worker" an.
 
 Nützliche Schalter:
 
@@ -461,6 +461,12 @@ Zwei Entwurfsentscheidungen des Skripts, die man kennen sollte: MSYS2 landet **n
 verdecken), sondern nur im PATH des Worker-Prozesses. Und die Zugangsdaten gehen über die
 Umgebungsvariablen `OPENBENCH_*` an den Client statt über `-U`/`-P`, damit das Passwort nicht in der
 Prozessliste steht.
+
+Meldet `start-worker.ps1` beim Start `Join-Path : Das Argument kann nicht an den Parameter "Path"
+gebunden werden, da es NULL ist`, stammt die Installation noch von einer Skriptversion, die die
+Worker-Einstellungen als `config.json` ablegte — fastchess schreibt sein Autosave unter demselben
+Namen ins Arbeitsverzeichnis und hat sie überschrieben. Abhilfe: aktuelles Skript laden und
+`.\setup-worker.ps1 -ConfigureOnly` ausführen; danach liegen die Einstellungen in `worker-config.json`.
 
 ### 7.1 Manuell, falls das Skript scheitert
 
