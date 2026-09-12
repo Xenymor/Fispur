@@ -100,6 +100,10 @@ internal class Program
                         : Bench.DEFAULT_DEPTH);
                     break;
 
+                case "spsa":
+                    PrintSpsaInputs();
+                    break;
+
                 case "quit":
                     StopAndWait();
                     Environment.Exit(0);
@@ -222,8 +226,9 @@ internal class Program
         public int Max { get; }
         public Func<int> Get { get; }
         public Action<int> Set { get; }
+        public bool isPoisoned { get; }
 
-        public SpsaOption(string name, int min, int max, Func<int> get, Action<int> set)
+        public SpsaOption(string name, int min, int max, Func<int> get, Action<int> set, bool isPoisoned = false)
         {
             Name = name;
             Min = min;
@@ -231,22 +236,42 @@ internal class Program
             Get = get;
             Set = set;
         }
+
     }
 
     private static readonly SpsaOption[] SpsaOptions =
     {
-        new("LmrMinDepth",      1,      16,     () => Fispur.LmrMinDepth,       v => Fispur.LmrMinDepth = v),
-        new("LmrMinMoves",      1,      16,     () => Fispur.LmrMinMoves,       v => Fispur.LmrMinMoves = v),
+        new("LmrMinDepth",      1,      16,     () => Fispur.LmrMinDepth,       v => Fispur.LmrMinDepth = v,    true),
+        new("LmrMinMoves",      1,      16,     () => Fispur.LmrMinMoves,       v => Fispur.LmrMinMoves = v,    true),
         new("LmrBase",          0,      400,    () => Fispur.LmrBase,           v => Fispur.LmrBase = v),
         new("LmrDivisor",       50,     1000,   () => Fispur.LmrDivisor,        v => Fispur.LmrDivisor = v),
-        new("RfpMaxDepth",      1,      16,     () => Fispur.RfpMaxDepth,       v => Fispur.RfpMaxDepth = v),
+        new("RfpMaxDepth",      1,      16,     () => Fispur.RfpMaxDepth,       v => Fispur.RfpMaxDepth = v,    true),
         new("RfpMargin",        10,     500,    () => Fispur.RfpMargin,         v => Fispur.RfpMargin = v),
         new("HistoryDivisor",   512,    65536,  () => Fispur.HistoryDivisor,    v => Fispur.HistoryDivisor = v),
         new("MaxHistBonus",     10,     16000,  () => Fispur.MaxHistBonus,      v => Fispur.MaxHistBonus = v),
+        new("HistBonusMult",    50,     800,    () => Fispur.HistBonusMult,     v => Fispur.HistBonusMult = v),
+        new("HistBonusBase",    -600,   200,    () => Fispur.HistBonusBase,     v => Fispur.HistBonusBase = v),
+        new("NMPMinDepth",      1,      8,      () => Fispur.NMPMinDepth,       v => Fispur.NMPMinDepth = v,    true),
+        new("NMPReductionB",    1,      6,      () => Fispur.NMPReductionB,     v => Fispur.NMPReductionB = v,  true),
+        new("NMPReductionDiv",  2,      10,     () => Fispur.NMPReductionDiv,   v => Fispur.NMPReductionDiv = v,true),
+        new("ASPWindowDelta",   10,     200,    () => Fispur.ASPWindowDelta,    v => Fispur.ASPWindowDelta = v),
+        new("ASPWindowReset",   100,    2000,   () => Fispur.ASPWindowReset,    v => Fispur.ASPWindowReset = v),
     };
 
+    static void PrintSpsaInputs()
+    {
+        foreach (SpsaOption option in SpsaOptions)
+        {
+            double cEnd = option.isPoisoned ? 0.1 : (option.Max - option.Min) / 20.0;
+            double rEnd = option.isPoisoned ? 0.001 : 0.002;
+            Console.WriteLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                "{0}, int, {1:0.0}, {2:0.0}, {3:0.0}, {4:0.0##}, {5:0.0##}",
+                option.Name, option.Get(), option.Min, option.Max, cEnd, rEnd));
+        }
+    }
+
     static readonly object outLock = new();
-    static FispurEngine.Fispur fispur = new FispurEngine.Fispur();
+    static Fispur fispur = new Fispur();
     static Thread? searchThread;
 
     static void Say(string s)
