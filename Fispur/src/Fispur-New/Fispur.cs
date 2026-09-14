@@ -14,7 +14,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.14.0";
+            return "Fispur 0.14.1";
         }
 
         private static string ScoreToUCI(int score)
