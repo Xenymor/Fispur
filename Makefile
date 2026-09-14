@@ -16,8 +16,18 @@
 # CC/CXX are passed by OpenBench for C-like engines; they are ignored here.
 
 EXE     ?= Fispur
-RID     ?= win-x64
 PROJECT := Fispur-cli-(exp)/Fispur-cli-(exp).csproj
+
+# Runtime identifier from the host OS, so the same Makefile serves Windows and
+# Linux workers. On Linux the published file has no extension, which is exactly
+# what OpenBench looks for there; on Windows it gets .exe. Override with RID=...
+ifeq ($(OS),Windows_NT)
+  RID ?= win-x64
+else ifeq ($(shell uname -m),aarch64)
+  RID ?= linux-arm64
+else
+  RID ?= linux-x64
+endif
 
 .PHONY: all clean
 all:

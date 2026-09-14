@@ -13,10 +13,11 @@ die Partien mit fastchess. Der Server baut nie eine Engine.
 
 | Datei | Zweck |
 |---|---|
-| [`Makefile`](../Makefile) | Der Build-Einstieg, den OpenBench aufruft: `make -j EXE=<name> CC=dotnet`. Publiziert `Fispur-cli-(exp)` self-contained als **eine** Datei mit dem Namen `<name>.exe`. |
+| [`Makefile`](../Makefile) | Der Build-Einstieg, den OpenBench aufruft: `make -j EXE=<name> CC=dotnet`. Erkennt das Host-OS und publiziert `Fispur-cli-(exp)` self-contained als **eine** Datei: `<name>.exe` unter Windows, `<name>` unter Linux. |
 | [`Fispur-cli-(exp)/Bench.cs`](../Fispur-cli-(exp)/Bench.cs) | `bench`-Kommando, gibt `<nodes> nodes <nps> nps` aus — das Format, das OpenBench parst. |
 | [`Fispur-cli-(exp)/Program.cs`](../Fispur-cli-(exp)/Program.cs) | UCI-Schnittstelle inkl. `Hash`- und (Dummy-)`Threads`-Option, wie fastchess sie setzt. |
 | [`Scripts/setup-worker.ps1`](../Scripts/setup-worker.ps1) | Richtet einen Windows-Worker komplett ein (Abschnitt 7): Werkzeuge, Client, Zugangsdaten, Startverknüpfung. |
+| [`Scripts/setup-worker.sh`](../Scripts/setup-worker.sh) | Dasselbe für Ubuntu/Debian (Abschnitt 8), mit denselben Schaltern. |
 
 Wichtige Randbedingungen, die daraus folgen:
 
@@ -179,7 +180,7 @@ Der Name der Engine bzw. des Buchs ergibt sich aus dem **Dateinamen** (`Fispur.j
         "path"      : "",
         "compilers" : ["dotnet>=8.0"],
         "cpuflags"  : ["AVX2", "POPCNT"],
-        "systems"   : ["Windows"]
+        "systems"   : ["Windows", "Linux"]
     },
 
     "test_presets" : {
@@ -204,8 +205,8 @@ Der Name der Engine bzw. des Buchs ergibt sich aus dem **Dateinamen** (`Fispur.j
 - `path: ""` → das `Makefile` im Repo-Root.
 - `compilers: ["dotnet>=8.0"]` → der Worker ruft `dotnet --version` auf und vergleicht die Zahl.
 - `cpuflags` filtert Maschinen: wer AVX2 nicht meldet, bekommt keine Fispur-Workloads.
-- `systems: ["Windows"]` → später `["Windows", "Linux"]`, wenn Linux-Worker dazukommen
-  (dann im Makefile `RID=linux-x64` setzen bzw. per OS-Weiche).
+- `systems: ["Windows", "Linux"]` → welche Worker-Betriebssysteme Workloads bekommen. Das Makefile wählt den
+  passenden Runtime-Identifier selbst; ein Linux-Rechner ohne `Linux` in dieser Liste bleibt schlicht leer.
 - **`nps`** ist die Referenzgeschwindigkeit, mit der Zeitkontrollen zwischen unterschiedlich schnellen
   Maschinen skaliert werden. Der Wert oben stammt von einem Lauf auf dem Entwicklungsrechner
   (Fispur 0.13.2: `1599904 nodes 1737137 nps`, Tiefe 9, 24 Stellungen). Auf deiner Referenzmaschine
@@ -491,7 +492,69 @@ Namen ins Arbeitsverzeichnis und hat sie überschrieben. Abhilfe: aktuelles Skri
 
 ---
 
-## 8. Betrieb
+## 8. Linux-Worker einrichten (Ubuntu/Debian)
+
+Gegenstück zu Abschnitt 7: [`Scripts/setup-worker.sh`](../Scripts/setup-worker.sh), gleiche Schalter,
+gleiche Abläufe. Als normaler Benutzer ausführen — für die Pakete fragt es per `sudo` nach:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Xenymor/Fispur/main/Scripts/setup-worker.sh -o setup-worker.sh && bash setup-worker.sh
+```
+
+Das Skript
+
+- prüft Architektur und **AVX2** (ohne AVX2 bricht es ab — die NNUE hat keinen Fallback),
+- installiert per apt `build-essential`, `make`, `g++`, `python3`, `python3-venv` und **`dotnet-sdk-8.0`**
+  (Ubuntu ≥ 22.04 aus den Distro-Quellen; sonst wird `packages.microsoft.com` eingerichtet),
+- legt unter `~/.local/share/fispur-worker` ein venv an, lädt `client.py` aus dem OpenBench-Fork,
+- fragt Benutzername, Passwort, Server und Threads ab. Kein DPAPI auf Linux: die Zugangsdaten liegen als
+  `worker.env` mit `chmod 600` (nur für dich lesbar) und gehen über `OPENBENCH_*`-Umgebungsvariablen an
+  den Client — das Passwort erscheint nicht in der Prozessliste,
+- schreibt `start-worker.sh` ins Installationsverzeichnis.
+
+| Schalter | Wirkung |
+|---|---|
+| `--check-only` | nur prüfen und berichten, nichts installieren oder schreiben |
+| `--smoke-test` | Fispur einmal testweise bauen und benchen |
+| `--configure-only` | Installationen überspringen, nur Zugangsdaten/Startskript erneuern |
+| `--server`, `--user`, `--password` | Vorbelegung bzw. Umgehung der Abfragen |
+| `--force` | Installationsschritte auch bei erkannten Werkzeugen wiederholen |
+| `--install-root`, `--client-source` | abweichender Pfad bzw. Fork-URL |
+
+Starten:
+
+```bash
+~/.local/share/fispur-worker/start-worker.sh
+```
+
+Der Worker läuft im Vordergrund. Auf einem Server per SSH deshalb in `tmux` (oder `screen`), damit er die
+Sitzung überlebt:
+
+```bash
+tmux new -s worker ~/.local/share/fispur-worker/start-worker.sh
+```
+
+Ablösen mit `Strg+B`, dann `D`; wieder anhängen mit `tmux attach -t worker`. Erfolgskriterium wie unter
+Windows: `Fispur | dotnet (8.0.x)` im Startlog, danach erscheint der Rechner unter `/machines/`.
+
+**Voraussetzung auf dem Server:** in `/manage/engines/` muss `systems` der Engine `Linux` enthalten
+(Abschnitt 5.1). Fehlt es, verbindet sich der Worker, bekommt aber nie einen Workload.
+
+Die Dateinamen `worker.env` und `worker-config` sind mit Absicht so gewählt: fastchess legt sein Autosave
+als `config.json` im Arbeitsverzeichnis ab und würde eine gleichnamige Worker-Konfiguration überschreiben.
+
+### 8.1 Manuell, falls das Skript scheitert
+
+```bash
+sudo apt install -y build-essential make g++ python3 python3-venv dotnet-sdk-8.0
+python3 -m venv ~/ob && ~/ob/bin/pip install requests psutil py-cpuinfo
+curl -fsSL https://raw.githubusercontent.com/Xenymor/OpenBench/master/Client/client.py -o ~/ob/client.py
+cd ~/ob && ./bin/python client.py -U <user> -P <passwort> -S https://deine-domain.de -T 8 -N 1 --only Fispur
+```
+
+---
+
+## 9. Betrieb
 
 - **Backups:** `python3 manage.py dumpdata > backup.json` (per Cron), zusätzlich `mysqldump`.
 - **Upstream-Updates:** Fork mergen → `Config/config.json` von Hand nachziehen → Server stoppen →
@@ -503,7 +566,7 @@ Namen ins Arbeitsverzeichnis und hat sie überschrieben. Abhilfe: aktuelles Skri
 
 ---
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 | Symptom | Ursache |
 |---|---|
@@ -517,4 +580,5 @@ Namen ins Arbeitsverzeichnis und hat sie überschrieben. Abhilfe: aktuelles Skri
 | Seite ohne CSS, `/static/*` liefert **403** | `www-data` darf nicht ins Home-Verzeichnis — ACLs setzen (siehe 6.2). |
 | Endlosschleife `ERR_TOO_MANY_REDIRECTS` hinter Cloudflare | SSL-Modus „Flexible" plus HTTPS-Redirect am Origin. Nach `certbot` auf „Full (strict)" stellen. |
 | 500 bei „Create Test", Worker meldet „Bad Credentials" | Dem Account fehlt das `Profile` (typisch nach `createsuperuser`) — siehe Abschnitt 3. |
+| Linux-Worker verbindet sich, bekommt aber nichts | `systems` der Engine enthält kein `Linux` (Abschnitt 5.1), oder die CPU meldet kein AVX2. |
 | Cloudflare 521 / 525 | 521: Origin auf dem angesprochenen Port nicht erreichbar (Port-Rewrite per Origin Rule? SSL-Modus?). 525: Origin spricht dort kein TLS. |
