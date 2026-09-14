@@ -14,7 +14,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.13.2";
+            return "Fispur 0.14.0";
         }
 
         private static string ScoreToUCI(int score)
@@ -50,6 +50,8 @@ namespace FispurEngine
         public static int LmrDivisor = 314;
         public static int RfpMaxDepth = 8;
         public static int RfpMargin = 100;
+        public static int FpMaxDepth = 8;
+        public static int FpMargin = 100;
         public static int HistoryDivisor = 16384;
         public static int MaxHistBonus = 1536;
         public static int HistBonusMult = 300;
@@ -269,14 +271,21 @@ namespace FispurEngine
 
             
 
-            int margin = RfpMargin * depthLeft;
+            int rfpMargin = RfpMargin * depthLeft;
 
-            if (!qSearch && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + margin)
+            if (!qSearch && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + rfpMargin)
             {
                 return eval;
             }
 
-            if (qSearch)
+            bool isFutile = false;
+            int fpMargin = FpMargin * depthLeft;
+            if (eval <= alpha && !pvNode && !inCheck && !qSearch && depthLeft <= FpMaxDepth && Math.Abs(alpha) < MATE_BOUND && eval + fpMargin <= alpha)
+            {
+                isFutile = true;
+            }
+
+                if (qSearch)
             {
                 if (!inCheck)
                 {
@@ -346,6 +355,12 @@ namespace FispurEngine
                 (scores[i], scores[best]) = (scores[best], scores[i]);
 
                 Move move = moves[i];
+
+                if (isFutile && !move.IsCapture && !move.IsPromotion)
+                {
+                    continue;
+                }
+
                 board.MakeMove(move);
                 NNUE.makeMove(move, !board.IsWhiteToMove);
 
