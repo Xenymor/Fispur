@@ -278,14 +278,7 @@ namespace FispurEngine
                 return eval;
             }
 
-            bool isFutile = false;
-            int fpMargin = FpMargin * depthLeft;
-            if (eval <= alpha && !pvNode && !inCheck && !qSearch && depthLeft <= FpMaxDepth && Math.Abs(alpha) < MATE_BOUND && eval + fpMargin <= alpha)
-            {
-                isFutile = true;
-            }
-
-                if (qSearch)
+            if (qSearch)
             {
                 if (!inCheck)
                 {
@@ -339,6 +332,8 @@ namespace FispurEngine
 
             Move bestMove = Move.NullMove;
             int bestScore = qSearch && !inCheck ? eval : -INFINITY;
+            int fpMargin = FpMargin * depthLeft;
+
 
             for (int i = 0; i < moves.Length; i++)
             {
@@ -356,7 +351,7 @@ namespace FispurEngine
 
                 Move move = moves[i];
 
-                if (isFutile && !move.IsCapture && !move.IsPromotion)
+                if (!pvNode && !inCheck && !qSearch && depthLeft <= FpMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -INFINITY && Math.Abs(alpha) < MATE_BOUND && eval + fpMargin <= alpha)
                 {
                     continue;
                 }
