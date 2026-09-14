@@ -633,7 +633,14 @@ if ($CheckOnly) {
     return
 }
 
-if (-not $ok) { throw 'Es fehlen Voraussetzungen (siehe Tabelle). Setup abgebrochen.' }
+if (-not $ok) {
+    if ($ConfigureOnly) {
+        # Zugangsdaten dürfen auch dann erneuert werden, wenn noch Werkzeuge fehlen.
+        Write-Warn 'Es fehlen Voraussetzungen (siehe Tabelle) - der Worker startet erst, wenn sie da sind.'
+    } else {
+        throw 'Es fehlen Voraussetzungen (siehe Tabelle). Setup abgebrochen.'
+    }
+}
 
 if ($SmokeTest) { Invoke-SmokeTest -Tools $tools -Root $InstallRoot }
 
