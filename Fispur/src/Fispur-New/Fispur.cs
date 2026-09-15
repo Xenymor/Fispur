@@ -14,7 +14,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.15.0";
+            return "Fispur 0.15.1";
         }
 
         private static string ScoreToUCI(int score)
@@ -333,6 +333,7 @@ namespace FispurEngine
             Move bestMove = Move.NullMove;
             int bestScore = qSearch && !inCheck ? eval : -INFINITY;
             int fpMargin = FpMargin * depthLeft;
+            int movesSearched = 0;
 
 
             for (int i = 0; i < moves.Length; i++)
@@ -356,25 +357,26 @@ namespace FispurEngine
                     continue;
                 }
 
-                if (qSearch && !inCheck && !SEE(board, move, 0))
+                if (qSearch && !inCheck && scores[i] < -500_000) // score lower than -500_000 is losing capture
                 {
                     continue;
                 }
 
                 board.MakeMove(move);
                 NNUE.makeMove(move, !board.IsWhiteToMove);
+                movesSearched++;
 
                 int score;
-                if (i == 0)
+                if (movesSearched == 0)
                 {
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha);
                 }
                 else
                 {
                     int reduction = 0;
-                    if (depthLeft >= LmrMinDepth && i >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
+                    if (depthLeft >= LmrMinDepth && movesSearched >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = Math.Clamp((int)(LmrBase / 100.0 + Math.Log(depthLeft) * Math.Log(i) / (LmrDivisor / 100.0)), 0, depthLeft - 2);
+                        reduction = Math.Clamp((int)(LmrBase / 100.0 + Math.Log(depthLeft) * Math.Log(movesSearched) / (LmrDivisor / 100.0)), 0, depthLeft - 2);
                     }
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha);
                     if (reduction > 0 && score > alpha)
@@ -476,7 +478,13 @@ namespace FispurEngine
 
             if (move.IsCapture)
             {
-                return 1_000_000 + 100 * (int)move.CapturePieceType - (int)move.MovePieceType;
+                if (SEE(board, move, 0))
+                { 
+                    return 1_000_000 + 100 * (int)move.CapturePieceType - (int)move.MovePieceType;
+                } else
+                {
+                    return -1_000_000 + 100 * (int)move.CapturePieceType - (int)move.MovePieceType;
+                }
             }
 
             return historyHeuristic[getHistoryHeuristicInd(board, move)];
