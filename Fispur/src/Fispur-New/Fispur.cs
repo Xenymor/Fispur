@@ -14,7 +14,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.14.1";
+            return "Fispur 0.14.2";
         }
 
         private static string ScoreToUCI(int score)
@@ -46,21 +46,21 @@ namespace FispurEngine
 
         public static int LmrMinDepth = 3;
         public static int LmrMinMoves = 3;
-        public static int LmrBase = 99;
-        public static int LmrDivisor = 314;
+        public static int LmrBase = 176;
+        public static int LmrDivisor = 309;
         public static int RfpMaxDepth = 8;
-        public static int RfpMargin = 100;
+        public static int RfpMargin = 88;
         public static int FpMaxDepth = 8;
         public static int FpMargin = 100;
-        public static int HistoryDivisor = 16384;
-        public static int MaxHistBonus = 1536;
-        public static int HistBonusMult = 300;
-        public static int HistBonusBase = -250;
+        public static int HistoryDivisor = 30168;
+        public static int MaxHistBonus = 3847;
+        public static int HistBonusMult = 539;
+        public static int HistBonusBase = -320;
         public static int NMPMinDepth = 3;
         public static int NMPReductionB = 3;
         public static int NMPReductionDiv = 4;
-        public static int ASPWindowDelta = 50;
-        public static int ASPWindowReset = 500;
+        public static int ASPWindowDelta = 80;
+        public static int ASPWindowReset = 1456;
 
         struct TTEntry
         {
