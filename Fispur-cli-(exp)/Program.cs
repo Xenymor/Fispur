@@ -266,7 +266,7 @@ internal class Program
         foreach (SpsaOption option in SpsaOptions)
         {
             double cEnd = option.IsPoisoned ? 0.1 : (option.Max - option.Min) / 20.0;
-            double rEnd = option.IsPoisoned ? 0.001 : 0.002;
+            double rEnd = option.IsPoisoned ? 0.05 : 0.002;
             Console.WriteLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
                 "{0}, int, {1:0.0}, {2:0.0}, {3:0.0}, {4:0.0##}, {5:0.0##}",
                 option.Name, option.Get(), option.Min, option.Max, cEnd, rEnd));
