@@ -46,8 +46,8 @@ namespace FispurEngine
 
         public static int LmrMinDepth = 3;
         public static int LmrMinMoves = 3;
-        public static int LmrBase = 176;
-        public static int LmrDivisor = 309;
+        public static int LmrBase = 147;
+        public static int LmrDivisor = 226;
         public static int RfpMaxDepth = 8;
         public static int RfpMargin = 88;
         public static int FpMaxDepth = 8;
