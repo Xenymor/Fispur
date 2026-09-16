@@ -14,7 +14,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.15.2";
+            return "Fispur 0.15.3";
         }
 
         private static string ScoreToUCI(int score)
@@ -51,7 +51,7 @@ namespace FispurEngine
         public static int RfpMaxDepth = 8;
         public static int RfpMargin = 88;
         public static int FpMaxDepth = 8;
-        public static int FpMargin = 100;
+        public static int FpMargin = 153;
         public static int HistoryDivisor = 30168;
         public static int MaxHistBonus = 3847;
         public static int HistBonusMult = 539;
