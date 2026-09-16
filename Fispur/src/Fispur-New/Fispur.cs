@@ -14,7 +14,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.15.1";
+            return "Fispur 0.15.3";
         }
 
         private static string ScoreToUCI(int score)
@@ -243,9 +243,12 @@ namespace FispurEngine
 
             int ogAlpha = alpha;
             Move[] moves;
-            bool qSearch = depthLeft <= 0;
             bool inCheck = board.IsInCheck();
-            int eval = inCheck ? -int.MaxValue : NNUE.Evaluate(board);
+            if (inCheck)
+            {
+                depthLeft++;
+            }
+            bool qSearch = depthLeft <= 0;
             bool pvNode = beta - alpha > 1;
 
             if (ply > 0)
@@ -269,8 +272,7 @@ namespace FispurEngine
                 }
             }
 
-            
-
+            int eval = inCheck ? -int.MaxValue : NNUE.Evaluate(board);
             int rfpMargin = RfpMargin * depthLeft;
 
             if (!qSearch && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + rfpMargin)
