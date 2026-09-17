@@ -248,6 +248,8 @@ internal class Program
         new("LmrDivisor",       50,     1000,   () => Fispur.LmrDivisor,        v => Fispur.LmrDivisor = v),
         new("RfpMaxDepth",      1,      16,     () => Fispur.RfpMaxDepth,       v => Fispur.RfpMaxDepth = v,    true),
         new("RfpMargin",        10,     500,    () => Fispur.RfpMargin,         v => Fispur.RfpMargin = v),
+        new("FpMaxDepth",       1,      16,     () => Fispur.FpMaxDepth,        v => Fispur.FpMaxDepth = v,     true),
+        new("FpMargin",         10,     500,    () => Fispur.FpMargin,          v => Fispur.FpMargin = v),
         new("HistoryDivisor",   512,    65536,  () => Fispur.HistoryDivisor,    v => Fispur.HistoryDivisor = v),
         new("MaxHistBonus",     10,     16000,  () => Fispur.MaxHistBonus,      v => Fispur.MaxHistBonus = v),
         new("HistBonusMult",    50,     800,    () => Fispur.HistBonusMult,     v => Fispur.HistBonusMult = v),
