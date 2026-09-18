@@ -61,9 +61,9 @@ namespace FispurEngine
         public static int NMPReductionDiv = 4;
         public static int ASPWindowDelta = 80;
         public static int ASPWindowReset = 1456;
-        public static int SEEPMaxDepth = 3;
-        public static int SEEPThreshold = 50;
-        public static int SEEPCaptureThreshold = 50;
+        public static int SEEPMaxDepth = 2;
+        public static int SEEPThreshold = 3;
+        public static int SEEPCaptureThreshold = 116;
 
         struct TTEntry
         {

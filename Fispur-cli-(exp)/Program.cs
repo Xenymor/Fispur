@@ -260,8 +260,8 @@ internal class Program
         new("ASPWindowDelta",       10,     200,    () => Fispur.ASPWindowDelta,    v => Fispur.ASPWindowDelta = v),
         new("ASPWindowReset",       100,    2000,   () => Fispur.ASPWindowReset,    v => Fispur.ASPWindowReset = v),
         new("SEEPMaxDepth",         1,      8,      () => Fispur.SEEPMaxDepth,      v => Fispur.SEEPMaxDepth = v,   true),
-        new("SEEPThreshold",        0,      1000,   () => Fispur.RfpMargin,         v => Fispur.RfpMargin = v),
-        new("SEEPCaptureThreshold", 0,      1000,   () => Fispur.RfpMargin,         v => Fispur.RfpMargin = v),
+        new("SEEPThreshold",        -500,   500,    () => Fispur.RfpMargin,         v => Fispur.RfpMargin = v),
+        new("SEEPCaptureThreshold", 0,      500,    () => Fispur.RfpMargin,         v => Fispur.RfpMargin = v),
     };
 
     static void PrintSpsaInputs()
