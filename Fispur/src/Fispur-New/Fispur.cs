@@ -49,7 +49,7 @@ namespace FispurEngine
         public static int LmrBase = 79;
         public static int LmrDivisor = 212;
         public static int RfpMaxDepth = 8;
-        public static int RfpMargin = 88;
+        public static int RfpMargin = 81;
         public static int FpMaxDepth = 8;
         public static int FpMargin = 153;
         public static int HistoryDivisor = 30168;
