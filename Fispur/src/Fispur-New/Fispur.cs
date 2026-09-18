@@ -366,7 +366,6 @@ namespace FispurEngine
 
                 board.MakeMove(move);
                 NNUE.makeMove(move, !board.IsWhiteToMove);
-                movesSearched++;
 
                 int score;
                 if (movesSearched == 0)
@@ -393,6 +392,8 @@ namespace FispurEngine
 
                 NNUE.undoMove();
                 board.UndoMove(move);
+
+                movesSearched++;
 
                 if (stopSearch)
                     return 0;
