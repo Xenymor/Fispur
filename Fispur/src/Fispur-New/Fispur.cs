@@ -62,8 +62,8 @@ namespace FispurEngine
         public static int ASPWindowDelta = 80;
         public static int ASPWindowReset = 1456;
         public static int SEEPMaxDepth = 2;
-        public static int SEEPThreshold = 3;
-        public static int SEEPCaptureThreshold = 116;
+        public static int SEEPThreshold = -8;
+        public static int SEEPCaptureThreshold = 104;
 
         struct TTEntry
         {
@@ -363,7 +363,7 @@ namespace FispurEngine
                     {
                         continue;
                     }
-                    if (depthLeft <= SEEPMaxDepth)
+                    if (depthLeft <= SEEPMaxDepth && movesSearched > 0)
                     {
                         if (move.IsCapture && !SEE(board, move, -SEEPCaptureThreshold * depthLeft))
                         {
