@@ -125,6 +125,7 @@ namespace FispurEngine
         public void NewGame()
         {
             Array.Clear(transpositionTable, 0, transpositionTable.Length);
+            Array.Clear(historyHeuristic, 0, historyHeuristic.Length);
             eval = 0;
         }
 
@@ -243,6 +244,11 @@ namespace FispurEngine
             {
                 stopSearch = true;
                 return 0;
+            }
+
+            if (ply >= MAX_DEPTH - 1)
+            {
+                return NNUE.Evaluate(board);
             }
 
             int ogAlpha = alpha;
@@ -395,7 +401,7 @@ namespace FispurEngine
                     int reduction = 0;
                     if (depthLeft >= LmrMinDepth && movesSearched >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = Math.Clamp((int)(LmrBase / 100.0 + Math.Log(depthLeft) * Math.Log(movesSearched) / (LmrDivisor / 100.0)), 0, depthLeft - 2);
+                        reduction = Math.Clamp((int)(LmrBase / 100.0 + Math.Log(depthLeft) * Math.Log(movesSearched) / (LmrDivisor / 100.0)), 0, Math.Max(0, depthLeft - 2));
                     }
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha);
                     if (reduction > 0 && score > alpha)
@@ -414,7 +420,7 @@ namespace FispurEngine
                 movesSearched++;
 
                 if (stopSearch)
-                    return 0;
+                    return ply == 0 ? bestScore : 0;
 
                 if (score >= beta)
                 {
@@ -436,22 +442,27 @@ namespace FispurEngine
 
                     StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move);
 
+                    if (ply == 0)
+                    {
+                        rootBestMove = bestMove;
+                    }
+
                     return score;
                 }
                 if (score > bestScore)
                 {
                     bestScore = score;
                     bestMove = move;
+
+                    if (ply == 0)
+                    {
+                        rootBestMove = bestMove;
+                    }
                 }
                 if (score > alpha)
                 {
                     alpha = score;
                 }
-            }
-
-            if (ply == 0)
-            {
-                rootBestMove = bestMove;
             }
 
             if (!qSearch)
