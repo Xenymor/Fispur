@@ -14,7 +14,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.15.3";
+            return "Fispur 0.15.4";
         }
 
         private static string ScoreToUCI(int score)
@@ -62,6 +62,9 @@ namespace FispurEngine
         public static int NMPReductionDiv = 4;
         public static int ASPWindowDelta = 80;
         public static int ASPWindowReset = 1456;
+        public static int SEEPMaxDepth = 3;
+        public static int SEEPThreshold = 0;
+        public static int SEEPCaptureThreshold = 103;
 
         struct TTEntry
         {
@@ -355,9 +358,23 @@ namespace FispurEngine
 
                 Move move = moves[i];
 
-                if (!pvNode && !inCheck && !qSearch && depthLeft <= FpMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -INFINITY && Math.Abs(alpha) < MATE_BOUND && eval + fpMargin <= alpha)
+                if (!pvNode && !inCheck && !qSearch)
                 {
-                    continue;
+                    if (depthLeft <= FpMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -INFINITY && Math.Abs(alpha) < MATE_BOUND && eval + fpMargin <= alpha)
+                    {
+                        continue;
+                    }
+                    if (depthLeft <= SEEPMaxDepth && movesSearched > 0)
+                    {
+                        if (move.IsCapture && !SEE(board, move, -SEEPCaptureThreshold * depthLeft))
+                        {
+                            continue;
+                        }
+                        if (!move.IsCapture && !SEE(board, move, -SEEPThreshold * depthLeft))
+                        {
+                            continue;
+                        }
+                    }
                 }
 
                 if (qSearch && !inCheck && scores[i] < -500_000) // score lower than -500_000 is losing capture
