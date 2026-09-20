@@ -14,7 +14,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.16.0";
+            return "Fispur 0.16.1";
         }
 
         private static string ScoreToUCI(int score)
@@ -401,7 +401,7 @@ namespace FispurEngine
                     int reduction = 0;
                     if (depthLeft >= LmrMinDepth && movesSearched >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = Math.Clamp((int)(LmrBase / 100.0 + Math.Log(depthLeft) * Math.Log(movesSearched) / (LmrDivisor / 100.0)), 0, Math.Max(0, depthLeft - 2));
+                        reduction = Math.Clamp((int)(LmrBase / 100.0 + Math.Log(depthLeft) * Math.Log(movesSearched) / (LmrDivisor / 100.0)), 0, depthLeft);
                     }
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha);
                     if (reduction > 0 && score > alpha)
