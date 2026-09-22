@@ -233,6 +233,7 @@ namespace FispurEngine
             return (bestMove, eval);
         }
 
+        [SkipLocalsInit]
         private int AlphaBeta(Board board, int ply, int depthLeft, int alpha, int beta, bool canNull = true)
         {
             if (stopSearch)
@@ -252,7 +253,6 @@ namespace FispurEngine
             }
 
             int ogAlpha = alpha;
-            Move[] moves;
             bool inCheck = board.IsInCheck();
             if (inCheck)
             {
@@ -329,7 +329,8 @@ namespace FispurEngine
 
             Move ttMove = hasEntry ? entry.move : Move.NullMove;
 
-            moves = board.GetLegalMoves(qSearch && !inCheck);
+            Span<Move> moves = stackalloc Move[218];
+            board.GetLegalMovesNonAlloc(ref moves, qSearch && !inCheck);
 
             if (moves.Length == 0)
                 return inCheck ? -MATE + ply
