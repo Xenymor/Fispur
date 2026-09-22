@@ -14,7 +14,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.15.3";
+            return "Fispur 0.16.1";
         }
 
         private static string ScoreToUCI(int score)
@@ -45,9 +45,10 @@ namespace FispurEngine
         public const int MAX_DEPTH = 256;
 
         public static int LmrMinDepth = 3;
-        public static int LmrMinMoves = 5;
-        public static int LmrBase = 79;
-        public static int LmrDivisor = 212;
+        public static int LmrMinMoves = 4;
+        public static int LmrBase = 99;
+        public static int LmrDivisor = 213;
+
         public static int RfpMaxDepth = 8;
         public static int RfpMargin = 81;
         public static int FpMaxDepth = 8;
@@ -61,6 +62,9 @@ namespace FispurEngine
         public static int NMPReductionDiv = 4;
         public static int ASPWindowDelta = 80;
         public static int ASPWindowReset = 1456;
+        public static int SEEPMaxDepth = 3;
+        public static int SEEPThreshold = 0;
+        public static int SEEPCaptureThreshold = 103;
 
         struct TTEntry
         {
@@ -121,6 +125,7 @@ namespace FispurEngine
         public void NewGame()
         {
             Array.Clear(transpositionTable, 0, transpositionTable.Length);
+            Array.Clear(historyHeuristic, 0, historyHeuristic.Length);
             eval = 0;
         }
 
@@ -241,6 +246,11 @@ namespace FispurEngine
                 return 0;
             }
 
+            if (ply >= MAX_DEPTH - 1)
+            {
+                return NNUE.Evaluate(board);
+            }
+
             int ogAlpha = alpha;
             Move[] moves;
             bool inCheck = board.IsInCheck();
@@ -354,9 +364,23 @@ namespace FispurEngine
 
                 Move move = moves[i];
 
-                if (!pvNode && !inCheck && !qSearch && depthLeft <= FpMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -INFINITY && Math.Abs(alpha) < MATE_BOUND && eval + fpMargin <= alpha)
+                if (!pvNode && !inCheck && !qSearch)
                 {
-                    continue;
+                    if (depthLeft <= FpMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -INFINITY && Math.Abs(alpha) < MATE_BOUND && eval + fpMargin <= alpha)
+                    {
+                        continue;
+                    }
+                    if (depthLeft <= SEEPMaxDepth && movesSearched > 0)
+                    {
+                        if (move.IsCapture && !SEE(board, move, -SEEPCaptureThreshold * depthLeft))
+                        {
+                            continue;
+                        }
+                        if (!move.IsCapture && !SEE(board, move, -SEEPThreshold * depthLeft))
+                        {
+                            continue;
+                        }
+                    }
                 }
 
                 if (qSearch && !inCheck && scores[i] < -500_000) // score lower than -500_000 is losing capture
@@ -366,7 +390,6 @@ namespace FispurEngine
 
                 board.MakeMove(move);
                 NNUE.makeMove(move, !board.IsWhiteToMove);
-                movesSearched++;
 
                 int score;
                 if (movesSearched == 0)
@@ -378,7 +401,7 @@ namespace FispurEngine
                     int reduction = 0;
                     if (depthLeft >= LmrMinDepth && movesSearched >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = Math.Clamp((int)(LmrBase / 100.0 + Math.Log(depthLeft) * Math.Log(movesSearched) / (LmrDivisor / 100.0)), 0, depthLeft - 2);
+                        reduction = Math.Clamp((int)(LmrBase / 100.0 + Math.Log(depthLeft) * Math.Log(movesSearched) / (LmrDivisor / 100.0)), 0, depthLeft);
                     }
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha);
                     if (reduction > 0 && score > alpha)
@@ -394,8 +417,10 @@ namespace FispurEngine
                 NNUE.undoMove();
                 board.UndoMove(move);
 
+                movesSearched++;
+
                 if (stopSearch)
-                    return 0;
+                    return ply == 0 ? bestScore : 0;
 
                 if (score >= beta)
                 {
@@ -417,22 +442,27 @@ namespace FispurEngine
 
                     StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move);
 
+                    if (ply == 0)
+                    {
+                        rootBestMove = bestMove;
+                    }
+
                     return score;
                 }
                 if (score > bestScore)
                 {
                     bestScore = score;
                     bestMove = move;
+
+                    if (ply == 0)
+                    {
+                        rootBestMove = bestMove;
+                    }
                 }
                 if (score > alpha)
                 {
                     alpha = score;
                 }
-            }
-
-            if (ply == 0)
-            {
-                rootBestMove = bestMove;
             }
 
             if (!qSearch)

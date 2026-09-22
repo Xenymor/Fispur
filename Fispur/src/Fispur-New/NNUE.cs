@@ -16,8 +16,6 @@ namespace FispurEngine
         const int QAB = QA * QB;          
         const int SCALE = 400;
 
-        const int MAX_PLY = 256;
-
         static readonly short[] l0w = new short[INPUT * HL];  
         static readonly short[] l0b = new short[HL];
         static readonly short[] l1w = new short[2 * HL];
@@ -38,10 +36,10 @@ namespace FispurEngine
             for (int i = 0; i < l1w.Length; i++) l1w[i] = r.ReadInt16();
             l1b = r.ReadInt16();
 
-            accWhite = new short[MAX_PLY][];
-            accBlack = new short[MAX_PLY][];
+            accWhite = new short[Fispur.MAX_DEPTH][];
+            accBlack = new short[Fispur.MAX_DEPTH][];
 
-            for (int i = 0; i < MAX_PLY; i++)
+            for (int i = 0; i < Fispur.MAX_DEPTH; i++)
             {
                 accWhite[i] = new short[HL];
                 accBlack[i] = new short[HL];
