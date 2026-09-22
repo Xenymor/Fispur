@@ -251,7 +251,6 @@ namespace FispurEngine
                 return NNUE.Evaluate(board);
             }
 
-            int ogAlpha = alpha;
             Move[] moves;
             bool inCheck = board.IsInCheck();
             if (inCheck)
@@ -264,9 +263,19 @@ namespace FispurEngine
             if (ply > 0)
             {
                 if (board.IsFiftyMoveDraw() || board.IsRepeatedPosition() || board.IsInsufficientMaterial())
+                {
                     return 0;
+                }
+
+                alpha = Math.Max(alpha, -MATE + ply);
+                beta = Math.Min(beta, MATE - ply - 1);
+                if (alpha >= beta)
+                {
+                    return alpha;
+                }
             }
 
+            int ogAlpha = alpha;
             ulong zobrist = board.ZobristKey;
             ref TTEntry entry = ref transpositionTable[zobrist & ttMask];
             bool hasEntry = entry.bound != BOUND_NONE && entry.key == (uint)(zobrist >> 32);
