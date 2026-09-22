@@ -51,20 +51,27 @@ namespace FispurEngine
 
         public static int RfpMaxDepth = 8;
         public static int RfpMargin = 81;
+
         public static int FpMaxDepth = 8;
         public static int FpMargin = 153;
+
         public static int HistoryDivisor = 30168;
         public static int MaxHistBonus = 3847;
         public static int HistBonusMult = 539;
         public static int HistBonusBase = -320;
+
         public static int NMPMinDepth = 3;
         public static int NMPReductionB = 3;
         public static int NMPReductionDiv = 4;
+
         public static int ASPWindowDelta = 80;
         public static int ASPWindowReset = 1456;
+
         public static int SEEPMaxDepth = 3;
         public static int SEEPThreshold = 0;
         public static int SEEPCaptureThreshold = 103;
+
+        public static int MinIIRDepth = 4;
 
         struct TTEntry
         {
@@ -280,6 +287,11 @@ namespace FispurEngine
                 {
                     return ttScore;
                 }
+            }
+
+            if (!hasEntry && depthLeft >= MinIIRDepth)
+            {
+                depthLeft--;
             }
 
             int eval = inCheck ? -int.MaxValue : NNUE.Evaluate(board);
