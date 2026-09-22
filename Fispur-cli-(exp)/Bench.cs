@@ -97,7 +97,7 @@ internal static class Bench
         Console.WriteLine("Time      : " + millis + " ms");
 
         // Must be the last line: OpenBench scans stdout backwards for "<n> nodes" / "<n> nps".
-        Console.WriteLine(totalNodes + " nodes " + nps + " nps");
+        Console.WriteLine("bench " + totalNodes + " nps " + nps);
     }
 
     private static void SearchAll(int depth)
