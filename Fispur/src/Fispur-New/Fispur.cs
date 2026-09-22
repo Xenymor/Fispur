@@ -444,7 +444,7 @@ namespace FispurEngine
 
                     if (ply == 0)
                     {
-                        rootBestMove = bestMove;
+                        rootBestMove = move;
                     }
 
                     return score;
@@ -456,7 +456,7 @@ namespace FispurEngine
 
                     if (ply == 0)
                     {
-                        rootBestMove = bestMove;
+                        rootBestMove = move;
                     }
                 }
                 if (score > alpha)
