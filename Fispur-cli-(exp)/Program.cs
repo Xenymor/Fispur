@@ -262,6 +262,7 @@ internal class Program
         new("SEEPMaxDepth",         1,      8,      () => Fispur.SEEPMaxDepth,          v => Fispur.SEEPMaxDepth = v,           true),
         new("SEEPThreshold",        0,      500,    () => Fispur.SEEPThreshold,         v => Fispur.SEEPThreshold = v),
         new("SEEPCaptureThreshold", 0,      500,    () => Fispur.SEEPCaptureThreshold,  v => Fispur.SEEPCaptureThreshold = v),
+        new("MinIIRDepth",          0,      8,      () => Fispur.MinIIRDepth,           v => Fispur.MinIIRDepth = v,            true),
     };
 
     static void PrintSpsaInputs()
