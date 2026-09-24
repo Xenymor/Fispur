@@ -86,6 +86,7 @@ namespace FispurEngine
         TTEntry[] transpositionTable;
         ulong ttMask;
         int[] historyHeuristic = new int[2 * 64 * 64];
+        Move[] killers = new Move[MAX_DEPTH];
 
         Timer timer;
         long nodes;
@@ -131,8 +132,9 @@ namespace FispurEngine
 
         public void NewGame()
         {
-            Array.Clear(transpositionTable, 0, transpositionTable.Length);
-            Array.Clear(historyHeuristic, 0, historyHeuristic.Length);
+            Array.Clear(transpositionTable);
+            Array.Clear(historyHeuristic);
+            Array.Clear(killers);
             eval = 0;
         }
 
@@ -141,7 +143,7 @@ namespace FispurEngine
         public void ResetState()
         {
             NewGame();
-            Array.Clear(historyHeuristic, 0, historyHeuristic.Length);
+            Array.Clear(historyHeuristic);
         }
 
 
@@ -156,6 +158,7 @@ namespace FispurEngine
             {
                 historyHeuristic[i] /= 2;
             }
+            Array.Clear(killers);
 
             Move[] moves = board.GetLegalMoves();
             bestMove = moves.Length == 0 ? Move.NullMove : moves[0];
@@ -451,6 +454,8 @@ namespace FispurEngine
                             ref int p = ref historyHeuristic[getHistoryHeuristicInd(board, moves[j])];
                             p += -bonus - p * bonus / HistoryDivisor;
                         }
+
+                        killers[ply] = move;
                     }
 
                     StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move);
@@ -521,6 +526,7 @@ namespace FispurEngine
                 return int.MaxValue;
             }
 
+
             if (move.IsCapture)
             {
                 if (SEE(board, move, 0))
@@ -530,6 +536,11 @@ namespace FispurEngine
                 {
                     return -1_000_000 + 100 * (int)move.CapturePieceType - (int)move.MovePieceType;
                 }
+            }
+
+            if (move.Equals(killers[ply]))
+            {
+                return 900_000;
             }
 
             return historyHeuristic[getHistoryHeuristicInd(board, move)];
