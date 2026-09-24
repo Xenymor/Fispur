@@ -342,6 +342,7 @@ namespace FispurEngine
             Move ttMove = hasEntry ? entry.move : Move.NullMove;
 
             Span<Move> moves = stackalloc Move[218];
+            Span<bool> skipped = stackalloc bool[218];
             board.GetLegalMovesNonAlloc(ref moves, qSearch && !inCheck);
 
             if (moves.Length == 0)
@@ -381,16 +382,19 @@ namespace FispurEngine
                 {
                     if (depthLeft <= FpMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -INFINITY && Math.Abs(alpha) < MATE_BOUND && eval + fpMargin <= alpha)
                     {
+                        skipped[i] = true;
                         continue;
                     }
                     if (depthLeft <= SEEPMaxDepth && movesSearched > 0)
                     {
                         if (move.IsCapture && !SEE(board, move, -SEEPCaptureThreshold * depthLeft))
                         {
+                            skipped[i] = true;
                             continue;
                         }
                         if (!move.IsCapture && !SEE(board, move, -SEEPThreshold * depthLeft))
                         {
+                            skipped[i] = true;
                             continue;
                         }
                     }
@@ -398,8 +402,11 @@ namespace FispurEngine
 
                 if (qSearch && !inCheck && scores[i] < -500_000) // score lower than -500_000 is losing capture
                 {
+                    skipped[i] = true;
                     continue;
                 }
+
+                skipped[i] = false;
 
                 board.MakeMove(move);
                 NNUE.makeMove(move, !board.IsWhiteToMove);
@@ -447,7 +454,7 @@ namespace FispurEngine
 
                         for (int j = 0; j < i; j++)
                         {
-                            if (moves[j].IsCapture) continue;
+                            if (moves[j].IsCapture || skipped[j]) continue;
                             ref int p = ref historyHeuristic[getHistoryHeuristicInd(board, moves[j])];
                             p += -bonus - p * bonus / HistoryDivisor;
                         }
