@@ -212,7 +212,7 @@ namespace FispurEngine
                     }
                 } else
                 {
-                    score = AlphaBeta(board, 0, depth, -int.MaxValue, int.MaxValue);
+                    score = AlphaBeta(board, 0, depth, -INFINITY, INFINITY);
                 }
 
                 if (stopSearch || failed)
@@ -294,7 +294,7 @@ namespace FispurEngine
                 depthLeft--;
             }
 
-            int eval = inCheck ? -int.MaxValue : NNUE.Evaluate(board);
+            int eval = inCheck ? -INFINITY : NNUE.Evaluate(board);
             int rfpMargin = RfpMargin * depthLeft;
 
             if (!qSearch && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + rfpMargin)
