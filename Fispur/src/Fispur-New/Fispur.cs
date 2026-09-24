@@ -189,7 +189,7 @@ namespace FispurEngine
                 {
                     while (true)
                     {
-                        int alpha = dl <= -ASPWindowReset ? -int.MaxValue : eval + dl, beta = dh >= ASPWindowReset ? int.MaxValue : eval + dh;
+                        int alpha = dl <= -ASPWindowReset ? -INFINITY : eval + dl, beta = dh >= ASPWindowReset ? INFINITY : eval + dh;
                         score = AlphaBeta(board, 0, depth, alpha, beta);
 
                         if (score <= alpha)
