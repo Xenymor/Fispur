@@ -192,7 +192,7 @@ namespace FispurEngine
                 {
                     while (true)
                     {
-                        int alpha = dl <= -ASPWindowReset ? -int.MaxValue : eval + dl, beta = dh >= ASPWindowReset ? int.MaxValue : eval + dh;
+                        int alpha = dl <= -ASPWindowReset ? -INFINITY : eval + dl, beta = dh >= ASPWindowReset ? INFINITY : eval + dh;
                         score = AlphaBeta(board, 0, depth, alpha, beta);
 
                         if (score <= alpha)
@@ -215,7 +215,7 @@ namespace FispurEngine
                     }
                 } else
                 {
-                    score = AlphaBeta(board, 0, depth, -int.MaxValue, int.MaxValue);
+                    score = AlphaBeta(board, 0, depth, -INFINITY, INFINITY);
                 }
 
                 if (stopSearch || failed)
@@ -297,7 +297,7 @@ namespace FispurEngine
                 depthLeft--;
             }
 
-            int eval = inCheck ? -int.MaxValue : NNUE.Evaluate(board);
+            int eval = inCheck ? -INFINITY : NNUE.Evaluate(board);
             int rfpMargin = RfpMargin * depthLeft;
 
             if (!qSearch && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + rfpMargin)
