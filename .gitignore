@@ -402,5 +402,6 @@ FodyWeavers.xsd
 /.github
 /Testing
 
-# OpenBench build output (make EXE=<name> publishes a single file into the repo root)
+# OpenBench build output (make EXE=<name> publishes into ob-publish/ and copies a single file into the repo root)
+/ob-publish/
 /*.exe
