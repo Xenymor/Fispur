@@ -91,14 +91,16 @@ reflection, so pre-0.7.0 snapshots (which have neither) still work.
 
 ## Build / run
 
-- Requires .NET SDK (6.0 for the GUI project, 8.0 for the CLIs) — targeted via VS 2022.
+- Requires .NET SDK 10 (all three projects target `net10.0`). VS 2022 17.14 builds it with warning NETSDK1233; VS 2026 / Rider / `dotnet` CLI are fine.
 - GUI: run the `Fispur` project (Raylib window).
 - Engine for a UCI GUI/tester: build/run `Fispur-cli-(exp)` (current WIP) or
   `Fispur-cli` (archived snapshots, selectable via the `Version` option).
 - OpenBench: `make EXE=<name>` in the repo root publishes `Fispur-cli-(exp)` as a
   single self-contained `<name>.exe` — that is the exact contract the OpenBench
   worker expects. The `OB_EXE` property drives the rename and switches off the
-  GUI's asset copies, so nothing but the binary lands in the root. Server/worker
+  GUI's asset copies. The publish goes to `ob-publish/` and a Copy target in
+  `Fispur-cli-(exp).csproj` puts the binary into the root — never publish with
+  `-o .` (SDK 10.0.2xx+ excludes PublishDir/** from compilation, i.e. every project). Server/worker
   setup is documented in `Docs/OpenBench-Setup.md`.
 
 ## Conventions
