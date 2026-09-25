@@ -36,7 +36,10 @@ make EXE=fispur-ob
 ./fispur-ob.exe bench
 ```
 
-Im Repo-Root darf danach **genau eine** neue Datei liegen: `fispur-ob.exe`. Der `bench` endet mit einer
+Im Repo-Root darf danach **genau eine** neue Datei liegen: `fispur-ob.exe` (dazu der Zwischenordner
+`ob-publish/`, der ignoriert wird). Direkt mit `-o .` ins Repo-Root zu publizieren geht ab SDK 10.0.2xx
+nicht mehr: der Publish-Ordner wird dann von der Kompilierung ausgeschlossen, und mit ihm alle Projekte
+(Symptom: `CS5001`, kein `Main`). Der `bench` endet mit einer
 Zeile der Form `1599904 nodes 1737137 nps` und beendet sich selbst.
 
 ---
@@ -178,7 +181,7 @@ Der Name der Engine bzw. des Buchs ergibt sich aus dem **Dateinamen** (`Fispur.j
 
     "build" : {
         "path"      : "",
-        "compilers" : ["dotnet>=8.0"],
+        "compilers" : ["dotnet>=10.0"],
         "cpuflags"  : ["AVX2", "POPCNT"],
         "systems"   : ["Windows", "Linux"]
     },
@@ -203,7 +206,7 @@ Der Name der Engine bzw. des Buchs ergibt sich aus dem **Dateinamen** (`Fispur.j
 ```
 
 - `path: ""` → das `Makefile` im Repo-Root.
-- `compilers: ["dotnet>=8.0"]` → der Worker ruft `dotnet --version` auf und vergleicht die Zahl.
+- `compilers: ["dotnet>=10.0"]` → der Worker ruft `dotnet --version` auf und vergleicht die Zahl.
 - `cpuflags` filtert Maschinen: wer AVX2 nicht meldet, bekommt keine Fispur-Workloads.
 - `systems: ["Windows", "Linux"]` → welche Worker-Betriebssysteme Workloads bekommen. Das Makefile wählt den
   passenden Runtime-Identifier selbst; ein Linux-Rechner ohne `Linux` in dieser Liste bleibt schlicht leer.
@@ -428,7 +431,7 @@ irm https://raw.githubusercontent.com/Xenymor/Fispur/main/Scripts/setup-worker.p
 
 Das Skript prüft jeden Schritt, bevor es ihn ausführt, und lässt sich deshalb gefahrlos wiederholen. Es
 
-- installiert per winget **.NET SDK 8**, **Python 3** und **MSYS2** und ruft `pacman` unbeaufsichtigt
+- installiert per winget **.NET SDK 10**, **Python 3** und **MSYS2** und ruft `pacman` unbeaufsichtigt
   für `make` und `mingw-w64-x86_64-gcc` auf,
 - legt unter `%LOCALAPPDATA%\FispurWorker` ein eigenes venv mit `requests`, `psutil`, `py-cpuinfo` an,
 - lädt `client.py` aus deinem OpenBench-Fork (mehr braucht der Client nicht — den Rest holt er sich
@@ -451,7 +454,7 @@ Nützliche Schalter:
 Gestartet wird der Worker über die Desktop-Verknüpfung. Im Startlog muss
 
 ```
-Fispur           | dotnet   (8.0.x)
+Fispur           | dotnet   (10.0.x)
 ```
 
 stehen; kurz darauf erscheint der Rechner unter `https://deine-domain.de/machines/`. Steht dort
@@ -471,7 +474,7 @@ Namen ins Arbeitsverzeichnis und hat sie überschrieben. Abhilfe: aktuelles Skri
 
 ### 7.1 Manuell, falls das Skript scheitert
 
-1. **.NET SDK 8 (oder neuer)** installieren. Prüfen: `dotnet --version` muss in der Shell antworten,
+1. **.NET SDK 10 (oder neuer)** installieren. Prüfen: `dotnet --version` muss in der Shell antworten,
    in der später der Worker läuft — genau so ermittelt OpenBench die Compiler-Version.
 2. **make + g++** bereitstellen, z. B. über MSYS2:
    ```
@@ -504,8 +507,9 @@ curl -fsSL https://raw.githubusercontent.com/Xenymor/Fispur/main/Scripts/setup-w
 Das Skript
 
 - prüft Architektur und **AVX2** (ohne AVX2 bricht es ab — die NNUE hat keinen Fallback),
-- installiert per apt `build-essential`, `make`, `g++`, `python3`, `python3-venv` und **`dotnet-sdk-8.0`**
-  (Ubuntu ≥ 22.04 aus den Distro-Quellen; sonst wird `packages.microsoft.com` eingerichtet),
+- installiert per apt `build-essential`, `make`, `g++`, `python3`, `python3-venv` und **`dotnet-sdk-10.0`**
+  (Ubuntu ≥ 24.04 aus den Distro-Quellen; sonst über `packages.microsoft.com`, notfalls per
+  `dotnet-install.sh` nach `~/.dotnet`),
 - legt unter `~/.local/share/fispur-worker` ein venv an, lädt `client.py` aus dem OpenBench-Fork,
 - fragt Benutzername, Passwort, Server und Threads ab. Kein DPAPI auf Linux: die Zugangsdaten liegen als
   `worker.env` mit `chmod 600` (nur für dich lesbar) und gehen über `OPENBENCH_*`-Umgebungsvariablen an
@@ -535,7 +539,7 @@ tmux new -s worker ~/.local/share/fispur-worker/start-worker.sh
 ```
 
 Ablösen mit `Strg+B`, dann `D`; wieder anhängen mit `tmux attach -t worker`. Erfolgskriterium wie unter
-Windows: `Fispur | dotnet (8.0.x)` im Startlog, danach erscheint der Rechner unter `/machines/`.
+Windows: `Fispur | dotnet (10.0.x)` im Startlog, danach erscheint der Rechner unter `/machines/`.
 
 **Voraussetzung auf dem Server:** in `/manage/engines/` muss `systems` der Engine `Linux` enthalten
 (Abschnitt 5.1). Fehlt es, verbindet sich der Worker, bekommt aber nie einen Workload.
@@ -546,7 +550,7 @@ als `config.json` im Arbeitsverzeichnis ab und würde eine gleichnamige Worker-K
 ### 8.1 Manuell, falls das Skript scheitert
 
 ```bash
-sudo apt install -y build-essential make g++ python3 python3-venv dotnet-sdk-8.0
+sudo apt install -y build-essential make g++ python3 python3-venv dotnet-sdk-10.0
 python3 -m venv ~/ob && ~/ob/bin/pip install requests psutil py-cpuinfo
 curl -fsSL https://raw.githubusercontent.com/Xenymor/OpenBench/master/Client/client.py -o ~/ob/client.py
 cd ~/ob && ./bin/python client.py -U <user> -P <passwort> -S https://deine-domain.de -T 8 -N 1 --only Fispur

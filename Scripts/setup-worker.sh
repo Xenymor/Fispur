@@ -136,34 +136,46 @@ install_dotnet() {
 
     local major
     major="$(dotnet_major)"
-    if [ "$major" -ge 8 ] && [ "$FORCE" -eq 0 ]; then
+    if [ "$major" -ge 10 ] && [ "$FORCE" -eq 0 ]; then
         ok "SDK $major.x gefunden ($(command -v dotnet))"
         return
     fi
     if [ "$CHECK_ONLY" -eq 1 ]; then
-        fail 'Kein .NET SDK >= 8 gefunden'
+        fail 'Kein .NET SDK >= 10 gefunden'
         return
     fi
 
-    # Ubuntu ab 22.04 hat das SDK in den eigenen Paketquellen. Debian und ältere Ubuntus
-    # brauchen Microsofts Repo - das wird nur nachgerüstet, wenn der direkte Weg scheitert.
-    info 'Installiere dotnet-sdk-8.0 ...'
-    if ! as_root apt-get install -y -qq dotnet-sdk-8.0 2>/dev/null; then
-        info 'Nicht in den Distro-Quellen - richte packages.microsoft.com ein ...'
+    # Ubuntu ab 24.04 hat das SDK in den eigenen Paketquellen. Sonst wird Microsofts Repo
+    # versucht; hat auch das kein dotnet-sdk-10.0 (z. B. ältere Ubuntus/Debians), wird das SDK
+    # per dotnet-install.sh nach ~/.dotnet gelegt - diesen Ort kennt auch start-worker.sh.
+    info 'Installiere dotnet-sdk-10.0 ...'
+    if ! as_root apt-get install -y -qq dotnet-sdk-10.0 2>/dev/null; then
+        info 'Nicht in den Distro-Quellen - versuche packages.microsoft.com ...'
         # shellcheck disable=SC1091
         . /etc/os-release
         local deb
         deb="$(mktemp --suffix=.deb)"
-        curl -fsSL "https://packages.microsoft.com/config/${ID}/${VERSION_ID}/packages-microsoft-prod.deb" -o "$deb" \
-            || die "Kein Microsoft-Paketfeed für ${ID} ${VERSION_ID}. .NET SDK 8 von Hand installieren, dann --configure-only."
-        as_root dpkg -i "$deb"
-        rm -f "$deb"
-        as_root apt-get update -qq
-        as_root apt-get install -y -qq dotnet-sdk-8.0
+        if curl -fsSL "https://packages.microsoft.com/config/${ID}/${VERSION_ID}/packages-microsoft-prod.deb" -o "$deb" \
+            && as_root dpkg -i "$deb" \
+            && as_root apt-get update -qq \
+            && as_root apt-get install -y -qq dotnet-sdk-10.0; then
+            rm -f "$deb"
+        else
+            rm -f "$deb"
+            info 'Kein Paket verfügbar - installiere per dotnet-install.sh nach ~/.dotnet ...'
+            local installer
+            installer="$(mktemp --suffix=.sh)"
+            curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$installer" \
+                || die '.NET-Installer nicht erreichbar. .NET SDK 10 von Hand installieren, dann --configure-only.'
+            bash "$installer" --channel 10.0 --install-dir "$HOME/.dotnet" \
+                || die '.NET SDK 10 konnte nicht installiert werden.'
+            rm -f "$installer"
+            export PATH="$HOME/.dotnet:$PATH" DOTNET_ROOT="$HOME/.dotnet"
+        fi
     fi
 
     major="$(dotnet_major)"
-    [ "$major" -ge 8 ] || die 'dotnet ist nach der Installation nicht auffindbar.'
+    [ "$major" -ge 10 ] || die 'dotnet ist nach der Installation nicht auffindbar.'
     ok "SDK $major.x installiert"
 }
 
@@ -365,7 +377,7 @@ verify() {
     }
 
     local major; major="$(dotnet_major)"
-    if [ "$major" -ge 8 ]; then row 'dotnet SDK' "OK ($major.x)"; else row 'dotnet SDK' 'FEHLT'; fi
+    if [ "$major" -ge 10 ]; then row 'dotnet SDK' "OK ($major.x)"; else row 'dotnet SDK' 'FEHLT'; fi
 
     if command -v make >/dev/null 2>&1; then row 'make' "OK ($(make -v | version_of))"; else row 'make' 'FEHLT'; fi
     if command -v g++  >/dev/null 2>&1; then row 'g++'  "OK ($(g++ --version | version_of))"; else row 'g++' 'FEHLT'; fi
@@ -475,5 +487,5 @@ printf '%sFertig.%s\n' "$C_GREEN" "$C_OFF"
 echo "  Worker starten:   $INSTALL_ROOT/start-worker.sh"
 echo "  Dauerbetrieb:     tmux new -s worker \"$INSTALL_ROOT/start-worker.sh\""
 echo
-echo "Im Startlog muss '$ENGINE_FILTER | dotnet (8.0.x)' erscheinen; danach taucht der"
+echo "Im Startlog muss '$ENGINE_FILTER | dotnet (10.0.x)' erscheinen; danach taucht der"
 echo "Rechner unter $SERVER/machines/ auf."
