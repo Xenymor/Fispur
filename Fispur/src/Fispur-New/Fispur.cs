@@ -86,7 +86,7 @@ namespace FispurEngine
         TTEntry[] transpositionTable;
         ulong ttMask;
         int[] historyHeuristic = new int[2 * 64 * 64];
-        Move[] killers = new Move[MAX_DEPTH];
+        Move[,] killers = new Move[MAX_DEPTH, 2];
 
         Timer timer;
         long nodes;
@@ -455,7 +455,11 @@ namespace FispurEngine
                             p += -bonus - p * bonus / HistoryDivisor;
                         }
 
-                        killers[ply] = move;
+                        if (!move.Equals(killers[ply, 0]))
+                        {
+                            killers[ply, 1] = killers[ply, 0];
+                            killers[ply, 0] = move;
+                        }
                     }
 
                     StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move);
@@ -538,7 +542,12 @@ namespace FispurEngine
                 }
             }
 
-            if (move.Equals(killers[ply]))
+            if (move.Equals(killers[ply, 0]))
+            {
+                return 900_001;
+            }
+
+            if (move.Equals(killers[ply, 1]))
             {
                 return 900_000;
             }
