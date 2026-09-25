@@ -203,16 +203,16 @@ function Get-Msys2Tools {
 function Install-DotnetSdk {
     Write-Step '.NET SDK'
     $major = Get-DotnetSdkMajor
-    if ($major -ge 8 -and -not $Force) {
+    if ($major -ge 10 -and -not $Force) {
         Write-Ok "SDK $major.x gefunden"
         return
     }
-    if ($CheckOnly) { Write-Fail 'Kein .NET SDK >= 8 gefunden'; return }
+    if ($CheckOnly) { Write-Fail 'Kein .NET SDK >= 10 gefunden'; return }
 
-    Invoke-Winget -Id 'Microsoft.DotNet.SDK.8' -Label '.NET SDK 8'
+    Invoke-Winget -Id 'Microsoft.DotNet.SDK.10' -Label '.NET SDK 10'
 
     $major = Get-DotnetSdkMajor
-    if ($major -lt 8) { throw 'dotnet ist nach der Installation nicht auffindbar. Shell neu öffnen und erneut versuchen.' }
+    if ($major -lt 10) { throw 'dotnet ist nach der Installation nicht auffindbar. Shell neu öffnen und erneut versuchen.' }
     Write-Ok "SDK $major.x installiert"
 }
 
@@ -501,7 +501,7 @@ function Test-Installation {
     $rows = @()
 
     $dotnetMajor = Get-DotnetSdkMajor
-    $rows += [pscustomobject]@{ Werkzeug = 'dotnet SDK'; Status = if ($dotnetMajor -ge 8) { "OK ($dotnetMajor.x)" } else { 'FEHLT' } }
+    $rows += [pscustomobject]@{ Werkzeug = 'dotnet SDK'; Status = if ($dotnetMajor -ge 10) { "OK ($dotnetMajor.x)" } else { 'FEHLT' } }
 
     $makeVer = $null
     if ($Tools.HasMake) { $makeVer = Get-VersionString ((Invoke-Native -Exe $Tools.Make -Arguments @('-v')).Output -join ' ') }
@@ -590,7 +590,7 @@ Konto und Rechner gebunden.
 if ($needsInstalls -and -not (Get-CommandPath 'winget')) {
     throw @'
 winget wurde nicht gefunden. Es gehört zum "App Installer" aus dem Microsoft Store
-(Windows 10 1809+). Entweder nachinstallieren, oder .NET SDK 8, Python 3 und MSYS2
+(Windows 10 1809+). Entweder nachinstallieren, oder .NET SDK 10, Python 3 und MSYS2
 von Hand einrichten und das Skript dann mit -ConfigureOnly erneut aufrufen.
 '@
 }
@@ -652,5 +652,5 @@ Write-Host 'Fertig.' -ForegroundColor Green
 Write-Host "  Worker starten:  Desktop-Verknüpfung 'Fispur Worker'"
 Write-Host "  oder von Hand:   powershell -ExecutionPolicy Bypass -File `"$start`""
 Write-Host ''
-Write-Host "Im Startlog muss '$EngineFilter | dotnet (8.0.x)' erscheinen; danach taucht der"
+Write-Host "Im Startlog muss '$EngineFilter | dotnet (10.0.x)' erscheinen; danach taucht der"
 Write-Host "Rechner unter $($config.server)/machines/ auf."

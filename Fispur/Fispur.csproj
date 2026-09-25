@@ -5,7 +5,7 @@
     <!-- OpenBench builds (OB_EXE set) only want the CLI's single file in the repo
          root; as a library this project stops emitting its own host artifacts. -->
     <OutputType Condition="'$(OB_EXE)' != ''">Library</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>FispurEngine</RootNamespace>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>

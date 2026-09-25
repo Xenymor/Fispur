@@ -90,6 +90,7 @@ namespace FispurEngine
         TTEntry[] transpositionTable;
         ulong ttMask;
         int[] historyHeuristic = new int[2 * 64 * 64];
+        Move[] killers = new Move[MAX_DEPTH];
 
         Timer timer;
         long nodes;
@@ -136,8 +137,9 @@ namespace FispurEngine
 
         public void NewGame()
         {
-            Array.Clear(transpositionTable, 0, transpositionTable.Length);
-            Array.Clear(historyHeuristic, 0, historyHeuristic.Length);
+            Array.Clear(transpositionTable);
+            Array.Clear(historyHeuristic);
+            Array.Clear(killers);
             eval = 0;
         }
 
@@ -146,7 +148,7 @@ namespace FispurEngine
         public void ResetState()
         {
             NewGame();
-            Array.Clear(historyHeuristic, 0, historyHeuristic.Length);
+            Array.Clear(historyHeuristic);
         }
 
 
@@ -162,6 +164,7 @@ namespace FispurEngine
             {
                 historyHeuristic[i] /= 2;
             }
+            Array.Clear(killers);
 
             Move[] moves = board.GetLegalMoves();
             bestMove = moves.Length == 0 ? Move.NullMove : moves[0];
@@ -195,7 +198,7 @@ namespace FispurEngine
                 {
                     while (true)
                     {
-                        int alpha = dl <= -ASPWindowReset ? -int.MaxValue : eval + dl, beta = dh >= ASPWindowReset ? int.MaxValue : eval + dh;
+                        int alpha = dl <= -ASPWindowReset ? -INFINITY : eval + dl, beta = dh >= ASPWindowReset ? INFINITY : eval + dh;
                         score = AlphaBeta(board, 0, depth, alpha, beta);
 
                         if (score <= alpha)
@@ -218,7 +221,7 @@ namespace FispurEngine
                     }
                 } else
                 {
-                    score = AlphaBeta(board, 0, depth, -int.MaxValue, int.MaxValue);
+                    score = AlphaBeta(board, 0, depth, -INFINITY, INFINITY);
                 }
 
                 if (stopSearch || failed)
@@ -300,7 +303,7 @@ namespace FispurEngine
                 depthLeft--;
             }
 
-            int eval = inCheck ? -int.MaxValue
+            int eval = inCheck ? -INFINITY
                      : hasEntry && entry.staticEval != NO_EVAL ? entry.staticEval
                      : NNUE.Evaluate(board);
             int rfpMargin = RfpMargin * depthLeft;
@@ -466,6 +469,8 @@ namespace FispurEngine
                             ref int p = ref historyHeuristic[getHistoryHeuristicInd(board, moves[j])];
                             p += -bonus - p * bonus / HistoryDivisor;
                         }
+
+                        killers[ply] = move;
                     }
 
                     StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move, eval);
@@ -575,6 +580,7 @@ namespace FispurEngine
                 return int.MaxValue;
             }
 
+
             if (move.IsCapture)
             {
                 if (SEE(board, move, 0))
@@ -584,6 +590,11 @@ namespace FispurEngine
                 {
                     return -1_000_000 + 100 * (int)move.CapturePieceType - (int)move.MovePieceType;
                 }
+            }
+
+            if (move.Equals(killers[ply]))
+            {
+                return 900_000;
             }
 
             return historyHeuristic[getHistoryHeuristicInd(board, move)];

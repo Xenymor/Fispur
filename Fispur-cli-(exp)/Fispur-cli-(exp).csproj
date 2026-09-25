@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Fispur_cli_exp</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -16,5 +16,18 @@
   <ItemGroup>
     <ProjectReference Include="..\Fispur\Fispur.csproj" />
   </ItemGroup>
+
+  <!-- OpenBench build: the Makefile publishes into a scratch folder (never the repo root,
+       see there) and this copies the single published file into the repo root, where the
+       worker expects <OB_EXE>[.exe]. The Copy task needs no shell tools, which Windows
+       workers lack. -->
+  <Target Name="CopyOpenBenchBinary" AfterTargets="Publish" Condition="'$(OB_EXE)' != ''">
+    <ItemGroup>
+      <_OpenBenchBinary Include="$(PublishDir)$(AssemblyName).exe" Condition="Exists('$(PublishDir)$(AssemblyName).exe')" />
+      <_OpenBenchBinary Include="$(PublishDir)$(AssemblyName)" Condition="Exists('$(PublishDir)$(AssemblyName)')" />
+    </ItemGroup>
+    <Error Condition="'@(_OpenBenchBinary)' == ''" Text="OpenBench: published binary $(AssemblyName) not found in $(PublishDir)" />
+    <Copy SourceFiles="@(_OpenBenchBinary)" DestinationFolder="$(MSBuildProjectDirectory)\.." />
+  </Target>
 
 </Project>
