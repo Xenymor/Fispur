@@ -15,7 +15,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.16.1";
+            return "Fispur 0.17.0";
         }
 
         private static string ScoreToUCI(int score)
@@ -61,6 +61,11 @@ namespace FispurEngine
         public static int HistBonusMult = 539;
         public static int HistBonusBase = -320;
 
+        public static int CHistoryDivisor = 32695;
+        public static int MaxCHistBonus = 4148;
+        public static int CHistBonusMult = 529;
+        public static int CHistBonusBase = -324;
+
         public static int NMPMinDepth = 3;
         public static int NMPReductionB = 3;
         public static int NMPReductionDiv = 4;
@@ -91,6 +96,7 @@ namespace FispurEngine
         ulong ttMask;
         int[] historyHeuristic = new int[2 * 64 * 64];
         Move[] killers = new Move[MAX_DEPTH];
+        int[,,,,] continuationHist = new int[2, 7, 64, 7, 64];
 
         Timer timer;
         long nodes;
@@ -140,6 +146,7 @@ namespace FispurEngine
             Array.Clear(transpositionTable);
             Array.Clear(historyHeuristic);
             Array.Clear(killers);
+            Array.Clear(continuationHist);
             eval = 0;
         }
 
@@ -199,7 +206,7 @@ namespace FispurEngine
                     while (true)
                     {
                         int alpha = dl <= -ASPWindowReset ? -INFINITY : eval + dl, beta = dh >= ASPWindowReset ? INFINITY : eval + dh;
-                        score = AlphaBeta(board, 0, depth, alpha, beta);
+                        score = AlphaBeta(board, 0, depth, alpha, beta, 0, 0);
 
                         if (score <= alpha)
                         {
@@ -221,7 +228,7 @@ namespace FispurEngine
                     }
                 } else
                 {
-                    score = AlphaBeta(board, 0, depth, -INFINITY, INFINITY);
+                    score = AlphaBeta(board, 0, depth, -INFINITY, INFINITY, 0, 0);
                 }
 
                 if (stopSearch || failed)
@@ -250,7 +257,7 @@ namespace FispurEngine
         }
 
         [SkipLocalsInit]
-        private unsafe int AlphaBeta(Board board, int ply, int depthLeft, int alpha, int beta, bool canNull = true)
+        private unsafe int AlphaBeta(Board board, int ply, int depthLeft, int alpha, int beta, int prevPiece, int prevTo, bool canNull = true)
         {
             if (stopSearch)
             {
@@ -336,7 +343,7 @@ namespace FispurEngine
                     int reduction = NMPReductionB + depthLeft / NMPReductionDiv;
 
                     board.ForceSkipTurn();
-                    int score = -AlphaBeta(board, ply + 1, depthLeft - reduction - 1, -beta, -beta + 1, canNull: false);
+                    int score = -AlphaBeta(board, ply + 1, depthLeft - reduction - 1, -beta, -beta + 1, 0, 1, canNull: false);
                     board.UndoSkipTurn();
 
                     if (stopSearch)
@@ -356,6 +363,8 @@ namespace FispurEngine
             Span<Move> moves = new Span<Move>(mv, 218);
             board.GetLegalMovesNonAlloc(ref moves, qSearch && !inCheck);
 
+            int sideToMove = board.IsWhiteToMove ? 0 : 1;
+
             if (moves.Length == 0)
                 return inCheck ? -MATE + ply
                      : qSearch ? eval
@@ -364,7 +373,7 @@ namespace FispurEngine
             int* scores = stackalloc int[moves.Length];
             for (int i = 0; i < moves.Length; i++)
             {
-                scores[i] = scoreMove(board, ply, mv[i], ttMove);
+                scores[i] = scoreMove(board, ply, mv[i], ttMove, prevPiece, prevTo, sideToMove);
             }
 
             Move bestMove = Move.NullMove;
@@ -425,7 +434,7 @@ namespace FispurEngine
                 int score;
                 if (movesSearched == 0)
                 {
-                    score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha);
+                    score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
                 }
                 else
                 {
@@ -434,14 +443,14 @@ namespace FispurEngine
                     {
                         reduction = Math.Clamp(LmrReduction(depthLeft, movesSearched), 0, depthLeft);
                     }
-                    score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha);
+                    score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
                     if (reduction > 0 && score > alpha)
                     {
-                        score = -AlphaBeta(board, ply + 1, depthLeft - 1, -(alpha + 1), -alpha);
+                        score = -AlphaBeta(board, ply + 1, depthLeft - 1, -(alpha + 1), -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
                     }
                     if (score > alpha && score < beta)
                     {
-                        score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha);
+                        score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
                     }
                 }
 
@@ -463,11 +472,24 @@ namespace FispurEngine
                         ref int h = ref historyHeuristic[getHistoryHeuristicInd(board, move)];
                         h += bonus - h * bonus / HistoryDivisor;
 
+                        int cBonus = Math.Min(MaxCHistBonus, CHistBonusMult * depthLeft + CHistBonusBase);
+
+
+                        ref int c = ref continuationHist[sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index];
+                        c += cBonus - c * cBonus / CHistoryDivisor;
+
                         for (int j = 0; j < i; j++)
                         {
-                            if (moves[j].IsCapture) continue;
+                            if (moves[j].IsCapture)
+                            {
+                                continue;
+                            }
+
                             ref int p = ref historyHeuristic[getHistoryHeuristicInd(board, moves[j])];
                             p += -bonus - p * bonus / HistoryDivisor;
+
+                            ref int cp = ref continuationHist[sideToMove, prevPiece, prevTo, (int)moves[j].MovePieceType, moves[j].TargetSquare.Index];
+                            cp += -cBonus - cp * cBonus / CHistoryDivisor;
                         }
 
                         killers[ply] = move;
@@ -573,7 +595,7 @@ namespace FispurEngine
              : score < -MATE_BOUND ? score + ply
              : score;
 
-        private int scoreMove(Board board, int ply, Move move, Move ttMove)
+        private int scoreMove(Board board, int ply, Move move, Move ttMove, int prevPiece, int prevTo, int sideToMove)
         {
             if (move.Equals(ttMove))
             {
@@ -597,7 +619,7 @@ namespace FispurEngine
                 return 900_000;
             }
 
-            return historyHeuristic[getHistoryHeuristicInd(board, move)];
+            return historyHeuristic[getHistoryHeuristicInd(board, move)] + continuationHist[sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index];
         }
 
         static readonly int[] pieceVals = new int[] { 0, 100, 300, 350, 500, 900, 100_000 };
