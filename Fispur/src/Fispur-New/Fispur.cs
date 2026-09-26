@@ -34,6 +34,11 @@ namespace FispurEngine
 
         const int MATE_BOUND = MATE - 256;
 
+        private const int KILLER_MOVE_SCORE = 900_000;
+        private const int TT_MOVE_SCORE = int.MaxValue;
+        private const int WINNING_CAPTURE_SCORE = 1_000_000;
+        private const int LOSING_CAPTURE_SCORE = -1_000_000;
+
         const byte BOUND_NONE = 0;
         const byte BOUND_LOWER = 1;  
         const byte BOUND_UPPER = 2;
@@ -432,7 +437,12 @@ namespace FispurEngine
                     int reduction = 0;
                     if (depthLeft >= LmrMinDepth && movesSearched >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = Math.Clamp(LmrReduction(depthLeft, movesSearched), 0, depthLeft);
+                        reduction = LmrReduction(depthLeft, movesSearched);
+                        if (scores[i] == KILLER_MOVE_SCORE)
+                        {
+                            reduction--;
+                        }
+                        reduction = Math.Clamp(reduction, 0, depthLeft);
                     }
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha);
                     if (reduction > 0 && score > alpha)
@@ -577,7 +587,7 @@ namespace FispurEngine
         {
             if (move.Equals(ttMove))
             {
-                return int.MaxValue;
+                return TT_MOVE_SCORE;
             }
 
 
@@ -585,16 +595,16 @@ namespace FispurEngine
             {
                 if (SEE(board, move, 0))
                 { 
-                    return 1_000_000 + 100 * (int)move.CapturePieceType - (int)move.MovePieceType;
+                    return WINNING_CAPTURE_SCORE + 100 * (int)move.CapturePieceType - (int)move.MovePieceType;
                 } else
                 {
-                    return -1_000_000 + 100 * (int)move.CapturePieceType - (int)move.MovePieceType;
+                    return LOSING_CAPTURE_SCORE + 100 * (int)move.CapturePieceType - (int)move.MovePieceType;
                 }
             }
 
             if (move.Equals(killers[ply]))
             {
-                return 900_000;
+                return KILLER_MOVE_SCORE;
             }
 
             return historyHeuristic[getHistoryHeuristicInd(board, move)];
