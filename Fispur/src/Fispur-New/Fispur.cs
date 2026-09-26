@@ -100,7 +100,8 @@ namespace FispurEngine
         ulong ttMask;
         int[] historyHeuristic = new int[2 * 64 * 64];
         Move[] killers = new Move[MAX_DEPTH];
-        private const int CORR_HIST_ENTRIES = 1 << 14;
+        private const int CORR_HIST_EXP = 14;
+        private const int CORR_HIST_ENTRIES = 1 << CORR_HIST_EXP;
         int[,] correctionHist = new int[2, CORR_HIST_ENTRIES];
         int[,,,,] continuationHist = new int[2, 7, 64, 7, 64];
 
@@ -277,7 +278,7 @@ namespace FispurEngine
             }
 
             ulong x = board.GetPieceBitboard(PieceType.Pawn, true) * 0x9E3779B97F4A7C15UL ^ board.GetPieceBitboard(PieceType.Pawn, false) * 0xC2B2AE3D27D4EB4FUL;
-            uint idx = (uint)(x >> (64 - 14)); // 14 = log2(CORR_HIST_ENTRIES);
+            uint idx = (uint)(x >> (64 - CORR_HIST_EXP));
 
             ref int corrHistEntry = ref correctionHist[board.IsWhiteToMove ? 0 : 1, idx];
 
@@ -375,13 +376,14 @@ namespace FispurEngine
             Span<Move> moves = new Span<Move>(mv, 218);
             board.GetLegalMovesNonAlloc(ref moves, qSearch && !inCheck);
 
-            int sideToMove = board.IsWhiteToMove ? 0 : 1;
 
             if (moves.Length == 0)
                 return inCheck ? -MATE + ply
                      : qSearch ? eval
                      : 0;
 
+            int sideToMove = board.IsWhiteToMove ? 0 : 1;
+            
             int* scores = stackalloc int[moves.Length];
             for (int i = 0; i < moves.Length; i++)
             {
@@ -392,7 +394,6 @@ namespace FispurEngine
             int bestScore = qSearch && !inCheck ? eval : -INFINITY;
             int fpMargin = FpMargin * depthLeft;
             int movesSearched = 0;
-
 
             int moveCount = moves.Length;
             for (int i = 0; i < moveCount; i++)
