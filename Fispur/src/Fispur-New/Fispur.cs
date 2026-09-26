@@ -381,8 +381,9 @@ namespace FispurEngine
             int fpMargin = FpMargin * depthLeft;
 
             int movesSearched = 0;
-            Move* searched = stackalloc Move[moves.Length];
-
+            
+            Move* quiets = stackalloc Move[moves.Length];
+            int quietsSearched = 0;
 
             int moveCount = moves.Length;
             for (int i = 0; i < moveCount; i++)
@@ -433,8 +434,6 @@ namespace FispurEngine
                 PrefetchTT(board.ZobristKey);
                 NNUE.makeMove(move, !board.IsWhiteToMove);
 
-                searched[movesSearched] = move;
-
                 int score;
                 if (movesSearched == 0)
                 {
@@ -466,10 +465,12 @@ namespace FispurEngine
                 if (stopSearch)
                     return ply == 0 ? bestScore : 0;
 
+                bool isQuiet = !move.IsCapture && !move.IsPromotion;
+
                 if (score >= beta)
                 {
 
-                    if (!qSearch && !move.IsCapture)
+                    if (!qSearch && isQuiet)
                     {
                         int bonus = Math.Min(MaxHistBonus, HistBonusMult * depthLeft + HistBonusBase);
 
@@ -482,9 +483,9 @@ namespace FispurEngine
                         ref int c = ref continuationHist[sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index];
                         c += cBonus - c * cBonus / CHistoryDivisor;
 
-                        for (int j = 0; j < movesSearched; j++)
+                        for (int j = 0; j < quietsSearched; j++)
                         {
-                            Move searchedMove = searched[j];
+                            Move searchedMove = quiets[j];
 
                             ref int p = ref historyHeuristic[getHistoryHeuristicInd(board, searchedMove)];
                             p += -bonus - p * bonus / HistoryDivisor;
@@ -505,6 +506,12 @@ namespace FispurEngine
 
                     return score;
                 }
+
+                if (isQuiet)
+                {
+                    quiets[quietsSearched++] = move;
+                }
+
                 if (score > bestScore)
                 {
                     bestScore = score;
