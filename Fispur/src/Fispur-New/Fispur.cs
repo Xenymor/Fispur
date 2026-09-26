@@ -361,7 +361,6 @@ namespace FispurEngine
 
             Move* mv = stackalloc Move[218];
             Span<Move> moves = new Span<Move>(mv, 218);
-            Span<bool> skipped = stackalloc bool[218];
             board.GetLegalMovesNonAlloc(ref moves, qSearch && !inCheck);
 
             int sideToMove = board.IsWhiteToMove ? 0 : 1;
@@ -380,7 +379,9 @@ namespace FispurEngine
             Move bestMove = Move.NullMove;
             int bestScore = qSearch && !inCheck ? eval : -INFINITY;
             int fpMargin = FpMargin * depthLeft;
+
             int movesSearched = 0;
+            Move* searched = stackalloc Move[moves.Length];
 
 
             int moveCount = moves.Length;
@@ -408,19 +409,16 @@ namespace FispurEngine
                 {
                     if (depthLeft <= FpMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -INFINITY && Math.Abs(alpha) < MATE_BOUND && eval + fpMargin <= alpha)
                     {
-                        skipped[i] = true;
                         continue;
                     }
                     if (depthLeft <= SEEPMaxDepth && movesSearched > 0)
                     {
                         if (move.IsCapture && !SEE(board, move, -SEEPCaptureThreshold * depthLeft))
                         {
-                            skipped[i] = true;
                             continue;
                         }
                         if (!move.IsCapture && !SEE(board, move, -SEEPThreshold * depthLeft))
                         {
-                            skipped[i] = true;
                             continue;
                         }
                     }
@@ -428,15 +426,14 @@ namespace FispurEngine
 
                 if (qSearch && !inCheck && scores[i] < -500_000) // score lower than -500_000 is losing capture
                 {
-                    skipped[i] = true;
                     continue;
                 }
-
-                skipped[i] = false;
 
                 board.MakeMove(move);
                 PrefetchTT(board.ZobristKey);
                 NNUE.makeMove(move, !board.IsWhiteToMove);
+
+                searched[movesSearched] = move;
 
                 int score;
                 if (movesSearched == 0)
@@ -485,13 +482,14 @@ namespace FispurEngine
                         ref int c = ref continuationHist[sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index];
                         c += cBonus - c * cBonus / CHistoryDivisor;
 
-                        for (int j = 0; j < i; j++)
+                        for (int j = 0; j < movesSearched; j++)
                         {
-                            if (moves[j].IsCapture || skipped[j]) continue;
-                            ref int p = ref historyHeuristic[getHistoryHeuristicInd(board, moves[j])];
+                            Move searchedMove = searched[j];
+
+                            ref int p = ref historyHeuristic[getHistoryHeuristicInd(board, searchedMove)];
                             p += -bonus - p * bonus / HistoryDivisor;
 
-                            ref int cp = ref continuationHist[sideToMove, prevPiece, prevTo, (int)moves[j].MovePieceType, moves[j].TargetSquare.Index];
+                            ref int cp = ref continuationHist[sideToMove, prevPiece, prevTo, (int)searchedMove.MovePieceType, searchedMove.TargetSquare.Index];
                             cp += -cBonus - cp * cBonus / CHistoryDivisor;
                         }
 
