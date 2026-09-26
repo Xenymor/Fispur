@@ -1,5 +1,7 @@
-﻿using FispurEngine.Chess;
+using FispurEngine.Chess;
 using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using static FispurEngine.Chess.PrecomputedMoveData;
 
 namespace FispurEngine.Application.APIHelpers
@@ -35,6 +37,8 @@ namespace FispurEngine.Application.APIHelpers
 
         bool generateNonCapture;
         Board board;
+        // board.Square of the current board
+        int[] squares;
         int currMoveIndex;
 
         ulong enemyPieces;
@@ -50,6 +54,7 @@ namespace FispurEngine.Application.APIHelpers
         public APIMoveGen()
         {
             board = new Board();
+            squares = Array.Empty<int>();
         }
 
         public bool IsInitialized => hasInitializedCurrentPosition;
@@ -68,19 +73,20 @@ namespace FispurEngine.Application.APIHelpers
 
         public bool NoLegalMovesInPosition(Board board)
         {
-            Span<API.Move> moves = stackalloc API.Move[128];
+            Span<API.Move> moves = stackalloc API.Move[MaxMoves];
             generateNonCapture = true;
             Init(board);
-            GenerateKingMoves(moves);
+            ref API.Move dest = ref MemoryMarshal.GetReference(moves);
+            GenerateKingMoves(ref dest);
             if (currMoveIndex > 0) { return false; }
 
             if (!inDoubleCheck)
             {
-                GenerateKnightMoves(moves);
+                GenerateKnightMoves(ref dest);
                 if (currMoveIndex > 0) { return false; }
-                GeneratePawnMoves(moves);
+                GeneratePawnMoves(ref dest);
                 if (currMoveIndex > 0) { return false; }
-                GenerateSlidingMoves(moves, true);
+                GenerateSlidingMoves(ref dest, true);
                 if (currMoveIndex > 0) { return false; }
             }
 
@@ -91,21 +97,39 @@ namespace FispurEngine.Application.APIHelpers
         // Quiet moves (non captures) can optionally be excluded. This is used in quiescence search.
         public void GenerateMoves(ref Span<API.Move> moves, Board board, bool includeQuietMoves = true)
         {
+            // Moves are written without bounds checks, which requires room for the maximum number of moves.
+            // Smaller spans are served through a temporary buffer (throws if the moves don't fit, like before).
+            if (moves.Length < MaxMoves)
+            {
+                Span<API.Move> buffer = stackalloc API.Move[MaxMoves];
+                GenerateMovesUnchecked(buffer, board, includeQuietMoves);
+                buffer.Slice(0, currMoveIndex).CopyTo(moves);
+            }
+            else
+            {
+                GenerateMovesUnchecked(moves, board, includeQuietMoves);
+            }
+
+            moves = moves.Slice(0, currMoveIndex);
+        }
+
+        // Requires moves.Length >= MaxMoves
+        void GenerateMovesUnchecked(Span<API.Move> moves, Board board, bool includeQuietMoves)
+        {
             generateNonCapture = includeQuietMoves;
 
             Init(board);
 
-            GenerateKingMoves(moves);
+            ref API.Move dest = ref MemoryMarshal.GetReference(moves);
+            GenerateKingMoves(ref dest);
 
             // Only king moves are valid in a double check position, so can return early.
             if (!inDoubleCheck)
             {
-                GenerateSlidingMoves(moves);
-                GenerateKnightMoves(moves);
-                GeneratePawnMoves(moves);
+                GenerateSlidingMoves(ref dest);
+                GenerateKnightMoves(ref dest);
+                GeneratePawnMoves(ref dest);
             }
-
-            moves = moves.Slice(0, currMoveIndex);
         }
 
         // Note, this will only return correct value after GenerateMoves() has been called in the current position
@@ -117,6 +141,7 @@ namespace FispurEngine.Application.APIHelpers
         public void Init(Board board)
         {
             this.board = board;
+            squares = board.Square;
             currMoveIndex = 0;
 
 
@@ -136,10 +161,10 @@ namespace FispurEngine.Application.APIHelpers
             pinRays = 0;
 
             // Store some info for convenience
-            isWhiteToMove = board.MoveColour == PieceHelper.White;
+            isWhiteToMove = board.IsWhiteToMove;
             friendlyColour = board.MoveColour;
-            friendlyKingSquare = board.KingSquare[board.MoveColourIndex];
             friendlyIndex = board.MoveColourIndex;
+            friendlyKingSquare = board.KingSquare[friendlyIndex];
             enemyIndex = 1 - friendlyIndex;
 
             // Store some bitboards for convenience
@@ -157,60 +182,65 @@ namespace FispurEngine.Application.APIHelpers
 
         }
 
-        API.Move CreateAPIMove(int startSquare, int targetSquare, int flag)
+        // Type of the piece on the given square (0..63). No bounds check.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        int PieceTypeOnSquare(int square)
         {
-            int movePieceType = PieceHelper.PieceType(board.Square[startSquare]);
-            return CreateAPIMove(startSquare, targetSquare, flag, movePieceType);
+            return PieceHelper.PieceType(Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(squares), square));
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         API.Move CreateAPIMove(int startSquare, int targetSquare, int flag, int movePieceType)
         {
-            int capturePieceType = PieceHelper.PieceType(board.Square[targetSquare]);
-            if (flag == Move.EnPassantCaptureFlag)
-            {
-                capturePieceType = PieceHelper.Pawn;
-            }
-            API.Move apiMove = new(new Move(startSquare, targetSquare, flag), movePieceType, capturePieceType);
-            return apiMove;
+            int capturePieceType = flag == Move.EnPassantCaptureFlag ? PieceHelper.Pawn : PieceTypeOnSquare(targetSquare);
+            return new API.Move(new Move(startSquare, targetSquare, flag), movePieceType, capturePieceType);
         }
 
-        void GenerateKingMoves(Span<API.Move> moves)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void AddMove(ref API.Move dest, int startSquare, int targetSquare, int flag, int movePieceType)
         {
+            Unsafe.Add(ref dest, currMoveIndex++) = CreateAPIMove(startSquare, targetSquare, flag, movePieceType);
+        }
+
+        void GenerateKingMoves(ref API.Move dest)
+        {
+            int moveCount = currMoveIndex;
             ulong legalMask = ~(opponentAttackMap | friendlyPieces);
             ulong kingMoves = Bits.KingMoves[friendlyKingSquare] & legalMask & moveTypeMask;
             while (kingMoves != 0)
             {
                 int targetSquare = BitBoardUtility.PopLSB(ref kingMoves);
-                moves[currMoveIndex++] = CreateAPIMove(friendlyKingSquare, targetSquare, 0, PieceHelper.King);
+                Unsafe.Add(ref dest, moveCount++) = CreateAPIMove(friendlyKingSquare, targetSquare, 0, PieceHelper.King);
             }
+            currMoveIndex = moveCount;
 
             // Castling
             if (!inCheck && generateNonCapture)
             {
-                ulong castleBlockers = opponentAttackMap | board.allPiecesBitboard;
-                if (board.currentGameState.HasKingsideCastleRight(board.IsWhiteToMove))
+                ulong castleBlockers = opponentAttackMap | allPieces;
+                if (board.currentGameState.HasKingsideCastleRight(isWhiteToMove))
                 {
-                    ulong castleMask = board.IsWhiteToMove ? Bits.WhiteKingsideMask : Bits.BlackKingsideMask;
+                    ulong castleMask = isWhiteToMove ? Bits.WhiteKingsideMask : Bits.BlackKingsideMask;
                     if ((castleMask & castleBlockers) == 0)
                     {
-                        int targetSquare = board.IsWhiteToMove ? BoardHelper.g1 : BoardHelper.g8;
-                        moves[currMoveIndex++] = CreateAPIMove(friendlyKingSquare, targetSquare, Move.CastleFlag, PieceHelper.King);
+                        int targetSquare = isWhiteToMove ? BoardHelper.g1 : BoardHelper.g8;
+                        AddMove(ref dest, friendlyKingSquare, targetSquare, Move.CastleFlag, PieceHelper.King);
                     }
                 }
-                if (board.currentGameState.HasQueensideCastleRight(board.IsWhiteToMove))
+                if (board.currentGameState.HasQueensideCastleRight(isWhiteToMove))
                 {
-                    ulong castleMask = board.IsWhiteToMove ? Bits.WhiteQueensideMask2 : Bits.BlackQueensideMask2;
-                    ulong castleBlockMask = board.IsWhiteToMove ? Bits.WhiteQueensideMask : Bits.BlackQueensideMask;
-                    if ((castleMask & castleBlockers) == 0 && (castleBlockMask & board.allPiecesBitboard) == 0)
+                    ulong castleMask = isWhiteToMove ? Bits.WhiteQueensideMask2 : Bits.BlackQueensideMask2;
+                    ulong castleBlockMask = isWhiteToMove ? Bits.WhiteQueensideMask : Bits.BlackQueensideMask;
+                    if ((castleMask & castleBlockers) == 0 && (castleBlockMask & allPieces) == 0)
                     {
-                        int targetSquare = board.IsWhiteToMove ? BoardHelper.c1 : BoardHelper.c8;
-                        moves[currMoveIndex++] = CreateAPIMove(friendlyKingSquare, targetSquare, Move.CastleFlag, PieceHelper.King);
+                        int targetSquare = isWhiteToMove ? BoardHelper.c1 : BoardHelper.c8;
+                        AddMove(ref dest, friendlyKingSquare, targetSquare, Move.CastleFlag, PieceHelper.King);
                     }
                 }
             }
         }
 
-        void GenerateSlidingMoves(Span<API.Move> moves, bool exitEarly = false)
+        void GenerateSlidingMoves(ref API.Move dest, bool exitEarly = false)
         {
             // Limit movement to empty or enemy squares, and must block check if king is in check.
             ulong moveMask = emptyOrEnemySquares & checkRayBitmask & moveTypeMask;
@@ -225,6 +255,9 @@ namespace FispurEngine.Application.APIHelpers
                 diagonalSliders &= ~pinRays;
             }
 
+            int alignBase = friendlyKingSquare;
+            int moveCount = currMoveIndex;
+
             // Ortho
             while (othogonalSliders != 0)
             {
@@ -234,15 +267,17 @@ namespace FispurEngine.Application.APIHelpers
                 // If piece is pinned, it can only move along the pin ray
                 if (IsPinned(startSquare))
                 {
-                    moveSquares &= alignMask[startSquare, friendlyKingSquare];
+                    moveSquares &= AlignMaskFlat[startSquare * 64 + alignBase];
                 }
 
+                int movePieceType = PieceTypeOnSquare(startSquare);
                 while (moveSquares != 0)
                 {
                     int targetSquare = BitBoardUtility.PopLSB(ref moveSquares);
-                    moves[currMoveIndex++] = CreateAPIMove(startSquare, targetSquare, 0);
+                    Unsafe.Add(ref dest, moveCount++) = CreateAPIMove(startSquare, targetSquare, 0, movePieceType);
                     if (exitEarly)
                     {
+                        currMoveIndex = moveCount;
                         return;
                     }
                 }
@@ -257,28 +292,33 @@ namespace FispurEngine.Application.APIHelpers
                 // If piece is pinned, it can only move along the pin ray
                 if (IsPinned(startSquare))
                 {
-                    moveSquares &= alignMask[startSquare, friendlyKingSquare];
+                    moveSquares &= AlignMaskFlat[startSquare * 64 + alignBase];
                 }
 
+                int movePieceType = PieceTypeOnSquare(startSquare);
                 while (moveSquares != 0)
                 {
                     int targetSquare = BitBoardUtility.PopLSB(ref moveSquares);
-                    moves[currMoveIndex++] = CreateAPIMove(startSquare, targetSquare, 0);
+                    Unsafe.Add(ref dest, moveCount++) = CreateAPIMove(startSquare, targetSquare, 0, movePieceType);
                     if (exitEarly)
                     {
+                        currMoveIndex = moveCount;
                         return;
                     }
                 }
             }
+
+            currMoveIndex = moveCount;
         }
 
 
-        void GenerateKnightMoves(Span<API.Move> moves)
+        void GenerateKnightMoves(ref API.Move dest)
         {
-            int friendlyKnightPiece = PieceHelper.MakePiece(PieceHelper.Knight, board.MoveColour);
+            int friendlyKnightPiece = PieceHelper.MakePiece(PieceHelper.Knight, friendlyColour);
             // bitboard of all non-pinned knights
             ulong knights = board.pieceBitboards[friendlyKnightPiece] & notPinRays;
             ulong moveMask = emptyOrEnemySquares & checkRayBitmask & moveTypeMask;
+            int moveCount = currMoveIndex;
 
             while (knights != 0)
             {
@@ -288,28 +328,37 @@ namespace FispurEngine.Application.APIHelpers
                 while (moveSquares != 0)
                 {
                     int targetSquare = BitBoardUtility.PopLSB(ref moveSquares);
-                    moves[currMoveIndex++] = CreateAPIMove(knightSquare, targetSquare, 0, PieceHelper.Knight);
+                    Unsafe.Add(ref dest, moveCount++) = CreateAPIMove(knightSquare, targetSquare, 0, PieceHelper.Knight);
                 }
             }
+
+            currMoveIndex = moveCount;
         }
 
-        void GeneratePawnMoves(Span<API.Move> moves)
+        // A pawn may move from start to target if it is not pinned, or if it stays on the pin ray
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        bool PawnMoveRespectsPin(int startSquare, int targetSquare)
         {
-            int pushDir = board.IsWhiteToMove ? 1 : -1;
+            return !IsPinned(startSquare) || AlignMaskFlat[startSquare * 64 + friendlyKingSquare] == AlignMaskFlat[targetSquare * 64 + friendlyKingSquare];
+        }
+
+        void GeneratePawnMoves(ref API.Move dest)
+        {
+            int pushDir = isWhiteToMove ? 1 : -1;
             int pushOffset = pushDir * 8;
 
-            int friendlyPawnPiece = PieceHelper.MakePiece(PieceHelper.Pawn, board.MoveColour);
+            int friendlyPawnPiece = PieceHelper.MakePiece(PieceHelper.Pawn, friendlyColour);
             ulong pawns = board.pieceBitboards[friendlyPawnPiece];
 
-            ulong promotionRankMask = board.IsWhiteToMove ? Bits.Rank8 : Bits.Rank1;
+            ulong promotionRankMask = isWhiteToMove ? Bits.Rank8 : Bits.Rank1;
 
             ulong singlePush = (BitBoardUtility.Shift(pawns, pushOffset)) & emptySquares;
 
             ulong pushPromotions = singlePush & promotionRankMask & checkRayBitmask;
 
 
-            ulong captureEdgeFileMask = board.IsWhiteToMove ? Bits.NotAFile : Bits.NotHFile;
-            ulong captureEdgeFileMask2 = board.IsWhiteToMove ? Bits.NotHFile : Bits.NotAFile;
+            ulong captureEdgeFileMask = isWhiteToMove ? Bits.NotAFile : Bits.NotHFile;
+            ulong captureEdgeFileMask2 = isWhiteToMove ? Bits.NotHFile : Bits.NotAFile;
             ulong captureA = BitBoardUtility.Shift(pawns & captureEdgeFileMask, pushDir * 7) & enemyPieces;
             ulong captureB = BitBoardUtility.Shift(pawns & captureEdgeFileMask2, pushDir * 9) & enemyPieces;
 
@@ -321,6 +370,8 @@ namespace FispurEngine.Application.APIHelpers
             captureA &= checkRayBitmask & ~promotionRankMask;
             captureB &= checkRayBitmask & ~promotionRankMask;
 
+            int moveCount = currMoveIndex;
+
             // Single / double push
             if (generateNonCapture)
             {
@@ -329,23 +380,23 @@ namespace FispurEngine.Application.APIHelpers
                 {
                     int targetSquare = BitBoardUtility.PopLSB(ref singlePushNoPromotions);
                     int startSquare = targetSquare - pushOffset;
-                    if (!IsPinned(startSquare) || alignMask[startSquare, friendlyKingSquare] == alignMask[targetSquare, friendlyKingSquare])
+                    if (PawnMoveRespectsPin(startSquare, targetSquare))
                     {
-                        moves[currMoveIndex++] = CreateAPIMove(startSquare, targetSquare, 0, PieceHelper.Pawn);
+                        Unsafe.Add(ref dest, moveCount++) = new API.Move(new Move(startSquare, targetSquare, 0), PieceHelper.Pawn, PieceHelper.None);
                     }
                 }
 
                 // Generate double pawn pushes
-                ulong doublePushTargetRankMask = board.IsWhiteToMove ? Bits.Rank4 : Bits.Rank5;
+                ulong doublePushTargetRankMask = isWhiteToMove ? Bits.Rank4 : Bits.Rank5;
                 ulong doublePush = BitBoardUtility.Shift(singlePush, pushOffset) & emptySquares & doublePushTargetRankMask & checkRayBitmask;
 
                 while (doublePush != 0)
                 {
                     int targetSquare = BitBoardUtility.PopLSB(ref doublePush);
                     int startSquare = targetSquare - pushOffset * 2;
-                    if (!IsPinned(startSquare) || alignMask[startSquare, friendlyKingSquare] == alignMask[targetSquare, friendlyKingSquare])
+                    if (PawnMoveRespectsPin(startSquare, targetSquare))
                     {
-                        moves[currMoveIndex++] = CreateAPIMove(startSquare, targetSquare, Move.PawnTwoUpFlag, PieceHelper.Pawn);
+                        Unsafe.Add(ref dest, moveCount++) = new API.Move(new Move(startSquare, targetSquare, Move.PawnTwoUpFlag), PieceHelper.Pawn, PieceHelper.None);
                     }
                 }
             }
@@ -356,9 +407,9 @@ namespace FispurEngine.Application.APIHelpers
                 int targetSquare = BitBoardUtility.PopLSB(ref captureA);
                 int startSquare = targetSquare - pushDir * 7;
 
-                if (!IsPinned(startSquare) || alignMask[startSquare, friendlyKingSquare] == alignMask[targetSquare, friendlyKingSquare])
+                if (PawnMoveRespectsPin(startSquare, targetSquare))
                 {
-                    moves[currMoveIndex++] = CreateAPIMove(startSquare, targetSquare, 0, PieceHelper.Pawn);
+                    Unsafe.Add(ref dest, moveCount++) = CreateAPIMove(startSquare, targetSquare, 0, PieceHelper.Pawn);
                 }
             }
 
@@ -367,13 +418,13 @@ namespace FispurEngine.Application.APIHelpers
                 int targetSquare = BitBoardUtility.PopLSB(ref captureB);
                 int startSquare = targetSquare - pushDir * 9;
 
-                if (!IsPinned(startSquare) || alignMask[startSquare, friendlyKingSquare] == alignMask[targetSquare, friendlyKingSquare])
+                if (PawnMoveRespectsPin(startSquare, targetSquare))
                 {
-                    moves[currMoveIndex++] = CreateAPIMove(startSquare, targetSquare, 0, PieceHelper.Pawn);
+                    Unsafe.Add(ref dest, moveCount++) = CreateAPIMove(startSquare, targetSquare, 0, PieceHelper.Pawn);
                 }
             }
 
-
+            currMoveIndex = moveCount;
 
             // Promotions
             if (generateNonCapture)
@@ -384,7 +435,7 @@ namespace FispurEngine.Application.APIHelpers
                     int startSquare = targetSquare - pushOffset;
                     if (!IsPinned(startSquare))
                     {
-                        GeneratePromotions(moves, startSquare, targetSquare);
+                        GeneratePromotions(ref dest, startSquare, targetSquare);
                     }
                 }
             }
@@ -395,9 +446,9 @@ namespace FispurEngine.Application.APIHelpers
                 int targetSquare = BitBoardUtility.PopLSB(ref capturePromotionsA);
                 int startSquare = targetSquare - pushDir * 7;
 
-                if (!IsPinned(startSquare) || alignMask[startSquare, friendlyKingSquare] == alignMask[targetSquare, friendlyKingSquare])
+                if (PawnMoveRespectsPin(startSquare, targetSquare))
                 {
-                    GeneratePromotions(moves, startSquare, targetSquare);
+                    GeneratePromotions(ref dest, startSquare, targetSquare);
                 }
             }
 
@@ -406,9 +457,9 @@ namespace FispurEngine.Application.APIHelpers
                 int targetSquare = BitBoardUtility.PopLSB(ref capturePromotionsB);
                 int startSquare = targetSquare - pushDir * 9;
 
-                if (!IsPinned(startSquare) || alignMask[startSquare, friendlyKingSquare] == alignMask[targetSquare, friendlyKingSquare])
+                if (PawnMoveRespectsPin(startSquare, targetSquare))
                 {
-                    GeneratePromotions(moves, startSquare, targetSquare);
+                    GeneratePromotions(ref dest, startSquare, targetSquare);
                 }
             }
 
@@ -416,22 +467,22 @@ namespace FispurEngine.Application.APIHelpers
             if (board.currentGameState.enPassantFile > 0)
             {
                 int epFileIndex = board.currentGameState.enPassantFile - 1;
-                int epRankIndex = board.IsWhiteToMove ? 5 : 2;
+                int epRankIndex = isWhiteToMove ? 5 : 2;
                 int targetSquare = epRankIndex * 8 + epFileIndex;
                 int capturedPawnSquare = targetSquare - pushOffset;
 
                 if (BitBoardUtility.ContainsSquare(checkRayBitmask, capturedPawnSquare))
                 {
-                    ulong pawnsThatCanCaptureEp = pawns & BitBoardUtility.PawnAttacks(1ul << targetSquare, !board.IsWhiteToMove);
+                    ulong pawnsThatCanCaptureEp = pawns & BitBoardUtility.PawnAttacks(1ul << targetSquare, !isWhiteToMove);
 
                     while (pawnsThatCanCaptureEp != 0)
                     {
                         int startSquare = BitBoardUtility.PopLSB(ref pawnsThatCanCaptureEp);
-                        if (!IsPinned(startSquare) || alignMask[startSquare, friendlyKingSquare] == alignMask[targetSquare, friendlyKingSquare])
+                        if (PawnMoveRespectsPin(startSquare, targetSquare))
                         {
                             if (!InCheckAfterEnPassant(startSquare, targetSquare, capturedPawnSquare))
                             {
-                                moves[currMoveIndex++] = CreateAPIMove(startSquare, targetSquare, Move.EnPassantCaptureFlag, PieceHelper.Pawn);
+                                AddMove(ref dest, startSquare, targetSquare, Move.EnPassantCaptureFlag, PieceHelper.Pawn);
                             }
                         }
                     }
@@ -439,25 +490,26 @@ namespace FispurEngine.Application.APIHelpers
             }
         }
 
-        void GeneratePromotions(Span<API.Move> moves, int startSquare, int targetSquare)
+        void GeneratePromotions(ref API.Move dest, int startSquare, int targetSquare)
         {
-            moves[currMoveIndex++] = CreateAPIMove(startSquare, targetSquare, Move.PromoteToQueenFlag, PieceHelper.Pawn);
+            AddMove(ref dest, startSquare, targetSquare, Move.PromoteToQueenFlag, PieceHelper.Pawn);
             // Don't generate non-queen promotions in q-search
             if (generateNonCapture)
             {
                 if (promotionsToGenerate == MoveGenerator.PromotionMode.All)
                 {
-                    moves[currMoveIndex++] = CreateAPIMove(startSquare, targetSquare, Move.PromoteToKnightFlag, PieceHelper.Pawn);
-                    moves[currMoveIndex++] = CreateAPIMove(startSquare, targetSquare, Move.PromoteToRookFlag, PieceHelper.Pawn);
-                    moves[currMoveIndex++] = CreateAPIMove(startSquare, targetSquare, Move.PromoteToBishopFlag, PieceHelper.Pawn);
+                    AddMove(ref dest, startSquare, targetSquare, Move.PromoteToKnightFlag, PieceHelper.Pawn);
+                    AddMove(ref dest, startSquare, targetSquare, Move.PromoteToRookFlag, PieceHelper.Pawn);
+                    AddMove(ref dest, startSquare, targetSquare, Move.PromoteToBishopFlag, PieceHelper.Pawn);
                 }
                 else if (promotionsToGenerate == MoveGenerator.PromotionMode.QueenAndKnight)
                 {
-                    moves[currMoveIndex++] = CreateAPIMove(startSquare, targetSquare, Move.PromoteToKnightFlag, PieceHelper.Pawn);
+                    AddMove(ref dest, startSquare, targetSquare, Move.PromoteToKnightFlag, PieceHelper.Pawn);
                 }
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         bool IsPinned(int square)
         {
             return ((pinRays >> square) & 1) != 0;
@@ -465,141 +517,87 @@ namespace FispurEngine.Application.APIHelpers
 
         void GenSlidingAttackMap()
         {
-            opponentSlidingAttackMap = 0;
+            ulong attacks = 0;
+            ulong blockers = allPieces & ~(1ul << friendlyKingSquare);
 
-            UpdateSlideAttack(board.EnemyOrthogonalSliders, true);
-            UpdateSlideAttack(board.EnemyDiagonalSliders, false);
-
-            void UpdateSlideAttack(ulong pieceBoard, bool ortho)
+            ulong orthogonalSliders = board.EnemyOrthogonalSliders;
+            while (orthogonalSliders != 0)
             {
-                ulong blockers = board.allPiecesBitboard & ~(1ul << friendlyKingSquare);
-
-                while (pieceBoard != 0)
-                {
-                    int startSquare = BitBoardUtility.PopLSB(ref pieceBoard);
-                    ulong moveBoard = Magic.GetSliderAttacks(startSquare, blockers, ortho);
-
-                    opponentSlidingAttackMap |= moveBoard;
-                }
+                attacks |= Magic.GetRookAttacks(BitBoardUtility.PopLSB(ref orthogonalSliders), blockers);
             }
+
+            ulong diagonalSliders = board.EnemyDiagonalSliders;
+            while (diagonalSliders != 0)
+            {
+                attacks |= Magic.GetBishopAttacks(BitBoardUtility.PopLSB(ref diagonalSliders), blockers);
+            }
+
+            opponentSlidingAttackMap = attacks;
         }
 
         void CalculateAttackData()
         {
             GenSlidingAttackMap();
-            // Search squares in all directions around friendly king for checks/pins by enemy sliding pieces (queen, rook, bishop)
-            int startDirIndex = 0;
-            int endDirIndex = 8;
 
-            if (board.queens[enemyIndex].Count == 0)
+            // Find checks and pins by enemy sliding pieces (queen, rook, bishop).
+            // Using only the enemy pieces as blockers gives, along every ray from the king, the first enemy piece on that ray.
+            // If that piece is a slider able to move along the ray, it either gives check (no friendly piece in between)
+            // or pins a friendly piece (exactly one friendly piece in between).
+            ulong enemyOrthogonalSliders = board.EnemyOrthogonalSliders;
+            ulong enemyDiagonalSliders = board.EnemyDiagonalSliders;
+            ulong potentialPinners = (Magic.GetRookAttacks(friendlyKingSquare, enemyPieces) & enemyOrthogonalSliders)
+                                   | (Magic.GetBishopAttacks(friendlyKingSquare, enemyPieces) & enemyDiagonalSliders);
+            int betweenBase = friendlyKingSquare * 64;
+
+            while (potentialPinners != 0)
             {
-                startDirIndex = (board.rooks[enemyIndex].Count > 0) ? 0 : 4;
-                endDirIndex = (board.bishops[enemyIndex].Count > 0) ? 8 : 4;
-            }
+                int sliderSquare = BitBoardUtility.PopLSB(ref potentialPinners);
+                ulong rayMask = BetweenMask[betweenBase + sliderSquare] | 1ul << sliderSquare;
+                ulong friendlyBlockers = rayMask & friendlyPieces;
 
-            for (int dir = startDirIndex; dir < endDirIndex; dir++)
-            {
-                bool isDiagonal = dir > 3;
-                ulong slider = isDiagonal ? board.EnemyDiagonalSliders : board.EnemyOrthogonalSliders;
-                if ((dirRayMask[dir, friendlyKingSquare] & slider) == 0)
+                // No friendly piece blocks the attack, so this is a check
+                if (friendlyBlockers == 0)
                 {
-                    continue;
+                    checkRayBitmask |= rayMask;
+                    inDoubleCheck = inCheck; // if already in check, then this is double check
+                    inCheck = true;
                 }
-
-                int n = numSquaresToEdge[friendlyKingSquare][dir];
-                int directionOffset = directionOffsets[dir];
-                bool isFriendlyPieceAlongRay = false;
-                ulong rayMask = 0;
-
-                for (int i = 0; i < n; i++)
+                // Exactly one friendly piece blocks the check, so this is a pin
+                else if ((friendlyBlockers & (friendlyBlockers - 1)) == 0)
                 {
-                    int squareIndex = friendlyKingSquare + directionOffset * (i + 1);
-                    rayMask |= 1ul << squareIndex;
-                    int piece = board.Square[squareIndex];
-
-                    // This square contains a piece
-                    if (piece != PieceHelper.None)
-                    {
-                        if (PieceHelper.IsColour(piece, friendlyColour))
-                        {
-                            // First friendly piece we have come across in this direction, so it might be pinned
-                            if (!isFriendlyPieceAlongRay)
-                            {
-                                isFriendlyPieceAlongRay = true;
-                            }
-                            // This is the second friendly piece we've found in this direction, therefore pin is not possible
-                            else
-                            {
-                                break;
-                            }
-                        }
-                        // This square contains an enemy piece
-                        else
-                        {
-                            int pieceType = PieceHelper.PieceType(piece);
-
-                            // Check if piece is in bitmask of pieces able to move in current direction
-                            if (isDiagonal && PieceHelper.IsDiagonalSlider(pieceType) || !isDiagonal && PieceHelper.IsOrthogonalSlider(pieceType))
-                            {
-                                // Friendly piece blocks the check, so this is a pin
-                                if (isFriendlyPieceAlongRay)
-                                {
-                                    pinRays |= rayMask;
-                                }
-                                // No friendly piece blocking the attack, so this is a check
-                                else
-                                {
-                                    checkRayBitmask |= rayMask;
-                                    inDoubleCheck = inCheck; // if already in check, then this is double check
-                                    inCheck = true;
-                                }
-                                break;
-                            }
-                            else
-                            {
-                                // This enemy piece is not able to move in the current direction, and so is blocking any checks/pins
-                                break;
-                            }
-                        }
-                    }
-                }
-                // Stop searching for pins if in double check, as the king is the only piece able to move in that case anyway
-                if (inDoubleCheck)
-                {
-                    break;
+                    pinRays |= rayMask;
                 }
             }
 
             notPinRays = ~pinRays;
 
+            int enemyColour = friendlyColour ^ PieceHelper.Black;
+            ulong knights = board.pieceBitboards[PieceHelper.MakePiece(PieceHelper.Knight, enemyColour)];
             ulong opponentKnightAttacks = 0;
-            ulong knights = board.pieceBitboards[PieceHelper.MakePiece(PieceHelper.Knight, board.OpponentColour)];
-            ulong friendlyKingBoard = board.pieceBitboards[PieceHelper.MakePiece(PieceHelper.King, board.MoveColour)];
 
             while (knights != 0)
             {
-                int knightSquare = BitBoardUtility.PopLSB(ref knights);
-                ulong knightAttacks = Bits.KnightAttacks[knightSquare];
-                opponentKnightAttacks |= knightAttacks;
+                opponentKnightAttacks |= Bits.KnightAttacks[BitBoardUtility.PopLSB(ref knights)];
+            }
 
-                if ((knightAttacks & friendlyKingBoard) != 0)
-                {
-                    inDoubleCheck = inCheck;
-                    inCheck = true;
-                    checkRayBitmask |= 1ul << knightSquare;
-                }
+            // Knight checks
+            ulong checkingKnights = Bits.KnightAttacks[friendlyKingSquare] & board.pieceBitboards[PieceHelper.MakePiece(PieceHelper.Knight, enemyColour)];
+            if (checkingKnights != 0)
+            {
+                // (more than one checking knight is only possible in positions set up from a fen, but handle it anyway)
+                inDoubleCheck = inCheck || (checkingKnights & (checkingKnights - 1)) != 0;
+                inCheck = true;
+                checkRayBitmask |= checkingKnights;
             }
 
             // Pawn attacks
-            opponentPawnAttackMap = 0;
-
-            ulong opponentPawnsBoard = board.pieceBitboards[PieceHelper.MakePiece(PieceHelper.Pawn, board.OpponentColour)];
+            ulong opponentPawnsBoard = board.pieceBitboards[PieceHelper.MakePiece(PieceHelper.Pawn, enemyColour)];
             opponentPawnAttackMap = BitBoardUtility.PawnAttacks(opponentPawnsBoard, !isWhiteToMove);
             if (BitBoardUtility.ContainsSquare(opponentPawnAttackMap, friendlyKingSquare))
             {
                 inDoubleCheck = inCheck; // if already in check, then this is double check
                 inCheck = true;
-                ulong possiblePawnAttackOrigins = board.IsWhiteToMove ? Bits.WhitePawnAttacks[friendlyKingSquare] : Bits.BlackPawnAttacks[friendlyKingSquare];
+                ulong possiblePawnAttackOrigins = isWhiteToMove ? Bits.WhitePawnAttacks[friendlyKingSquare] : Bits.BlackPawnAttacks[friendlyKingSquare];
                 ulong pawnCheckMap = opponentPawnsBoard & possiblePawnAttackOrigins;
                 checkRayBitmask |= pawnCheckMap;
             }
