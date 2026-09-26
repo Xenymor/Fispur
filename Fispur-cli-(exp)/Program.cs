@@ -246,22 +246,34 @@ internal class Program
         new("LmrMinMoves",          1,      16,     () => Fispur.LmrMinMoves,           v => Fispur.LmrMinMoves = v,            true),
         new("LmrBase",              0,      400,    () => Fispur.LmrBase,               v => Fispur.LmrBase = v),
         new("LmrDivisor",           50,     1000,   () => Fispur.LmrDivisor,            v => Fispur.LmrDivisor = v),
+
         new("RfpMaxDepth",          1,      16,     () => Fispur.RfpMaxDepth,           v => Fispur.RfpMaxDepth = v,            true),
         new("RfpMargin",            10,     500,    () => Fispur.RfpMargin,             v => Fispur.RfpMargin = v),
+
         new("FpMaxDepth",           1,      16,     () => Fispur.FpMaxDepth,            v => Fispur.FpMaxDepth = v,             true),
         new("FpMargin",             10,     500,    () => Fispur.FpMargin,              v => Fispur.FpMargin = v),
+
         new("HistoryDivisor",       512,    65536,  () => Fispur.HistoryDivisor,        v => Fispur.HistoryDivisor = v),
         new("MaxHistBonus",         10,     16000,  () => Fispur.MaxHistBonus,          v => Fispur.MaxHistBonus = v),
         new("HistBonusMult",        50,     800,    () => Fispur.HistBonusMult,         v => Fispur.HistBonusMult = v),
         new("HistBonusBase",        -600,   200,    () => Fispur.HistBonusBase,         v => Fispur.HistBonusBase = v),
+
+        new("CHistoryDivisor",      512,    65536,  () => Fispur.CHistoryDivisor,        v => Fispur.CHistoryDivisor = v),
+        new("MaxCHistBonus",        10,     16000,  () => Fispur.MaxCHistBonus,          v => Fispur.MaxCHistBonus = v),
+        new("CHistBonusMult",       50,     800,    () => Fispur.CHistBonusMult,         v => Fispur.CHistBonusMult = v),
+        new("CHistBonusBase",       -600,   200,    () => Fispur.CHistBonusBase,         v => Fispur.CHistBonusBase = v),
+
         new("NMPMinDepth",          1,      8,      () => Fispur.NMPMinDepth,           v => Fispur.NMPMinDepth = v,            true),
         new("NMPReductionB",        1,      6,      () => Fispur.NMPReductionB,         v => Fispur.NMPReductionB = v,          true),
         new("NMPReductionDiv",      2,      10,     () => Fispur.NMPReductionDiv,       v => Fispur.NMPReductionDiv = v,        true),
+
         new("ASPWindowDelta",       10,     200,    () => Fispur.ASPWindowDelta,        v => Fispur.ASPWindowDelta = v),
         new("ASPWindowReset",       100,    2000,   () => Fispur.ASPWindowReset,        v => Fispur.ASPWindowReset = v),
+
         new("SEEPMaxDepth",         1,      8,      () => Fispur.SEEPMaxDepth,          v => Fispur.SEEPMaxDepth = v,           true),
         new("SEEPThreshold",        0,      500,    () => Fispur.SEEPThreshold,         v => Fispur.SEEPThreshold = v),
         new("SEEPCaptureThreshold", 0,      500,    () => Fispur.SEEPCaptureThreshold,  v => Fispur.SEEPCaptureThreshold = v),
+
         new("MinIIRDepth",          0,      8,      () => Fispur.MinIIRDepth,           v => Fispur.MinIIRDepth = v,            true),
         new("CorrHistGrain",        0,      500,    () => Fispur.CORR_GRAIN,            v => Fispur.CORR_GRAIN = v),
         new("CorrHistScale",        0,      500,    () => Fispur.CORR_SCALE,            v => Fispur.CORR_SCALE = v),
