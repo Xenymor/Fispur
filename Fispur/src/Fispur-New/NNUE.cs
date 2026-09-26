@@ -2,93 +2,104 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 
 namespace FispurEngine
 {
-    public static class NNUE
+    public static unsafe class NNUE
     {
         const int INPUT = 768;
-        const int HL = 512;              
+        const int HL = 512;
         const int QA = 255;
         const int QB = 64;
-        const int QAB = QA * QB;          
+        const int QAB = QA * QB;
         const int SCALE = 400;
 
-        static readonly short[] l0w = new short[INPUT * HL];  
-        static readonly short[] l0b = new short[HL];
-        static readonly short[] l1w = new short[2 * HL];
+        // All weights and accumulators live in 32-byte aligned native memory:
+        // no bounds checks, no pinning via `fixed`, aligned AVX2 loads/stores.
+        static readonly short* l0w;
+        static readonly short* l0b;
+        static readonly short* l1w;
         static readonly short l1b;
 
-        static short[][] accWhite;
-        static short[][] accBlack;
+        // Accumulator stack, one entry per ply: [ply][perspective (0 = white, 1 = black)][HL]
+        static readonly short* acc;
+        const int PLY_STRIDE = 2 * HL;
 
         static int currPly = 0;
 
         static NNUE()
         {
-            Stream? s = Assembly.GetExecutingAssembly().GetManifestResourceStream("net0.12.0.bin");
+            l0w = (short*)NativeMemory.AlignedAlloc((nuint)(INPUT * HL * sizeof(short)), 64);
+            l0b = (short*)NativeMemory.AlignedAlloc((nuint)(HL * sizeof(short)), 64);
+            l1w = (short*)NativeMemory.AlignedAlloc((nuint)(2 * HL * sizeof(short)), 64);
+            acc = (short*)NativeMemory.AlignedAlloc((nuint)(Fispur.MAX_DEPTH * PLY_STRIDE * sizeof(short)), 64);
 
+            Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("net0.12.0.bin")!;
             using var r = new BinaryReader(s);
-            for (int i = 0; i < l0w.Length; i++) l0w[i] = r.ReadInt16();
-            for (int i = 0; i < l0b.Length; i++) l0b[i] = r.ReadInt16();
-            for (int i = 0; i < l1w.Length; i++) l1w[i] = r.ReadInt16();
+            for (int i = 0; i < INPUT * HL; i++)
+            {
+                l0w[i] = r.ReadInt16();
+            }
+
+            for (int i = 0; i < HL; i++)
+            {
+                l0b[i] = r.ReadInt16();
+            }
+
+            for (int i = 0; i < 2 * HL; i++)
+            {
+                l1w[i] = r.ReadInt16();
+            }
+
             l1b = r.ReadInt16();
-
-            accWhite = new short[Fispur.MAX_DEPTH][];
-            accBlack = new short[Fispur.MAX_DEPTH][];
-
-            for (int i = 0; i < Fispur.MAX_DEPTH; i++)
-            {
-                accWhite[i] = new short[HL];
-                accBlack[i] = new short[HL];
-            }
         }
 
-        static int SCReLU(int x)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static short* Acc(int ply, int perspective)
         {
-            int c = x < 0 ? 0 : x > QA ? QA : x;
-            return c * c;
+            return acc + ply * PLY_STRIDE + perspective * HL;
         }
 
-
-        public static unsafe int Evaluate(Board board)
+        public static int Evaluate(Board board)
         {
-            short[] boysArr = board.IsWhiteToMove ? accWhite[currPly] : accBlack[currPly];
-            short[] oppsArr = board.IsWhiteToMove ? accBlack[currPly] : accWhite[currPly];
+            short* boys = Acc(currPly, board.IsWhiteToMove ? 0 : 1);
+            short* opps = Acc(currPly, board.IsWhiteToMove ? 1 : 0);
+            short* w = l1w;
 
-            fixed (short* boys = boysArr, opps = oppsArr, w = l1w)
+            Vector256<short> zero = Vector256<short>.Zero;
+            Vector256<short> qa = Vector256.Create((short)QA);
+            Vector256<int> sum0 = Vector256<int>.Zero;
+            Vector256<int> sum1 = Vector256<int>.Zero;
+
+            for (int h = 0; h < HL; h += 16)
             {
-                Vector256<short> zero = Vector256<short>.Zero;
-                Vector256<short> qa = Vector256.Create((short)QA);
-                Vector256<int> sum = Vector256<int>.Zero;
+                Vector256<short> v = Avx2.Min(Avx2.Max(Avx.LoadAlignedVector256(boys + h), zero), qa);
+                sum0 = Avx2.Add(sum0, Avx2.MultiplyAddAdjacent(v, Avx2.MultiplyLow(v, Avx.LoadAlignedVector256(w + h))));
 
-                for (int h = 0; h < HL; h += 16)
-                {
-                    Vector256<short> v = Avx2.Min(Avx2.Max(Avx.LoadVector256(boys + h), zero), qa);
-                    sum = Avx2.Add(sum, Avx2.MultiplyAddAdjacent(v, Avx2.MultiplyLow(v, Avx.LoadVector256(w + h))));
-
-                    Vector256<short> o = Avx2.Min(Avx2.Max(Avx.LoadVector256(opps + h), zero), qa);
-                    sum = Avx2.Add(sum, Avx2.MultiplyAddAdjacent(o, Avx2.MultiplyLow(o, Avx.LoadVector256(w + HL + h))));
-                }
-
-                Vector128<int> s = Sse2.Add(sum.GetLower(), sum.GetUpper());
-                s = Ssse3.HorizontalAdd(s, s);
-                s = Ssse3.HorizontalAdd(s, s);
-
-                long total = s.ToScalar();
-                return (int)((total / QA + l1b) * SCALE / QAB);
+                Vector256<short> o = Avx2.Min(Avx2.Max(Avx.LoadAlignedVector256(opps + h), zero), qa);
+                sum1 = Avx2.Add(sum1, Avx2.MultiplyAddAdjacent(o, Avx2.MultiplyLow(o, Avx.LoadAlignedVector256(w + HL + h))));
             }
+
+            Vector256<int> sum = Avx2.Add(sum0, sum1);
+            Vector128<int> s = Sse2.Add(sum.GetLower(), sum.GetUpper());
+            s = Ssse3.HorizontalAdd(s, s);
+            s = Ssse3.HorizontalAdd(s, s);
+
+            long total = s.ToScalar();
+            return (int)((total / QA + l1b) * SCALE / QAB);
         }
 
         public static void UpdateAccumulators(Board board)
         {
             currPly = 0;
-            short[] currAccWhite = accWhite[currPly];
-            short[] currAccBlack = accBlack[currPly];
+            short* aw = Acc(0, 0);
+            short* ab = Acc(0, 1);
 
-            for (int h = 0; h < HL; h++) { currAccWhite[h] = l0b[h]; currAccBlack[h] = l0b[h]; }
+            for (int h = 0; h < HL; h++) { aw[h] = l0b[h]; ab[h] = l0b[h]; }
 
             for (int color = 0; color <= 1; color++)
             {
@@ -100,57 +111,64 @@ namespace FispurEngine
                     while (bb != 0)
                     {
                         int sq = BitboardHelper.ClearAndGetIndexOfLSB(ref bb);
-                        int wBase = (384 * color + 64 * pc + sq) * HL;
-                        int bBase = (384 * (1 - color) + 64 * pc + (sq ^ 56)) * HL;
+                        short* wf = l0w + (384 * color + 64 * pc + sq) * HL;
+                        short* bf = l0w + (384 * (1 - color) + 64 * pc + (sq ^ 56)) * HL;
                         for (int h = 0; h < HL; h++)
                         {
-                            currAccWhite[h] += l0w[wBase + h];
-                            currAccBlack[h] += l0w[bBase + h];
+                            aw[h] += wf[h];
+                            ab[h] += bf[h];
                         }
                     }
                 }
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static int FeatureW(int color, int pc, int sq)
+        {
+            return (384 * color + 64 * pc + sq) * HL;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static int FeatureB(int color, int pc, int sq)
+        {
+            return (384 * (1 - color) + 64 * pc + (sq ^ 56)) * HL;
+        }
+
         internal static void makeMove(Move move, bool isWhite)
         {
-            accWhite[currPly].CopyTo(accWhite[currPly + 1], 0);
-            accBlack[currPly].CopyTo(accBlack[currPly + 1], 0);
-            currPly++;
-
             int color = isWhite ? 0 : 1;
             int pc = (int)move.MovePieceType - 1;
             int destPc = (int)(move.IsPromotion ? move.PromotionPieceType : move.MovePieceType) - 1;
+            int from = move.StartSquare.Index, to = move.TargetSquare.Index;
 
-            getIndexes(color, pc, move.StartSquare.Index, out int wSrc, out int bSrc);
-            getIndexes(color, destPc, move.TargetSquare.Index, out int wDest, out int bDest);
+            short* srcW = Acc(currPly, 0), srcB = Acc(currPly, 1);
+            currPly++;
+            short* dstW = Acc(currPly, 0), dstB = Acc(currPly, 1);
 
-            removePiece(wSrc, bSrc);
-            addPiece(wDest, bDest);
-
-            if (move.IsEnPassant)
-            {
-                int capSq = move.TargetSquare.Index + (isWhite ? -8 : 8);
-                getIndexes(1 - color, (int)PieceType.Pawn - 1, capSq, out int wCap, out int bCap);
-                removePiece(wCap, bCap);
-            }
-            else if (move.IsCapture)
-            {
-                getIndexes(1 - color, (int)move.CapturePieceType - 1, move.TargetSquare.Index, out int wCap, out int bCap);
-                removePiece(wCap, bCap);
-            }
+            int subW = FeatureW(color, pc, from), subB = FeatureB(color, pc, from);
+            int addW = FeatureW(color, destPc, to), addB = FeatureB(color, destPc, to);
 
             if (move.IsCastles)
             {
-                bool kingside = move.TargetSquare.Index > move.StartSquare.Index;
-                int rookFrom = kingside ? move.TargetSquare.Index + 1 : move.TargetSquare.Index - 2;
-                int rookTo = kingside ? move.TargetSquare.Index - 1 : move.TargetSquare.Index + 1;
+                bool kingside = to > from;
+                int rookFrom = kingside ? to + 1 : to - 2;
+                int rookTo = kingside ? to - 1 : to + 1;
                 int rpc = (int)PieceType.Rook - 1;
-
-                getIndexes(color, rpc, rookFrom, out int wRookFrom, out int bRookFrom);
-                getIndexes(color, rpc, rookTo, out int wRookTo, out int bRookTo);
-                removePiece(wRookFrom, bRookFrom);
-                addPiece(wRookTo, bRookTo);
+                AddAddSubSub(dstW, srcW, l0w + addW, l0w + FeatureW(color, rpc, rookTo), l0w + subW, l0w + FeatureW(color, rpc, rookFrom));
+                AddAddSubSub(dstB, srcB, l0w + addB, l0w + FeatureB(color, rpc, rookTo), l0w + subB, l0w + FeatureB(color, rpc, rookFrom));
+            }
+            else if (move.IsCapture)
+            {
+                int capSq = move.IsEnPassant ? to + (isWhite ? -8 : 8) : to;
+                int capPc = (int)move.CapturePieceType - 1;
+                AddSubSub(dstW, srcW, l0w + addW, l0w + subW, l0w + FeatureW(1 - color, capPc, capSq));
+                AddSubSub(dstB, srcB, l0w + addB, l0w + subB, l0w + FeatureB(1 - color, capPc, capSq));
+            }
+            else
+            {
+                AddSub(dstW, srcW, l0w + addW, l0w + subW);
+                AddSub(dstB, srcB, l0w + addB, l0w + subB);
             }
         }
 
@@ -159,49 +177,40 @@ namespace FispurEngine
             currPly--;
         }
 
-        private static void getIndexes(int color, int pc, int sq, out int wPos, out int bPos)
+        // dst = src + a - s   (one pass: read src once, write dst once)
+        static void AddSub(short* dst, short* src, short* a, short* s)
         {
-            wPos = (384 * color + 64 * pc + sq) * HL;
-            bPos = (384 * (1 - color) + 64 * pc + (sq ^ 56)) * HL;
-        }
-
-        private static unsafe void addPiece(int wPos, int bPos)
-        {
-            fixed (short* aw = accWhite[currPly], ab = accBlack[currPly], w = l0w)
+            for (int i = 0; i < HL; i += 16)
             {
-                AddInPlaceAvx2(aw, &w[wPos], HL);
-                AddInPlaceAvx2(ab, &w[bPos], HL);
+                var v = Avx.LoadAlignedVector256(src + i);
+                v = Avx2.Add(v, Avx.LoadAlignedVector256(a + i));
+                v = Avx2.Subtract(v, Avx.LoadAlignedVector256(s + i));
+                Avx.StoreAligned(dst + i, v);
             }
         }
 
-        private static unsafe void removePiece(int wPos, int bPos)
+        static void AddSubSub(short* dst, short* src, short* a, short* s1, short* s2)
         {
-            fixed (short* aw = accWhite[currPly], ab = accBlack[currPly], w = l0w)
+            for (int i = 0; i < HL; i += 16)
             {
-                SubtractInPlaceAvx2(aw, &w[wPos], HL);
-                SubtractInPlaceAvx2(ab, &w[bPos], HL);
+                var v = Avx.LoadAlignedVector256(src + i);
+                v = Avx2.Add(v, Avx.LoadAlignedVector256(a + i));
+                v = Avx2.Subtract(v, Avx.LoadAlignedVector256(s1 + i));
+                v = Avx2.Subtract(v, Avx.LoadAlignedVector256(s2 + i));
+                Avx.StoreAligned(dst + i, v);
             }
         }
 
-        static unsafe void SubtractInPlaceAvx2(short* dst, short* src, int length)
+        static void AddAddSubSub(short* dst, short* src, short* a1, short* a2, short* s1, short* s2)
         {
-            int i = 0;
-            for (; i <= length - 16; i += 16)
+            for (int i = 0; i < HL; i += 16)
             {
-                var a = Avx.LoadVector256(dst + i);
-                var b = Avx.LoadVector256(src + i);
-                Avx2.Store(dst + i, Avx2.Subtract(a, b));
-            }
-        }
-
-        static unsafe void AddInPlaceAvx2(short* dst, short* src, int length)
-        {
-            int i = 0;
-            for (; i <= length - 16; i += 16)
-            {
-                var a = Avx.LoadVector256(dst + i);
-                var b = Avx.LoadVector256(src + i);
-                Avx2.Store(dst + i, Avx2.Add(a, b));
+                var v = Avx.LoadAlignedVector256(src + i);
+                v = Avx2.Add(v, Avx.LoadAlignedVector256(a1 + i));
+                v = Avx2.Add(v, Avx.LoadAlignedVector256(a2 + i));
+                v = Avx2.Subtract(v, Avx.LoadAlignedVector256(s1 + i));
+                v = Avx2.Subtract(v, Avx.LoadAlignedVector256(s2 + i));
+                Avx.StoreAligned(dst + i, v);
             }
         }
     }

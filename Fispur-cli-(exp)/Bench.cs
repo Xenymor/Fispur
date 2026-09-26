@@ -21,7 +21,7 @@ using ApiTimer = FispurEngine.API.Timer;
 internal static class Bench
 {
     /// <summary>Depth used when the caller does not pass one explicitly.</summary>
-    public const int DEFAULT_DEPTH = 9;
+    public const int DEFAULT_DEPTH = 12;
 
     /// <summary>
     /// Hash size for the bench. Deliberately fixed: if this followed the Hash UCI option
