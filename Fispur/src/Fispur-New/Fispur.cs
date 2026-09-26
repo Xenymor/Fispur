@@ -74,6 +74,10 @@ namespace FispurEngine
 
         public static int MinIIRDepth = 4;
 
+        public static int CORR_GRAIN = 256;
+        public static int CORR_SCALE = 256;
+        public static int CORR_MAX = 64 * CORR_GRAIN;
+
         struct TTEntry
         {
             public uint key; //first 32 bit
@@ -91,6 +95,8 @@ namespace FispurEngine
         ulong ttMask;
         int[] historyHeuristic = new int[2 * 64 * 64];
         Move[] killers = new Move[MAX_DEPTH];
+        private const int CORR_HIST_ENTRIES = 1 << 14;
+        int[,] correctionHist = new int[2, CORR_HIST_ENTRIES];
 
         Timer timer;
         long nodes;
@@ -140,6 +146,7 @@ namespace FispurEngine
             Array.Clear(transpositionTable);
             Array.Clear(historyHeuristic);
             Array.Clear(killers);
+            Array.Clear(correctionHist);
             eval = 0;
         }
 
@@ -148,7 +155,6 @@ namespace FispurEngine
         public void ResetState()
         {
             NewGame();
-            Array.Clear(historyHeuristic);
         }
 
 
@@ -263,9 +269,14 @@ namespace FispurEngine
                 return 0;
             }
 
+            ulong x = board.GetPieceBitboard(PieceType.Pawn, true) * 0x9E3779B97F4A7C15UL ^ board.GetPieceBitboard(PieceType.Pawn, false) * 0xC2B2AE3D27D4EB4FUL;
+            uint idx = (uint)(x >> (64 - 14)); // 14 = log2(CORR_HIST_ENTRIES);
+
+            ref int corrHistEntry = ref correctionHist[board.IsWhiteToMove ? 0 : 1, idx];
+
             if (ply >= MAX_DEPTH - 1)
             {
-                return NNUE.Evaluate(board);
+                return NNUE.Evaluate(board) + corrHistEntry / CORR_GRAIN;
             }
 
             int ogAlpha = alpha;
@@ -303,9 +314,10 @@ namespace FispurEngine
                 depthLeft--;
             }
 
-            int eval = inCheck ? -INFINITY
-                     : hasEntry && entry.staticEval != NO_EVAL ? entry.staticEval
-                     : NNUE.Evaluate(board);
+            int rawEval = inCheck ? -INFINITY
+                     : (hasEntry && entry.staticEval != NO_EVAL ? entry.staticEval
+                     : NNUE.Evaluate(board));
+            int eval = rawEval + (rawEval > - INFINITY ? corrHistEntry / CORR_GRAIN : 0);
             int rfpMargin = RfpMargin * depthLeft;
 
             if (!qSearch && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + rfpMargin)
@@ -473,7 +485,12 @@ namespace FispurEngine
                         killers[ply] = move;
                     }
 
-                    StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move, eval);
+
+                    StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move, rawEval);
+                    if (!qSearch && !inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > eval)
+                    {
+                        UpdateCorrHist(ref corrHistEntry, score, rawEval, depthLeft);
+                    }
 
                     if (ply == 0)
                     {
@@ -500,11 +517,25 @@ namespace FispurEngine
 
             if (!qSearch)
             {
+                byte bound = bestScore <= ogAlpha ? BOUND_UPPER : BOUND_EXACT;
                 StoreTT(zobrist, bestScore, depthLeft, ply,
-                    bestScore <= ogAlpha ? BOUND_UPPER : BOUND_EXACT, bestMove, eval);
+                    bound, bestMove, rawEval);
+                if (!inCheck && !bestMove.IsCapture && !bestMove.IsPromotion && Math.Abs(bestScore) < MATE_BOUND 
+                    && ((bound == BOUND_UPPER && bestScore < eval) || bound == BOUND_EXACT))
+                {
+                    UpdateCorrHist(ref corrHistEntry, bestScore, rawEval, depthLeft);
+                }
             }
 
             return bestScore;
+        }
+
+        void UpdateCorrHist(ref int entry, int score, int rawEval, int depth)
+        {
+            int diff = (score - rawEval) * CORR_GRAIN;
+            int w = Math.Min(depth + 1, 16);
+            entry = (entry * (CORR_SCALE - w) + diff * w) / CORR_SCALE;
+            entry = Math.Clamp(entry, -CORR_MAX, CORR_MAX);
         }
 
         // LMR reductions, precomputed. Rebuilt whenever LmrBase / LmrDivisor change (SPSA / setoption).

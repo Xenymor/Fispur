@@ -263,6 +263,9 @@ internal class Program
         new("SEEPThreshold",        0,      500,    () => Fispur.SEEPThreshold,         v => Fispur.SEEPThreshold = v),
         new("SEEPCaptureThreshold", 0,      500,    () => Fispur.SEEPCaptureThreshold,  v => Fispur.SEEPCaptureThreshold = v),
         new("MinIIRDepth",          0,      8,      () => Fispur.MinIIRDepth,           v => Fispur.MinIIRDepth = v,            true),
+        new("CorrHistGrain",        0,      500,    () => Fispur.CORR_GRAIN,            v => Fispur.CORR_GRAIN = v),
+        new("CorrHistScale",        0,      500,    () => Fispur.CORR_SCALE,            v => Fispur.CORR_SCALE = v),
+        new("CorrHistMax",          0,      500,    () => Fispur.CORR_MAX,              v => Fispur.CORR_MAX = v),
     };
 
     static void PrintSpsaInputs()
