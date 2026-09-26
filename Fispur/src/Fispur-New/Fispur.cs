@@ -61,10 +61,10 @@ namespace FispurEngine
         public static int HistBonusMult = 539;
         public static int HistBonusBase = -320;
 
-        public static int CHistoryDivisor = 30168;
-        public static int MaxCHistBonus = 3847;
-        public static int CHistBonusMult = 539;
-        public static int CHistBonusBase = -320;
+        public static int CHistoryDivisor = 32695;
+        public static int MaxCHistBonus = 4148;
+        public static int CHistBonusMult = 529;
+        public static int CHistBonusBase = -324;
 
         public static int NMPMinDepth = 3;
         public static int NMPReductionB = 3;
