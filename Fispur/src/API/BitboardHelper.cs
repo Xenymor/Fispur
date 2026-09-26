@@ -165,25 +165,9 @@ namespace FispurEngine.API
         /// </summary>
         public static void StopVisualizingBitboard() => BitboardDebugState.BitboardDebugVisualizationRequested = false;
 
-        static ulong GetRookAttacks(Square square, ulong blockers)
-        {
-            ulong mask = Magic.RookMask[square.Index];
-            ulong magic = PrecomputedMagics.RookMagics[square.Index];
-            int shift = PrecomputedMagics.RookShifts[square.Index];
+        static ulong GetRookAttacks(Square square, ulong blockers) => Magic.GetRookAttacks(square.Index, blockers);
 
-            ulong key = ((blockers & mask) * magic) >> shift;
-            return Magic.RookAttacks[square.Index][key];
-        }
-
-        static ulong GetBishopAttacks(Square square, ulong blockers)
-        {
-            ulong mask = Magic.BishopMask[square.Index];
-            ulong magic = PrecomputedMagics.BishopMagics[square.Index];
-            int shift = PrecomputedMagics.BishopShifts[square.Index];
-
-            ulong key = ((blockers & mask) * magic) >> shift;
-            return Magic.BishopAttacks[square.Index][key];
-        }
+        static ulong GetBishopAttacks(Square square, ulong blockers) => Magic.GetBishopAttacks(square.Index, blockers);
 
         static ulong GetQueenAttacks(Square square, ulong blockers)
         {
