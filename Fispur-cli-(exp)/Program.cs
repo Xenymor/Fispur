@@ -280,7 +280,7 @@ internal class Program
         new("CorrHistScale",        0,      500,    () => Fispur.CORR_SCALE,            v => Fispur.CORR_SCALE = v),
         new("CorrHistMax",          0,      50000,  () => Fispur.CORR_MAX,              v => Fispur.CORR_MAX = v),
 
-        new("HHLMRDiv",             512,    65536,  () => Fispur.HHLMRDiv,              v => Fispur.HHLMRDiv = v)
+        new("HHLMRDiv",             512,    49152,  () => Fispur.HHLMRDiv,              v => Fispur.HHLMRDiv = v)
     };
 
     static void PrintSpsaInputs()
