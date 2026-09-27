@@ -52,6 +52,7 @@ namespace FispurEngine
 
         public static int RfpMaxDepth = 8;
         public static int RfpMargin = 81;
+        public static int RFPImpMargin = 81;
 
         public static int FpMaxDepth = 8;
         public static int FpMargin = 153;
@@ -104,6 +105,7 @@ namespace FispurEngine
         private const int CORR_HIST_ENTRIES = 1 << CORR_HIST_EXP;
         int[,] correctionHist = new int[2, CORR_HIST_ENTRIES];
         int[,,,,] continuationHist = new int[2, 7, 64, 7, 64];
+        int[] staticEvals = new int[MAX_DEPTH];
 
         Timer timer;
         long nodes;
@@ -325,8 +327,12 @@ namespace FispurEngine
             int rawEval = inCheck ? -INFINITY
                      : (hasEntry && entry.staticEval != NO_EVAL ? entry.staticEval
                      : NNUE.Evaluate(board));
-            int eval = rawEval + (rawEval > - INFINITY ? corrHistEntry / CORR_GRAIN : 0);
-            int rfpMargin = RfpMargin * depthLeft;
+            int eval = rawEval + (rawEval > -INFINITY ? corrHistEntry / CORR_GRAIN : 0);
+
+            staticEvals[ply] = inCheck ? -INFINITY : eval;
+            bool improving = !inCheck && ply >= 2 ? eval > staticEvals[ply - 2] : false;
+
+            int rfpMargin = RfpMargin * depthLeft - (improving ? RFPImpMargin : 0);
 
             if (!qSearch && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + rfpMargin)
             {
@@ -454,7 +460,7 @@ namespace FispurEngine
                     int reduction = 0;
                     if (depthLeft >= LmrMinDepth && movesSearched >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = Math.Clamp(LmrReduction(depthLeft, movesSearched), 0, depthLeft);
+                        reduction = Math.Clamp(LmrReduction(depthLeft, movesSearched) + (improving ? 1 : 0), 0, depthLeft);
                     }
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
                     if (reduction > 0 && score > alpha)
