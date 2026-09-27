@@ -83,6 +83,8 @@ namespace FispurEngine
         public static int CORR_SCALE = 256;
         public static int CORR_MAX = 64 * CORR_GRAIN;
 
+        public static int HHLMRDiv = 8213;
+
         struct TTEntry
         {
             public uint key; //first 32 bit
@@ -440,6 +442,8 @@ namespace FispurEngine
                     continue;
                 }
 
+                int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicInd(board, move)] + continuationHist[sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index];
+
                 board.MakeMove(move);
                 PrefetchTT(board.ZobristKey);
                 NNUE.makeMove(move, !board.IsWhiteToMove);
@@ -454,7 +458,8 @@ namespace FispurEngine
                     int reduction = 0;
                     if (depthLeft >= LmrMinDepth && movesSearched >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = Math.Clamp(LmrReduction(depthLeft, movesSearched), 0, depthLeft);
+                        reduction = LmrReduction(depthLeft, movesSearched) - quietHist/HHLMRDiv;
+                        reduction = Math.Clamp(reduction, 0, depthLeft);
                     }
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
                     if (reduction > 0 && score > alpha)
