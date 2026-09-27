@@ -77,6 +77,9 @@ namespace FispurEngine
         public static int SEEPThreshold = 0;
         public static int SEEPCaptureThreshold = 103;
 
+        public static int LMPMaxDepth = 3;
+        public static int LMPBase = 8;
+
         public static int MinIIRDepth = 4;
 
         public static int CORR_GRAIN = 256;
@@ -424,6 +427,12 @@ namespace FispurEngine
                     {
                         continue;
                     }
+
+                    if (depthLeft <= LMPMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -MATE_BOUND && movesSearched >= (LMPBase + (depthLeft * depthLeft)) / 2)
+                    {
+                        continue;
+                    }
+
                     if (depthLeft <= SEEPMaxDepth && movesSearched > 0)
                     {
                         if (move.IsCapture && !SEE(board, move, -SEEPCaptureThreshold * depthLeft))
