@@ -52,7 +52,7 @@ namespace FispurEngine
 
         public static int RfpMaxDepth = 8;
         public static int RfpMargin = 81;
-        public static int RFPImpMargin = 81;
+        public static int RFPImpMargin = 60;
 
         public static int FpMaxDepth = 8;
         public static int FpMargin = 153;
