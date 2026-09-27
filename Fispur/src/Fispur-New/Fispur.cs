@@ -83,7 +83,7 @@ namespace FispurEngine
         public static int CORR_SCALE = 256;
         public static int CORR_MAX = 64 * CORR_GRAIN;
 
-        public static int HHLMRDiv = 8000;
+        public static int HHLMRDiv = 8213;
 
         struct TTEntry
         {
