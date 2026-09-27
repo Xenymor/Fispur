@@ -460,7 +460,7 @@ namespace FispurEngine
                     int reduction = 0;
                     if (depthLeft >= LmrMinDepth && movesSearched >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = Math.Clamp(LmrReduction(depthLeft, movesSearched) + (improving ? 1 : 0), 0, depthLeft);
+                        reduction = Math.Clamp(LmrReduction(depthLeft, movesSearched) + (improving ? 0 : 1), 0, depthLeft);
                     }
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
                     if (reduction > 0 && score > alpha)
