@@ -9,6 +9,11 @@
 
         public static readonly ulong[,] alignMask;
         public static readonly ulong[,] dirRayMask;
+        // Same as alignMask, but flattened (index = squareA * 64 + squareB) to avoid the overhead of 2D array access
+        public static readonly ulong[] AlignMaskFlat;
+        // Squares strictly between two squares on a shared rank, file or diagonal (0 if not aligned).
+        // Flattened: index = squareA * 64 + squareB
+        public static readonly ulong[] BetweenMask;
 
         // First 4 are orthogonal, last 4 are diagonals (N, S, W, E, NW, SE, NE, SW)
         public static readonly int[] directionOffsets = { 8, -8, -1, 1, 7, -7, 9, -9 };
@@ -273,6 +278,34 @@
                             alignMask[squareA, squareB] |= 1ul << (BoardHelper.IndexFromCoord(coord));
                         }
                     }
+                }
+            }
+
+
+            AlignMaskFlat = new ulong[64 * 64];
+            BetweenMask = new ulong[64 * 64];
+            for (int squareA = 0; squareA < 64; squareA++)
+            {
+                for (int squareB = 0; squareB < 64; squareB++)
+                {
+                    AlignMaskFlat[squareA * 64 + squareB] = alignMask[squareA, squareB];
+
+                    Coord cA = BoardHelper.CoordFromIndex(squareA);
+                    Coord cB = BoardHelper.CoordFromIndex(squareB);
+                    int df = cB.fileIndex - cA.fileIndex;
+                    int dr = cB.rankIndex - cA.rankIndex;
+                    bool aligned = squareA != squareB && (df == 0 || dr == 0 || Abs(df) == Abs(dr));
+                    if (!aligned)
+                    {
+                        continue;
+                    }
+                    Coord dir = new Coord(Sign(df), Sign(dr));
+                    ulong between = 0;
+                    for (Coord c = cA + dir; c.fileIndex != cB.fileIndex || c.rankIndex != cB.rankIndex; c = c + dir)
+                    {
+                        between |= 1ul << BoardHelper.IndexFromCoord(c);
+                    }
+                    BetweenMask[squareA * 64 + squareB] = between;
                 }
             }
 

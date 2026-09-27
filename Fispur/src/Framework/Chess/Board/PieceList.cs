@@ -1,52 +1,58 @@
-﻿namespace FispurEngine.Chess
+namespace FispurEngine.Chess
 {
+    using System;
+    using System.Numerics;
+
+    // List of the squares occupied by one piece type/colour.
+    // This is a view onto the piece's bitboard in the board (so it never has to be updated while making/undoing moves).
+    // Squares are listed in ascending order of their index.
     public class PieceList
     {
+        readonly Board board;
+        readonly int piece;
 
-        // Indices of squares occupied by given piece type (only elements up to Count are valid, the rest are unused/garbage)
-        public int[] occupiedSquares;
-        // Map to go from index of a square, to the index in the occupiedSquares array where that square is stored
-        int[] map;
-        int numPieces;
-
-        public PieceList(int maxPieceCount = 16)
+        public PieceList(Board board, int piece)
         {
-            occupiedSquares = new int[maxPieceCount];
-            map = new int[64];
-            numPieces = 0;
+            this.board = board;
+            this.piece = piece;
         }
 
-        public int Count
+        ulong Bitboard => board.pieceBitboards[piece];
+
+        public int Count => BitOperations.PopCount(Bitboard);
+
+        // Indices of squares occupied by given piece type
+        public int[] occupiedSquares
         {
             get
             {
-                return numPieces;
+                ulong bitboard = Bitboard;
+                int[] squares = new int[BitOperations.PopCount(bitboard)];
+                for (int i = 0; i < squares.Length; i++)
+                {
+                    squares[i] = BitBoardUtility.PopLSB(ref bitboard);
+                }
+                return squares;
             }
         }
 
-        public void AddPieceAtSquare(int square)
+        public int this[int index]
         {
-            occupiedSquares[numPieces] = square;
-            map[square] = numPieces;
-            numPieces++;
+            get
+            {
+                ulong bitboard = Bitboard;
+                if ((uint)index >= (uint)BitOperations.PopCount(bitboard))
+                {
+                    throw new IndexOutOfRangeException();
+                }
+                // Clear the lowest set bits until the requested one is the lowest
+                for (int i = 0; i < index; i++)
+                {
+                    bitboard &= bitboard - 1;
+                }
+                return BitOperations.TrailingZeroCount(bitboard);
+            }
         }
-
-        public void RemovePieceAtSquare(int square)
-        {
-            int pieceIndex = map[square]; // get the index of this element in the occupiedSquares array
-            occupiedSquares[pieceIndex] = occupiedSquares[numPieces - 1]; // move last element in array to the place of the removed element
-            map[occupiedSquares[pieceIndex]] = pieceIndex; // update map to point to the moved element's new location in the array
-            numPieces--;
-        }
-
-        public void MovePiece(int startSquare, int targetSquare)
-        {
-            int pieceIndex = map[startSquare]; // get the index of this element in the occupiedSquares array
-            occupiedSquares[pieceIndex] = targetSquare;
-            map[targetSquare] = pieceIndex;
-        }
-
-        public int this[int index] => occupiedSquares[index];
 
     }
 }

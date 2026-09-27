@@ -1,5 +1,7 @@
 namespace FispurEngine.Chess
 {
+    using System.Runtime.CompilerServices;
+    using System.Runtime.InteropServices;
     using static PrecomputedMagics;
 
     // Helper class for magic bitboards.
@@ -16,22 +18,44 @@ namespace FispurEngine.Chess
         public static readonly ulong[][] RookAttacks;
         public static readonly ulong[][] BishopAttacks;
 
+        // Everything needed for a lookup of one square packed together (one cache line access instead of four arrays)
+        struct MagicEntry
+        {
+            public ulong Mask;
+            public ulong Magic;
+            public int Shift;
+            public int Offset; // start of this square's attacks inside AttackTable
+        }
+
+        static readonly MagicEntry[] RookEntries;
+        static readonly MagicEntry[] BishopEntries;
+        // Rook and bishop attack tables of all squares, stored back to back in a single array
+        static readonly ulong[] AttackTable;
+
 
         public static ulong GetSliderAttacks(int square, ulong blockers, bool ortho)
         {
             return ortho ? GetRookAttacks(square, blockers) : GetBishopAttacks(square, blockers);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong GetRookAttacks(int square, ulong blockers)
         {
-            ulong key = ((blockers & RookMask[square]) * RookMagics[square]) >> RookShifts[square];
-            return RookAttacks[square][key];
+            return Lookup(in RookEntries[square], blockers);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong GetBishopAttacks(int square, ulong blockers)
         {
-            ulong key = ((blockers & BishopMask[square]) * BishopMagics[square]) >> BishopShifts[square];
-            return BishopAttacks[square][key];
+            return Lookup(in BishopEntries[square], blockers);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static ulong Lookup(in MagicEntry entry, ulong blockers)
+        {
+            ulong key = ((blockers & entry.Mask) * entry.Magic) >> entry.Shift;
+            // key < 2^(64 - shift) by construction, so it always lies within this square's table: skip the bounds check
+            return Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(AttackTable), entry.Offset + (int)key);
         }
 
 
@@ -53,6 +77,31 @@ namespace FispurEngine.Chess
             {
                 RookAttacks[i] = CreateTable(i, true, RookMagics[i], RookShifts[i]);
                 BishopAttacks[i] = CreateTable(i, false, BishopMagics[i], BishopShifts[i]);
+            }
+
+            // Pack all tables into one flat array
+            int totalSize = 0;
+            for (int i = 0; i < 64; i++)
+            {
+                totalSize += RookAttacks[i].Length + BishopAttacks[i].Length;
+            }
+
+            AttackTable = new ulong[totalSize];
+            RookEntries = new MagicEntry[64];
+            BishopEntries = new MagicEntry[64];
+            int offset = 0;
+
+            for (int i = 0; i < 64; i++)
+            {
+                RookEntries[i] = new MagicEntry { Mask = RookMask[i], Magic = RookMagics[i], Shift = RookShifts[i], Offset = offset };
+                RookAttacks[i].CopyTo(AttackTable, offset);
+                offset += RookAttacks[i].Length;
+            }
+            for (int i = 0; i < 64; i++)
+            {
+                BishopEntries[i] = new MagicEntry { Mask = BishopMask[i], Magic = BishopMagics[i], Shift = BishopShifts[i], Offset = offset };
+                BishopAttacks[i].CopyTo(AttackTable, offset);
+                offset += BishopAttacks[i].Length;
             }
 
             ulong[] CreateTable(int square, bool rook, ulong magic, int leftShift)

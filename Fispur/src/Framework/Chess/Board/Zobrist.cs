@@ -10,8 +10,8 @@
     {
         // Random numbers are generated for each aspect of the game state, and are used for calculating the hash:
 
-        // piece type, colour, square index
-        public static readonly ulong[,] piecesArray = new ulong[PieceHelper.MaxPieceIndex + 1, 64];
+        // piece type, colour, square index (flattened: index = piece * 64 + square, see PieceKey)
+        public static readonly ulong[] piecesArray = new ulong[(PieceHelper.MaxPieceIndex + 1) * 64];
         // Each player has 4 possible castling right states: none, queenside, kingside, both.
         // So, taking both sides into account, there are 16 possible states.
         public static readonly ulong[] castlingRights = new ulong[16];
@@ -31,7 +31,7 @@
             {
                 foreach (int piece in PieceHelper.PieceIndices)
                 {
-                    piecesArray[piece, squareIndex] = RandomUnsigned64BitNumber(rng);
+                    piecesArray[piece * 64 + squareIndex] = RandomUnsigned64BitNumber(rng);
                 }
             }
 
@@ -49,6 +49,9 @@
             sideToMove = RandomUnsigned64BitNumber(rng);
         }
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ulong PieceKey(int piece, int square) => piecesArray[piece * 64 + square];
+
         // Calculate zobrist key from current board position.
         // NOTE: this function is slow and should only be used when the board is initially set up from fen.
         // During search, the key should be updated incrementally instead.
@@ -62,7 +65,7 @@
 
                 if (PieceHelper.PieceType(piece) != PieceHelper.None)
                 {
-                    zobristKey ^= piecesArray[piece, squareIndex];
+                    zobristKey ^= piecesArray[piece * 64 + squareIndex];
                 }
             }
 
