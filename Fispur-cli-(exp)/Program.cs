@@ -274,6 +274,9 @@ internal class Program
         new("SEEPThreshold",        0,      500,    () => Fispur.SEEPThreshold,         v => Fispur.SEEPThreshold = v),
         new("SEEPCaptureThreshold", 0,      500,    () => Fispur.SEEPCaptureThreshold,  v => Fispur.SEEPCaptureThreshold = v),
 
+        new("LMPMaxDepth",          1,      8,      () => Fispur.LMPMaxDepth,           v => Fispur.LMPMaxDepth = v,            true),
+        new("LMPBase",              1,      20,     () => Fispur.LMPBase,               v => Fispur.LMPBase = v,                true),
+
         new("MinIIRDepth",          0,      8,      () => Fispur.MinIIRDepth,           v => Fispur.MinIIRDepth = v,            true),
 
         new("CorrHistGrain",        0,      500,    () => Fispur.CORR_GRAIN,            v => Fispur.CORR_GRAIN = v),
