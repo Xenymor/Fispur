@@ -179,6 +179,8 @@ namespace FispurEngine
             EnsureLmrTable();
             nodes = 0;
 
+            int lastBestMove = 0;
+
             for (int i = 0; i < historyHeuristic.Length; i++)
             {
                 historyHeuristic[i] /= 2;
@@ -247,6 +249,12 @@ namespace FispurEngine
                     break;
 
                 eval = score;
+
+                if (!bestMove.Equals(rootBestMove))
+                {
+                    lastBestMove = depth;
+                }
+
                 bestMove = rootBestMove;
                 Console.WriteLine("info depth " + depth + " score " + ScoreToUCI(eval)
                     + " nodes " + nodes + " time " + timer.MillisecondsElapsedThisTurn
@@ -264,6 +272,8 @@ namespace FispurEngine
                     || Math.Abs(eval) >= MATE_BOUND && !timer.isInfinite)
                     break;
             }
+
+            Console.WriteLine($"info string pgncomment lastBestMoveChange={lastBestMove}");
 
             return (bestMove, eval);
         }
