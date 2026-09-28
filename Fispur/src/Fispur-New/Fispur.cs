@@ -88,6 +88,16 @@ namespace FispurEngine
 
         public static int HHLMRDiv = 8213;
 
+        public static int MoveOverhead = 30;
+        public static int TmBaseDiv = 20;
+        public static int TmIncPct = 75;
+        public static int TmSoftPct = 60;
+        public static int TmHardPct = 300;
+        public static int TmNodeBase = 150;
+        public static int TmNodeMult = 135;
+        public static readonly int[] StabScale = { 220, 140, 110, 90, 80 };
+
+
         struct TTEntry
         {
             public uint key; //first 32 bit
@@ -109,6 +119,8 @@ namespace FispurEngine
         private const int CORR_HIST_ENTRIES = 1 << CORR_HIST_EXP;
         int[,] correctionHist = new int[2, CORR_HIST_ENTRIES];
         int[,,,,] continuationHist = new int[2, 7, 64, 7, 64];
+
+        long[,] rootNodes = new long[64, 64];
 
         Timer timer;
         long nodes;
@@ -172,12 +184,15 @@ namespace FispurEngine
 
 
         int eval = 0;
+        int stability = 0;
         public (Move move, int eval) Think(Board board, Timer timer, int maxDepth)
         {
             this.timer = timer;
             stopSearch = false;
             EnsureLmrTable();
+            Array.Clear(rootNodes);
             nodes = 0;
+            stability = 0;
 
             for (int i = 0; i < historyHeuristic.Length; i++)
             {
@@ -189,13 +204,22 @@ namespace FispurEngine
             bestMove = moves.Length == 0 ? Move.NullMove : moves[0];
             rootBestMove = bestMove;
 
-            long softLimit = timer.moveTime != -1 ? timer.moveTime : timer.MillisecondsRemaining / 20 + timer.IncrementMilliseconds / 2;
-            hardLimit = timer.moveTime != -1 ? timer.moveTime : Math.Min(softLimit * 4, timer.MillisecondsRemaining - 50);
+            long softLimit;
 
             if (timer.isInfinite)
             {
-                softLimit = long.MaxValue;
-                hardLimit = long.MaxValue;
+                softLimit = hardLimit = long.MaxValue;
+            } else if (timer.moveTime != -1)
+            {
+                softLimit = hardLimit = Math.Max(1, timer.moveTime - MoveOverhead);
+            }
+            else
+            {
+                long remaining = Math.Max(1, timer.MillisecondsRemaining - MoveOverhead);
+                int movesToGo = TmBaseDiv;
+                long baseTime = remaining / movesToGo + timer.IncrementMilliseconds * TmIncPct / 100;
+                hardLimit = Math.Min(baseTime * TmHardPct / 100, remaining * 3 / 4);
+                softLimit = Math.Min(baseTime * TmSoftPct / 100, hardLimit);
             }
 
             NNUE.UpdateAccumulators(board);
@@ -247,22 +271,47 @@ namespace FispurEngine
                     break;
 
                 eval = score;
+
+
+                stability = bestMove.Equals(rootBestMove) ? Math.Min(stability + 1, 4) : 0;
                 bestMove = rootBestMove;
+
                 Console.WriteLine("info depth " + depth + " score " + ScoreToUCI(eval)
                     + " nodes " + nodes + " time " + timer.MillisecondsElapsedThisTurn
                     + " pv " + Chess.MoveUtility.GetMoveNameUCI(bestMove.move));
 
-                if (timer.isInfinite)
+                if (timer.isInfinite && stopSearch)
                 {
-                    softLimit = long.MaxValue;
-                    hardLimit = long.MaxValue;
+                    break;
                 }
 
-                if (timer.isInfinite && stopSearch 
-                    || !timer.isInfinite && ((timer.moveTime == -1 && timer.MillisecondsElapsedThisTurn >= softLimit / 2) 
-                    || (timer.moveTime != -1 && timer.MillisecondsElapsedThisTurn >= timer.moveTime))
-                    || Math.Abs(eval) >= MATE_BOUND && !timer.isInfinite)
-                    break;
+                if (!timer.isInfinite)
+                {
+                    if (Math.Abs(eval) >= MATE_BOUND)
+                    {
+                        break;
+                    }
+
+                    if (timer.moveTime == -1)
+                    {
+                        double scale = 1.0;
+                        if (depth >= 6)
+                        {
+                            double bmFrac = rootNodes[bestMove.StartSquare.Index, bestMove.TargetSquare.Index] / (double)Math.Max(1, nodes);
+                            scale = (TmNodeBase / 100.0 - bmFrac) * (TmNodeMult / 100.0) * (StabScale[stability] / 100.0);
+                        }
+
+                        if (timer.MillisecondsElapsedThisTurn >= softLimit * scale)
+                        { 
+                            break;
+                        }
+                    }
+                    else if (timer.MillisecondsElapsedThisTurn >= timer.moveTime)
+                    {
+                        break;
+                    }
+                }
+
             }
 
             return (bestMove, eval);
@@ -453,6 +502,8 @@ namespace FispurEngine
 
                 int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicInd(board, move)] + continuationHist[sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index];
 
+                long nodesBefore = nodes;
+
                 board.MakeMove(move);
                 PrefetchTT(board.ZobristKey);
                 NNUE.makeMove(move, !board.IsWhiteToMove);
@@ -485,6 +536,11 @@ namespace FispurEngine
                 board.UndoMove(move);
 
                 movesSearched++;
+
+                if (ply == 0)
+                {
+                    rootNodes[move.StartSquare.Index, move.TargetSquare.Index] += nodes - nodesBefore;
+                }
 
                 if (stopSearch)
                     return ply == 0 ? bestScore : 0;
