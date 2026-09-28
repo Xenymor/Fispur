@@ -78,11 +78,16 @@ namespace FispurEngine
         public static int SEEPThreshold = 0;
         public static int SEEPCaptureThreshold = 103;
 
+        public static int LMPMaxDepth = 3;
+        public static int LMPBase = 8;
+
         public static int MinIIRDepth = 4;
 
         public static int CORR_GRAIN = 256;
         public static int CORR_SCALE = 256;
         public static int CORR_MAX = 64 * CORR_GRAIN;
+
+        public static int HHLMRDiv = 8213;
 
         struct TTEntry
         {
@@ -428,6 +433,12 @@ namespace FispurEngine
                     {
                         continue;
                     }
+
+                    if (depthLeft <= LMPMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -MATE_BOUND && movesSearched >= (LMPBase + (depthLeft * depthLeft)) / 2)
+                    {
+                        continue;
+                    }
+
                     if (depthLeft <= SEEPMaxDepth && movesSearched > 0)
                     {
                         if (move.IsCapture && !SEE(board, move, -SEEPCaptureThreshold * depthLeft))
@@ -446,6 +457,8 @@ namespace FispurEngine
                     continue;
                 }
 
+                int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicInd(board, move)] + continuationHist[sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index];
+
                 board.MakeMove(move);
                 PrefetchTT(board.ZobristKey);
                 NNUE.makeMove(move, !board.IsWhiteToMove);
@@ -460,7 +473,8 @@ namespace FispurEngine
                     int reduction = 0;
                     if (depthLeft >= LmrMinDepth && movesSearched >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = Math.Clamp(LmrReduction(depthLeft, movesSearched) + (improving ? 0 : 1), 0, depthLeft);
+                        reduction = LmrReduction(depthLeft, movesSearched) - quietHist/HHLMRDiv;
+                        reduction = Math.Clamp(reduction + (improving ? 0 : 1), 0, depthLeft);
                     }
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
                     if (reduction > 0 && score > alpha)
