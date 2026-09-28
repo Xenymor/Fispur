@@ -434,7 +434,7 @@ namespace FispurEngine
                         continue;
                     }
 
-                    if (depthLeft <= LMPMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -MATE_BOUND && movesSearched >= (LMPBase + (depthLeft * depthLeft)) / 2)
+                    if (depthLeft <= LMPMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -MATE_BOUND && movesSearched >= (LMPBase + (depthLeft * depthLeft)) / (improving ? 1 : 2))
                     {
                         continue;
                     }
