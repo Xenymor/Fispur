@@ -398,8 +398,6 @@ namespace FispurEngine
             Move bestMove = Move.NullMove;
             int bestScore = qSearch && !inCheck ? eval : -INFINITY;
             int fpMargin = FpMargin * depthLeft;
-
-            int movesSearched = 0;
             
             Move* quiets = stackalloc Move[moves.Length];
             int quietsSearched = 0;
@@ -432,12 +430,12 @@ namespace FispurEngine
                         continue;
                     }
 
-                    if (depthLeft <= LMPMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -MATE_BOUND && movesSearched >= (LMPBase + (depthLeft * depthLeft)) / 2)
+                    if (depthLeft <= LMPMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -MATE_BOUND && quietsSearched >= (LMPBase + (depthLeft * depthLeft)) / 2)
                     {
                         continue;
                     }
 
-                    if (depthLeft <= SEEPMaxDepth && movesSearched > 0)
+                    if (depthLeft <= SEEPMaxDepth && quietsSearched > 0)
                     {
                         if (move.IsCapture && !SEE(board, move, -SEEPCaptureThreshold * depthLeft))
                         {
@@ -462,16 +460,16 @@ namespace FispurEngine
                 NNUE.makeMove(move, !board.IsWhiteToMove);
 
                 int score;
-                if (movesSearched == 0)
+                if (i == 0)
                 {
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
                 }
                 else
                 {
                     int reduction = 0;
-                    if (depthLeft >= LmrMinDepth && movesSearched >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
+                    if (depthLeft >= LmrMinDepth && quietsSearched >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = LmrReduction(depthLeft, movesSearched) - quietHist/HHLMRDiv;
+                        reduction = LmrReduction(depthLeft, quietsSearched) - quietHist/HHLMRDiv;
                         reduction = Math.Clamp(reduction, 0, depthLeft);
                     }
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
@@ -487,8 +485,6 @@ namespace FispurEngine
 
                 NNUE.undoMove();
                 board.UndoMove(move);
-
-                movesSearched++;
 
                 if (stopSearch)
                     return ply == 0 ? bestScore : 0;
