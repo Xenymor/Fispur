@@ -14,6 +14,18 @@ project memory — read it first to orient before diving into files.
 - The engine is developed as a series of versioned snapshots, so old strength
   levels stay runnable for regression testing.
 
+## Todo list (read before starting engine work)
+
+- The authoritative todo list lives in the claude.ai Project **"Fispur"** as the
+  project doc `claude/Fispur-TODO.md`: Elo-per-effort ranking, status of every
+  patch and branch, SPRT/bench notes.
+- Keep it up to date: after every merge to `main`, SPRT/SPSA result, rejected
+  patch or new finding, update the item's status, branch and result, and bump
+  the date at the top.
+- Sessions without the Projects tool (e.g. plain Claude Code in this repo) can't
+  read it. Don't start a second list here - ask the user for the current state
+  and tell them which entries need updating.
+
 ## Solution layout (`Fispur.sln`, VS 2022)
 
 > The repository root folder on disk is still named `Spiritbreaker` (the project
