@@ -234,7 +234,7 @@ namespace FispurEngine
                         {
                             break;
                         }
-                        if (timer.MillisecondsElapsedThisTurn >= softLimit || stopSearch)
+                        if (stopSearch)
                         {
                             failed = true;
                             break;
