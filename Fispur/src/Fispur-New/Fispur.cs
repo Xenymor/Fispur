@@ -52,7 +52,7 @@ namespace FispurEngine
 
         public static int RfpMaxDepth = 8;
         public static int RfpMargin = 81;
-        public static int RFPImpMargin = 60;
+        public static int RFPImpMargin = 39;
 
         public static int FpMaxDepth = 8;
         public static int FpMargin = 153;
@@ -87,7 +87,7 @@ namespace FispurEngine
         public static int CORR_SCALE = 256;
         public static int CORR_MAX = 64 * CORR_GRAIN;
 
-        public static int HHLMRDiv = 8213;
+        public static int HHLMRDiv = 10262;
 
         struct TTEntry
         {
