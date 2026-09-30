@@ -45,49 +45,49 @@ namespace FispurEngine
 
         public const int MAX_DEPTH = 256;
 
-        public static int LmrMinDepth = 2;
-        public static int LmrMinMoves = 3;
-        public static int LmrBase = 90;
-        public static int LmrDivisor = 200;
+        public static int LmrMinDepth = 4;
+        public static int LmrMinMoves = 4;
+        public static int LmrBase = 53;
+        public static int LmrDivisor = 196;
 
-        public static int RfpMaxDepth = 8;
-        public static int RfpMargin = 81;
+        public static int RfpMaxDepth = 4;
+        public static int RfpMargin = 87;
         public static int RFPImpMargin = 39;
 
-        public static int FpMaxDepth = 8;
-        public static int FpMargin = 153;
+        public static int FpMaxDepth = 9;
+        public static int FpMargin = 223;
 
-        public static int HistoryDivisor = 30168;
-        public static int MaxHistBonus = 3847;
-        public static int HistBonusMult = 539;
-        public static int HistBonusBase = -320;
+        public static int HistoryDivisor = 42827;
+        public static int MaxHistBonus = 5034;
+        public static int HistBonusMult = 494;
+        public static int HistBonusBase = -290;
 
-        public static int CHistoryDivisor = 32695;
-        public static int MaxCHistBonus = 4148;
-        public static int CHistBonusMult = 529;
-        public static int CHistBonusBase = -324;
+        public static int CHistoryDivisor = 34242;
+        public static int MaxCHistBonus = 4765;
+        public static int CHistBonusMult = 602;
+        public static int CHistBonusBase = -353;
 
-        public static int NMPMinDepth = 3;
-        public static int NMPReductionB = 3;
-        public static int NMPReductionDiv = 4;
+        public static int NMPMinDepth = 2;
+        public static int NMPReductionB = 4;
+        public static int NMPReductionDiv = 5;
 
-        public static int ASPWindowDelta = 80;
-        public static int ASPWindowReset = 1456;
+        public static int ASPWindowDelta = 53;
+        public static int ASPWindowReset = 1687;
 
-        public static int SEEPMaxDepth = 3;
-        public static int SEEPThreshold = 0;
-        public static int SEEPCaptureThreshold = 103;
+        public static int SEEPMaxDepth = 5;
+        public static int SEEPThreshold = 63;
+        public static int SEEPCaptureThreshold = 89;
 
-        public static int LMPMaxDepth = 3;
-        public static int LMPBase = 8;
+        public static int LMPMaxDepth = 5;
+        public static int LMPBase = 10;
 
-        public static int MinIIRDepth = 4;
+        public static int MinIIRDepth = 3;
 
-        public static int CORR_GRAIN = 256;
-        public static int CORR_SCALE = 256;
-        public static int CORR_MAX = 64 * CORR_GRAIN;
+        public static int CORR_GRAIN = 275;
+        public static int CORR_SCALE = 210;
+        public static int CORR_MAX = 14280;
 
-        public static int HHLMRDiv = 10262;
+        public static int HHLMRDiv = 8980;
 
         struct TTEntry
         {
