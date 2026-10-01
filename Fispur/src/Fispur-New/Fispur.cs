@@ -52,6 +52,7 @@ namespace FispurEngine
 
         public static int RfpMaxDepth = 8;
         public static int RfpMargin = 81;
+        public static int RFPImpMargin = 39;
 
         public static int FpMaxDepth = 8;
         public static int FpMargin = 153;
@@ -86,7 +87,7 @@ namespace FispurEngine
         public static int CORR_SCALE = 256;
         public static int CORR_MAX = 64 * CORR_GRAIN;
 
-        public static int HHLMRDiv = 8213;
+        public static int HHLMRDiv = 10262;
 
         public static int MoveOverhead = 30;
         public static int TmBaseDiv = 18;
@@ -119,6 +120,7 @@ namespace FispurEngine
         private const int CORR_HIST_ENTRIES = 1 << CORR_HIST_EXP;
         int[,] correctionHist = new int[2, CORR_HIST_ENTRIES];
         int[,,,,] continuationHist = new int[2, 7, 64, 7, 64];
+        int[] staticEvals = new int[MAX_DEPTH];
 
         long[,] rootNodes = new long[64, 64];
 
@@ -379,8 +381,12 @@ namespace FispurEngine
             int rawEval = inCheck ? -INFINITY
                      : (hasEntry && entry.staticEval != NO_EVAL ? entry.staticEval
                      : NNUE.Evaluate(board));
-            int eval = rawEval + (rawEval > - INFINITY ? corrHistEntry / CORR_GRAIN : 0);
-            int rfpMargin = RfpMargin * depthLeft;
+            int eval = rawEval + (rawEval > -INFINITY ? corrHistEntry / CORR_GRAIN : 0);
+
+            staticEvals[ply] = inCheck ? -INFINITY : eval;
+            bool improving = !inCheck && ply >= 2 ? eval > staticEvals[ply - 2] : false;
+
+            int rfpMargin = RfpMargin * depthLeft - (improving ? RFPImpMargin : 0);
 
             if (!qSearch && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + rfpMargin)
             {
@@ -477,7 +483,7 @@ namespace FispurEngine
                         continue;
                     }
 
-                    if (depthLeft <= LMPMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -MATE_BOUND && movesSearched >= (LMPBase + (depthLeft * depthLeft)) / 2)
+                    if (depthLeft <= LMPMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -MATE_BOUND && movesSearched >= (LMPBase + (depthLeft * depthLeft)) / (improving ? 1 : 2))
                     {
                         continue;
                     }
@@ -519,7 +525,7 @@ namespace FispurEngine
                     if (depthLeft >= LmrMinDepth && movesSearched >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
                         reduction = LmrReduction(depthLeft, movesSearched) - quietHist/HHLMRDiv;
-                        reduction = Math.Clamp(reduction, 0, depthLeft);
+                        reduction = Math.Clamp(reduction + (improving ? 0 : 1), 0, depthLeft);
                     }
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
                     if (reduction > 0 && score > alpha)

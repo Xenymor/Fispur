@@ -254,6 +254,7 @@ internal class Program
 
         new("RfpMaxDepth",          1,      16,     () => Fispur.RfpMaxDepth,           v => Fispur.RfpMaxDepth = v,            true),
         new("RfpMargin",            10,     500,    () => Fispur.RfpMargin,             v => Fispur.RfpMargin = v),
+        new("RFPImpMargin",         10,     500,    () => Fispur.RFPImpMargin,          v => Fispur.RFPImpMargin = v),
 
         new("FpMaxDepth",           1,      16,     () => Fispur.FpMaxDepth,            v => Fispur.FpMaxDepth = v,             true),
         new("FpMargin",             10,     500,    () => Fispur.FpMargin,              v => Fispur.FpMargin = v),
