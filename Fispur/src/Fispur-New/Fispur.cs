@@ -89,13 +89,13 @@ namespace FispurEngine
         public static int HHLMRDiv = 8213;
 
         public static int MoveOverhead = 30;
-        public static int TmBaseDiv = 20;
-        public static int TmIncPct = 75;
-        public static int TmSoftPct = 60;
-        public static int TmHardPct = 300;
-        public static int TmNodeBase = 150;
-        public static int TmNodeMult = 135;
-        public static readonly int[] StabScale = { 220, 140, 110, 90, 80 };
+        public static int TmBaseDiv = 18;
+        public static int TmIncPct = 92;
+        public static int TmSoftPct = 62;
+        public static int TmHardPct = 369;
+        public static int TmNodeBase = 152;
+        public static int TmNodeMult = 127;
+        public static readonly int[] StabScale = { 208, 144, 107, 98, 80 };
 
 
         struct TTEntry
