@@ -12,7 +12,7 @@ namespace FispurEngine
     public static unsafe class NNUE
     {
         const int INPUT = 768;
-        const int HL = 512;
+        const int HL = 1_024;
         const int QA = 255;
         const int QB = 64;
         const int QAB = QA * QB;
@@ -38,7 +38,7 @@ namespace FispurEngine
             l1w = (short*)NativeMemory.AlignedAlloc((nuint)(2 * HL * sizeof(short)), 64);
             acc = (short*)NativeMemory.AlignedAlloc((nuint)(Fispur.MAX_DEPTH * PLY_STRIDE * sizeof(short)), 64);
 
-            Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("net0.12.0.bin")!;
+            Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("curr-net.bin")!;
             using var r = new BinaryReader(s);
             for (int i = 0; i < INPUT * HL; i++)
             {

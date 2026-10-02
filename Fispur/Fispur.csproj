@@ -13,16 +13,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Training\Nets\quantised.bin" />
-  </ItemGroup>
-
-  <ItemGroup>
     <EmbeddedResource Include="Training\Nets\net0.3.0.bin">
       <LogicalName>net0.3.0.bin</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="Training\Nets\net0.12.0.bin">
       <LogicalName>net0.12.0.bin</LogicalName>
     </EmbeddedResource>
+	<EmbeddedResource Include="Training\Nets\curr-net.bin">
+		<LogicalName>curr-net.bin</LogicalName>
+	</EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>
