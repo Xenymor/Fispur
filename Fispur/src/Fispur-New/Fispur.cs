@@ -47,15 +47,15 @@ namespace FispurEngine
 
         public static int LmrMinDepth = 2;
         public static int LmrMinMoves = 3;
-        public static int LmrBase = 90;
-        public static int LmrDivisor = 200;
+        public static int LmrBase = 93;
+        public static int LmrDivisor = 236;
 
-        public static int RfpMaxDepth = 8;
-        public static int RfpMargin = 81;
-        public static int RFPImpMargin = 39;
+        public static int RfpMaxDepth = 9;
+        public static int RfpMargin = 107;
+        public static int RFPImpMargin = 52;
 
-        public static int FpMaxDepth = 8;
-        public static int FpMargin = 153;
+        public static int FpMaxDepth = 7;
+        public static int FpMargin = 211;
 
         public static int HistoryDivisor = 30168;
         public static int MaxHistBonus = 3847;
@@ -78,8 +78,8 @@ namespace FispurEngine
         public static int SEEPThreshold = 0;
         public static int SEEPCaptureThreshold = 103;
 
-        public static int LMPMaxDepth = 3;
-        public static int LMPBase = 8;
+        public static int LMPMaxDepth = 4;
+        public static int LMPBase = 9;
 
         public static int MinIIRDepth = 4;
 
