@@ -43,6 +43,7 @@ internal class Program
                         + Fispur.DEFAULT_HASH_MB
                         + " min 1 max " + Fispur.MAX_HASH_MB);
                     Console.WriteLine("option name Threads type spin default 1 min 1 max 1");
+                    Console.WriteLine("option name MoveOverhead type spin default 30 min 0 max 5000");
                     foreach (SpsaOption option in SpsaOptions)
                     {
                         Console.WriteLine("option name " + option.Name + " type spin default "
@@ -66,6 +67,10 @@ internal class Program
                         {
                             hashMb = Math.Clamp(mb, 1, Fispur.MAX_HASH_MB);
                             fispur.SetHashSize(hashMb);
+                        }
+                        else if (optionName.Equals("MoveOverhead", StringComparison.OrdinalIgnoreCase) && int.TryParse(optionValue, out int moveOverhead))
+                        {
+                            Fispur.MoveOverhead = Math.Clamp(moveOverhead, 0, 5000);
                         }
                         else if (int.TryParse(optionValue, out int tuned))
                         {
@@ -284,7 +289,20 @@ internal class Program
         new("CorrHistScale",        0,      500,    () => Fispur.CORR_SCALE,            v => Fispur.CORR_SCALE = v),
         new("CorrHistMax",          0,      50000,  () => Fispur.CORR_MAX,              v => Fispur.CORR_MAX = v),
 
-        new("HHLMRDiv",             512,    49152,  () => Fispur.HHLMRDiv,              v => Fispur.HHLMRDiv = v)
+        new("HHLMRDiv",             512,    49152,  () => Fispur.HHLMRDiv,              v => Fispur.HHLMRDiv = v),
+
+        new("TmBaseDiv",            10,     40,     () => Fispur.TmBaseDiv,             v => Fispur.TmBaseDiv = v),
+        new("TmIncPct",             25,     150,    () => Fispur.TmIncPct,              v => Fispur.TmIncPct = v),
+        new("TmSoftPct",            20,     150,    () => Fispur.TmSoftPct,             v => Fispur.TmSoftPct = v),
+        new("TmHardPct",            100,    600,    () => Fispur.TmHardPct,             v => Fispur.TmHardPct = v),
+        new("TmNodeBase",           100,    250,    () => Fispur.TmNodeBase,            v => Fispur.TmNodeBase = v),
+        new("TmNodeMult",           50,     300,    () => Fispur.TmNodeMult,            v => Fispur.TmNodeMult = v),
+
+        new("StabScale0",           100,    400,    () => Fispur.StabScale[0],          v => Fispur.StabScale[0] = v),
+        new("StabScale1",           80,     300,    () => Fispur.StabScale[1],          v => Fispur.StabScale[1] = v),
+        new("StabScale2",           60,     200,    () => Fispur.StabScale[2],          v => Fispur.StabScale[2] = v),
+        new("StabScale3",           50,     150,    () => Fispur.StabScale[3],          v => Fispur.StabScale[3] = v),
+        new("StabScale4",           40,     150,    () => Fispur.StabScale[4],          v => Fispur.StabScale[4] = v)
     };
 
     static void PrintSpsaInputs()
