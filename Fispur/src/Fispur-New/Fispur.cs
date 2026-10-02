@@ -47,8 +47,8 @@ namespace FispurEngine
 
         public static int LmrMinDepth = 2;
         public static int LmrMinMoves = 2;
-        public static int LmrBase = 114;
-        public static int LmrDivisor = 202;
+        public static int LmrBase = 97;
+        public static int LmrDivisor = 241;
 
         public static int RfpMaxDepth = 8;
         public static int RfpMargin = 81;
@@ -57,15 +57,15 @@ namespace FispurEngine
         public static int FpMaxDepth = 8;
         public static int FpMargin = 153;
 
-        public static int HistoryDivisor = 30514;
-        public static int MaxHistBonus = 3398;
-        public static int HistBonusMult = 521;
-        public static int HistBonusBase = -333;
+        public static int HistoryDivisor = 25157;
+        public static int MaxHistBonus = 4062;
+        public static int HistBonusMult = 533;
+        public static int HistBonusBase = -319;
 
-        public static int CHistoryDivisor = 32296;
-        public static int MaxCHistBonus = 4662;
-        public static int CHistBonusMult = 565;
-        public static int CHistBonusBase = -333;
+        public static int CHistoryDivisor = 29583;
+        public static int MaxCHistBonus = 5425;
+        public static int CHistBonusMult = 576;
+        public static int CHistBonusBase = -359;
 
         public static int NMPMinDepth = 3;
         public static int NMPReductionB = 3;
@@ -87,7 +87,7 @@ namespace FispurEngine
         public static int CORR_SCALE = 256;
         public static int CORR_MAX = 64 * CORR_GRAIN;
 
-        public static int HHLMRDiv = 10262;
+        public static int HHLMRDiv = 8566;
 
         public static int MoveOverhead = 30;
         public static int TmBaseDiv = 18;
