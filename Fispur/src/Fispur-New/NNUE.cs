@@ -13,6 +13,7 @@ namespace FispurEngine
     {
         const int INPUT = 768;
         const int HL = 1_024;
+        private const int OUTPUT_BUCKETS = 8;
         const int QA = 255;
         const int QB = 64;
         const int QAB = QA * QB;
@@ -23,22 +24,22 @@ namespace FispurEngine
         static readonly short* l0w;
         static readonly short* l0b;
         static readonly short* l1w;
-        static readonly short l1b;
+        static readonly short* l1b;
 
         // Accumulator stack, one entry per ply: [ply][perspective (0 = white, 1 = black)][HL]
         static readonly short* acc;
         const int PLY_STRIDE = 2 * HL;
-
         static int currPly = 0;
 
         static NNUE()
         {
-            l0w = (short*)NativeMemory.AlignedAlloc((nuint)(INPUT * HL * sizeof(short)), 64);
-            l0b = (short*)NativeMemory.AlignedAlloc((nuint)(HL * sizeof(short)), 64);
-            l1w = (short*)NativeMemory.AlignedAlloc((nuint)(2 * HL * sizeof(short)), 64);
-            acc = (short*)NativeMemory.AlignedAlloc((nuint)(Fispur.MAX_DEPTH * PLY_STRIDE * sizeof(short)), 64);
+            l0w = (short*)NativeMemory.AlignedAlloc(INPUT * HL                      * sizeof(short), 64);
+            l0b = (short*)NativeMemory.AlignedAlloc(HL                              * sizeof(short), 64);
+            l1w = (short*)NativeMemory.AlignedAlloc(OUTPUT_BUCKETS * 2 * HL         * sizeof(short), 64);
+            l1b = (short*)NativeMemory.AlignedAlloc(OUTPUT_BUCKETS                  * sizeof(short), 64);
+            acc = (short*)NativeMemory.AlignedAlloc(Fispur.MAX_DEPTH * PLY_STRIDE   * sizeof(short), 64);
 
-            Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("curr-net.bin")!;
+            Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("1024hl-8ob.bin")!;
             using var r = new BinaryReader(s);
             for (int i = 0; i < INPUT * HL; i++)
             {
@@ -50,12 +51,15 @@ namespace FispurEngine
                 l0b[i] = r.ReadInt16();
             }
 
-            for (int i = 0; i < 2 * HL; i++)
+            for (int i = 0; i < OUTPUT_BUCKETS * 2 * HL; i++)
             {
                 l1w[i] = r.ReadInt16();
             }
 
-            l1b = r.ReadInt16();
+            for (int i = 0; i < OUTPUT_BUCKETS; i++)
+            {
+                l1b[i] = r.ReadInt16();
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -66,14 +70,17 @@ namespace FispurEngine
 
         public static int Evaluate(Board board)
         {
+            short bucket = (short)((ulong.PopCount(board.AllPiecesBitboard) - 2) / 4);
+
             short* boys = Acc(currPly, board.IsWhiteToMove ? 0 : 1);
             short* opps = Acc(currPly, board.IsWhiteToMove ? 1 : 0);
-            short* w = l1w;
+            short* w = l1w + bucket * 2 * HL;
 
             Vector256<short> zero = Vector256<short>.Zero;
             Vector256<short> qa = Vector256.Create((short)QA);
             Vector256<int> sum0 = Vector256<int>.Zero;
             Vector256<int> sum1 = Vector256<int>.Zero;
+
 
             for (int h = 0; h < HL; h += 16)
             {
@@ -90,7 +97,7 @@ namespace FispurEngine
             s = Ssse3.HorizontalAdd(s, s);
 
             long total = s.ToScalar();
-            return (int)((total / QA + l1b) * SCALE / QAB);
+            return (int)((total / QA + l1b[bucket]) * SCALE / QAB);
         }
 
         public static void UpdateAccumulators(Board board)
