@@ -512,7 +512,7 @@ namespace FispurEngine
 
                 board.MakeMove(move);
                 PrefetchTT(board.ZobristKey);
-                NNUE.makeMove(move, !board.IsWhiteToMove);
+                NNUE.makeMove(board, move, !board.IsWhiteToMove);
 
                 int score;
                 if (movesSearched == 0)
