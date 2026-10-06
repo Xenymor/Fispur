@@ -118,11 +118,19 @@ namespace FispurEngine
         Move[] killers = new Move[MAX_DEPTH];
         private const int CORR_HIST_EXP = 14;
         private const int CORR_HIST_ENTRIES = 1 << CORR_HIST_EXP;
-        int[,] correctionHist = new int[2, CORR_HIST_ENTRIES];
-        int[,,,,] continuationHist = new int[2, 7, 64, 7, 64];
+        int[] correctionHist = new int[2 * CORR_HIST_ENTRIES]; // [stm][pawnKey]
+
+        int[] continuationHist = new int[2 * 7 * 64 * 7 * 64]; // [stm][prevPiece][prevTo][piece][to]
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static int ContHistIndex(int stm, int prevPiece, int prevTo, int piece, int to)
+        {
+            return (((stm * 7 + prevPiece) * 64 + prevTo) * 7 + piece) * 64 + to;
+        }
+
         int[] staticEvals = new int[MAX_DEPTH];
 
-        long[,] rootNodes = new long[64, 64];
+        long[] rootNodes = new long[64 * 64]; // [from][to]
 
         Timer timer;
         long nodes;
@@ -299,7 +307,7 @@ namespace FispurEngine
                         double scale = 1.0;
                         if (depth >= 6)
                         {
-                            double bmFrac = rootNodes[bestMove.StartSquare.Index, bestMove.TargetSquare.Index] / (double)Math.Max(1, nodes);
+                            double bmFrac = rootNodes[bestMove.StartSquare.Index * 64 + bestMove.TargetSquare.Index] / (double)Math.Max(1, nodes);
                             scale = (TmNodeBase / 100.0 - bmFrac) * (TmNodeMult / 100.0) * (StabScale[stability] / 100.0);
                         }
 
@@ -336,7 +344,7 @@ namespace FispurEngine
             ulong x = board.GetPieceBitboard(PieceType.Pawn, true) * 0x9E3779B97F4A7C15UL ^ board.GetPieceBitboard(PieceType.Pawn, false) * 0xC2B2AE3D27D4EB4FUL;
             uint idx = (uint)(x >> (64 - CORR_HIST_EXP));
 
-            ref int corrHistEntry = ref correctionHist[board.IsWhiteToMove ? 0 : 1, idx];
+            ref int corrHistEntry = ref correctionHist[(board.IsWhiteToMove ? 0 : CORR_HIST_ENTRIES) + (int)idx];
 
             if (ply >= MAX_DEPTH - 1)
             {
@@ -506,7 +514,7 @@ namespace FispurEngine
                     continue;
                 }
 
-                int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicInd(board, move)] + continuationHist[sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index];
+                int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicInd(board, move)] + continuationHist[ContHistIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
 
                 long nodesBefore = nodes;
 
@@ -545,7 +553,7 @@ namespace FispurEngine
 
                 if (ply == 0)
                 {
-                    rootNodes[move.StartSquare.Index, move.TargetSquare.Index] += nodes - nodesBefore;
+                    rootNodes[move.StartSquare.Index * 64 + move.TargetSquare.Index] += nodes - nodesBefore;
                 }
 
                 if (stopSearch)
@@ -564,7 +572,7 @@ namespace FispurEngine
                         int cBonus = Math.Min(MaxCHistBonus, CHistBonusMult * depthLeft + CHistBonusBase);
 
 
-                        ref int c = ref continuationHist[sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index];
+                        ref int c = ref continuationHist[ContHistIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
                         c += cBonus - c * cBonus / CHistoryDivisor;
 
                         for (int j = 0; j < i; j++)
@@ -577,7 +585,7 @@ namespace FispurEngine
                             ref int p = ref historyHeuristic[getHistoryHeuristicInd(board, moves[j])];
                             p += -bonus - p * bonus / HistoryDivisor;
 
-                            ref int cp = ref continuationHist[sideToMove, prevPiece, prevTo, (int)moves[j].MovePieceType, moves[j].TargetSquare.Index];
+                            ref int cp = ref continuationHist[ContHistIndex(sideToMove, prevPiece, prevTo, (int)moves[j].MovePieceType, moves[j].TargetSquare.Index)];
                             cp += -cBonus - cp * cBonus / CHistoryDivisor;
                         }
 
@@ -637,9 +645,8 @@ namespace FispurEngine
             entry = Math.Clamp(entry, -CORR_MAX, CORR_MAX);
         }
 
-        // LMR reductions, precomputed. Rebuilt whenever LmrBase / LmrDivisor change (SPSA / setoption).
         const int LMR_DEPTHS = MAX_DEPTH, LMR_MOVES = 218;
-        static int[,] lmrTable = new int[LMR_DEPTHS, LMR_MOVES];
+        static int[] lmrTable = new int[LMR_DEPTHS * LMR_MOVES]; // [depth][moves]
         static int lmrBuiltBase = int.MinValue, lmrBuiltDiv = int.MinValue;
 
         static void EnsureLmrTable()
@@ -653,18 +660,19 @@ namespace FispurEngine
             {
                 for (int m = 1; m < LMR_MOVES; m++)
                 {
-                    lmrTable[d, m] = (int)(LmrBase / 100.0 + Math.Log(d) * Math.Log(m) / (LmrDivisor / 100.0));
+                    lmrTable[d * LMR_MOVES + m] = (int)(LmrBase / 100.0 + Math.Log(d) * Math.Log(m) / (LmrDivisor / 100.0));
                 }
             }
 
-            lmrBuiltBase = LmrBase; lmrBuiltDiv = LmrDivisor;
+            lmrBuiltBase = LmrBase;
+            lmrBuiltDiv = LmrDivisor;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int LmrReduction(int depth, int moves)
         {
             return depth < LMR_DEPTHS && moves < LMR_MOVES
-                        ? lmrTable[depth, moves]
+                        ? lmrTable[depth * LMR_MOVES + moves]
                         : (int)(LmrBase / 100.0 + Math.Log(depth) * Math.Log(moves) / (LmrDivisor / 100.0));
         }
 
@@ -727,7 +735,7 @@ namespace FispurEngine
                 return 900_000;
             }
 
-            return historyHeuristic[getHistoryHeuristicInd(board, move)] + continuationHist[sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index];
+            return historyHeuristic[getHistoryHeuristicInd(board, move)] + continuationHist[ContHistIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
         }
 
         static readonly int[] pieceVals = new int[] { 0, 100, 300, 350, 500, 900, 100_000 };

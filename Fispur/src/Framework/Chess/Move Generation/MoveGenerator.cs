@@ -168,7 +168,7 @@ namespace FispurEngine.Chess
                 // If piece is pinned, it can only move along the pin ray
                 if (IsPinned(startSquare))
                 {
-                    moveSquares &= alignMask[startSquare, friendlyKingSquare];
+                    moveSquares &= AlignMaskFlat[startSquare * 64 + friendlyKingSquare];
                 }
 
                 while (moveSquares != 0)
@@ -187,7 +187,7 @@ namespace FispurEngine.Chess
                 // If piece is pinned, it can only move along the pin ray
                 if (IsPinned(startSquare))
                 {
-                    moveSquares &= alignMask[startSquare, friendlyKingSquare];
+                    moveSquares &= AlignMaskFlat[startSquare * 64 + friendlyKingSquare];
                 }
 
                 while (moveSquares != 0)
@@ -255,7 +255,7 @@ namespace FispurEngine.Chess
                 {
                     int targetSquare = BitBoardUtility.PopLSB(ref singlePushNoPromotions);
                     int startSquare = targetSquare - pushOffset;
-                    if (!IsPinned(startSquare) || alignMask[startSquare, friendlyKingSquare] == alignMask[targetSquare, friendlyKingSquare])
+                    if (!IsPinned(startSquare) || AlignMaskFlat[startSquare * 64 + friendlyKingSquare] == AlignMaskFlat[targetSquare * 64 + friendlyKingSquare])
                     {
                         moves[currMoveIndex++] = new Move(startSquare, targetSquare);
                     }
@@ -269,7 +269,7 @@ namespace FispurEngine.Chess
                 {
                     int targetSquare = BitBoardUtility.PopLSB(ref doublePush);
                     int startSquare = targetSquare - pushOffset * 2;
-                    if (!IsPinned(startSquare) || alignMask[startSquare, friendlyKingSquare] == alignMask[targetSquare, friendlyKingSquare])
+                    if (!IsPinned(startSquare) || AlignMaskFlat[startSquare * 64 + friendlyKingSquare] == AlignMaskFlat[targetSquare * 64 + friendlyKingSquare])
                     {
                         moves[currMoveIndex++] = new Move(startSquare, targetSquare, Move.PawnTwoUpFlag);
                     }
@@ -282,7 +282,7 @@ namespace FispurEngine.Chess
                 int targetSquare = BitBoardUtility.PopLSB(ref captureA);
                 int startSquare = targetSquare - pushDir * 7;
 
-                if (!IsPinned(startSquare) || alignMask[startSquare, friendlyKingSquare] == alignMask[targetSquare, friendlyKingSquare])
+                if (!IsPinned(startSquare) || AlignMaskFlat[startSquare * 64 + friendlyKingSquare] == AlignMaskFlat[targetSquare * 64 + friendlyKingSquare])
                 {
                     moves[currMoveIndex++] = new Move(startSquare, targetSquare);
                 }
@@ -293,7 +293,7 @@ namespace FispurEngine.Chess
                 int targetSquare = BitBoardUtility.PopLSB(ref captureB);
                 int startSquare = targetSquare - pushDir * 9;
 
-                if (!IsPinned(startSquare) || alignMask[startSquare, friendlyKingSquare] == alignMask[targetSquare, friendlyKingSquare])
+                if (!IsPinned(startSquare) || AlignMaskFlat[startSquare * 64 + friendlyKingSquare] == AlignMaskFlat[targetSquare * 64 + friendlyKingSquare])
                 {
                     moves[currMoveIndex++] = new Move(startSquare, targetSquare);
                 }
@@ -318,7 +318,7 @@ namespace FispurEngine.Chess
                 int targetSquare = BitBoardUtility.PopLSB(ref capturePromotionsA);
                 int startSquare = targetSquare - pushDir * 7;
 
-                if (!IsPinned(startSquare) || alignMask[startSquare, friendlyKingSquare] == alignMask[targetSquare, friendlyKingSquare])
+                if (!IsPinned(startSquare) || AlignMaskFlat[startSquare * 64 + friendlyKingSquare] == AlignMaskFlat[targetSquare * 64 + friendlyKingSquare])
                 {
                     GeneratePromotions(startSquare, targetSquare, moves);
                 }
@@ -329,7 +329,7 @@ namespace FispurEngine.Chess
                 int targetSquare = BitBoardUtility.PopLSB(ref capturePromotionsB);
                 int startSquare = targetSquare - pushDir * 9;
 
-                if (!IsPinned(startSquare) || alignMask[startSquare, friendlyKingSquare] == alignMask[targetSquare, friendlyKingSquare])
+                if (!IsPinned(startSquare) || AlignMaskFlat[startSquare * 64 + friendlyKingSquare] == AlignMaskFlat[targetSquare * 64 + friendlyKingSquare])
                 {
                     GeneratePromotions(startSquare, targetSquare, moves);
                 }
@@ -350,7 +350,7 @@ namespace FispurEngine.Chess
                     while (pawnsThatCanCaptureEp != 0)
                     {
                         int startSquare = BitBoardUtility.PopLSB(ref pawnsThatCanCaptureEp);
-                        if (!IsPinned(startSquare) || alignMask[startSquare, friendlyKingSquare] == alignMask[targetSquare, friendlyKingSquare])
+                        if (!IsPinned(startSquare) || AlignMaskFlat[startSquare * 64 + friendlyKingSquare] == AlignMaskFlat[targetSquare * 64 + friendlyKingSquare])
                         {
                             if (!InCheckAfterEnPassant(startSquare, targetSquare, capturedPawnSquare))
                             {
@@ -424,12 +424,12 @@ namespace FispurEngine.Chess
             {
                 bool isDiagonal = dir > 3;
                 ulong slider = isDiagonal ? board.EnemyDiagonalSliders : board.EnemyOrthogonalSliders;
-                if ((dirRayMask[dir, friendlyKingSquare] & slider) == 0)
+                if ((dirRayMask[dir * 64 + friendlyKingSquare] & slider) == 0)
                 {
                     continue;
                 }
 
-                int n = numSquaresToEdge[friendlyKingSquare][dir];
+                int n = numSquaresToEdge[friendlyKingSquare * 8 + dir];
                 int directionOffset = directionOffsets[dir];
                 bool isFriendlyPieceAlongRay = false;
                 ulong rayMask = 0;
