@@ -47,7 +47,7 @@ namespace FispurEngine
         static readonly int[] KING_BUCKET = new int[64];
 
         const int FINNY_ENTRIES = 2 * KING_BUCKETS * 2;
-        private const string FILE_NAME = "10kb-1024hl-8ob.bin";
+        private const string FILE_NAME = "10kb-1024hl-8ob-wdlft.bin";
         static readonly short* finnyAcc;
         static readonly ulong[] finnyBB = new ulong[FINNY_ENTRIES * 12];
 

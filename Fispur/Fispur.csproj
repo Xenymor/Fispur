@@ -13,8 +13,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<EmbeddedResource Include="Training\Nets\10kb-1024hl-8ob.bin">
-		<LogicalName>10kb-1024hl-8ob.bin</LogicalName>
+	<EmbeddedResource Include="Training\Nets\10kb-1024hl-8ob-wdlft.bin">
+		<LogicalName>10kb-1024hl-8ob-wdlft.bin</LogicalName>
 	</EmbeddedResource>
     <EmbeddedResource Include="Training\Nets\net0.3.0.bin">
       <LogicalName>net0.3.0.bin</LogicalName>
