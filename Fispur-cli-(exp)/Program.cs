@@ -259,15 +259,21 @@ internal class Program
         new("FpMaxDepth",           1,      16,     () => Fispur.FpMaxDepth,            v => Fispur.FpMaxDepth = v,             true),
         new("FpMargin",             10,     500,    () => Fispur.FpMargin,              v => Fispur.FpMargin = v),
 
-        new("HistoryDivisor",       512,    65536,  () => Fispur.HistoryDivisor,        v => Fispur.HistoryDivisor = v),
-        new("MaxHistBonus",         10,     16000,  () => Fispur.MaxHistBonus,          v => Fispur.MaxHistBonus = v),
+        new("HistoryDivisor",       512,    65536,  () => Fispur.HistDivisor,           v => Fispur.HistDivisor = v),
+        new("MaxHistBonus",         10,     16000,  () => Fispur.HistMaxBonus,          v => Fispur.HistMaxBonus = v),
         new("HistBonusMult",        50,     800,    () => Fispur.HistBonusMult,         v => Fispur.HistBonusMult = v),
         new("HistBonusBase",        -600,   200,    () => Fispur.HistBonusBase,         v => Fispur.HistBonusBase = v),
 
-        new("CHistoryDivisor",      512,    65536,  () => Fispur.CHistoryDivisor,        v => Fispur.CHistoryDivisor = v),
-        new("MaxCHistBonus",        10,     16000,  () => Fispur.MaxCHistBonus,          v => Fispur.MaxCHistBonus = v),
-        new("CHistBonusMult",       50,     800,    () => Fispur.CHistBonusMult,         v => Fispur.CHistBonusMult = v),
-        new("CHistBonusBase",       -600,   200,    () => Fispur.CHistBonusBase,         v => Fispur.CHistBonusBase = v),
+        new("CaptureHistDivisor",   512,    65536,  () => Fispur.CaptureHistDivisor,    v => Fispur.CaptureHistDivisor = v),
+        new("CaptureMaxHistBonus",  10,     16000,  () => Fispur.CaptureHistMaxBonus,   v => Fispur.CaptureHistMaxBonus = v),
+        new("CaptureHistBonusMult", 50,     800,    () => Fispur.CaptureHistBonusMult,  v => Fispur.CaptureHistBonusMult = v),
+        new("CaptureHistBonusBase", -600,   200,    () => Fispur.CaptureHistBonusBase,  v => Fispur.CaptureHistBonusBase = v),
+        new("MvvMult",              4,      40,     () => Fispur.MvvMult,               v => Fispur.MvvMult = v),
+
+        new("CHistoryDivisor",      512,    65536,  () => Fispur.CHistoryDivisor,       v => Fispur.CHistoryDivisor = v),
+        new("MaxCHistBonus",        10,     16000,  () => Fispur.MaxCHistBonus,         v => Fispur.MaxCHistBonus = v),
+        new("CHistBonusMult",       50,     800,    () => Fispur.CHistBonusMult,        v => Fispur.CHistBonusMult = v),
+        new("CHistBonusBase",       -600,   200,    () => Fispur.CHistBonusBase,        v => Fispur.CHistBonusBase = v),
 
         new("NMPMinDepth",          1,      8,      () => Fispur.NMPMinDepth,           v => Fispur.NMPMinDepth = v,            true),
         new("NMPReductionB",        1,      6,      () => Fispur.NMPReductionB,         v => Fispur.NMPReductionB = v,          true),
@@ -280,14 +286,19 @@ internal class Program
         new("SEEPThreshold",        0,      500,    () => Fispur.SEEPThreshold,         v => Fispur.SEEPThreshold = v),
         new("SEEPCaptureThreshold", 0,      500,    () => Fispur.SEEPCaptureThreshold,  v => Fispur.SEEPCaptureThreshold = v),
 
+        new("KnightValue",          150,    500,    () => Fispur.pieceVals[2],          v => Fispur.pieceVals[2] = v),
+        new("BishopValue",          150,    550,    () => Fispur.pieceVals[3],          v => Fispur.pieceVals[3] = v),
+        new("RookValue",            300,    800,    () => Fispur.pieceVals[4],          v => Fispur.pieceVals[4] = v),
+        new("QueenValue",           600,    1400,   () => Fispur.pieceVals[5],          v => Fispur.pieceVals[5] = v),
+
         new("LMPMaxDepth",          1,      8,      () => Fispur.LMPMaxDepth,           v => Fispur.LMPMaxDepth = v,            true),
         new("LMPBase",              1,      20,     () => Fispur.LMPBase,               v => Fispur.LMPBase = v,                true),
 
         new("MinIIRDepth",          0,      8,      () => Fispur.MinIIRDepth,           v => Fispur.MinIIRDepth = v,            true),
 
-        new("CorrHistGrain",        1,      500,    () => Fispur.CORR_GRAIN,            v => Fispur.CORR_GRAIN = v),
-        new("CorrHistScale",        16,     500,    () => Fispur.CORR_SCALE,            v => Fispur.CORR_SCALE = v),
-        new("CorrHistMax",          0,      50000,  () => Fispur.CORR_MAX,              v => Fispur.CORR_MAX = v),
+        new("CorrHistGrain",        1,      500,    () => Fispur.CorrGrain,            v => Fispur.CorrGrain = v),
+        new("CorrHistScale",        16,     500,    () => Fispur.CorrScale,            v => Fispur.CorrScale = v),
+        new("CorrHistMax",          0,      50000,  () => Fispur.CorrMax,              v => Fispur.CorrMax = v),
 
         new("HHLMRDiv",             512,    49152,  () => Fispur.HHLMRDiv,              v => Fispur.HHLMRDiv = v),
 
