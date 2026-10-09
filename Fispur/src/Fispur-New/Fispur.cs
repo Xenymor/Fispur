@@ -76,7 +76,7 @@ namespace FispurEngine
 
         public static int SEEPMaxDepth = 3;
         public static int SEEPThreshold = 0;
-        public static int SEEPCaptureThreshold = 103;
+        public static int SEEPCaptureThreshold = 104;
 
         public static int LMPMaxDepth = 4;
         public static int LMPBase = 9;
@@ -87,11 +87,11 @@ namespace FispurEngine
         public static int CorrScale = 256;
         public static int CorrMax = 64 * CorrGrain;
 
-        public static int CaptureHistDivisor = 30168;
-        public static int CaptureHistMaxBonus = 3847;
-        public static int CaptureHistBonusMult = 539;
-        public static int CaptureHistBonusBase = -324;
-        public static int MvvMult = 16;
+        public static int CaptureHistDivisor = 32961;
+        public static int CaptureHistMaxBonus = 3940;
+        public static int CaptureHistBonusMult = 553;
+        public static int CaptureHistBonusBase = -320;
+        public static int MvvMult = 15;
 
         public static int HHLMRDiv = 10262;
 
@@ -759,7 +759,7 @@ namespace FispurEngine
             return historyHeuristic[getHistoryHeuristicInd(board, move)] + continuationHist[ContHistIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
         }
 
-        public static readonly int[] pieceVals = [0, 100, 300, 350, 500, 900, 1_000_000];
+        public static readonly int[] pieceVals = [0, 100, 290, 337, 504, 926, 1_000_000];
 
         private bool SEE(Board board, Move move, int threshold)
         {
