@@ -268,6 +268,7 @@ internal class Program
         new("CaptureMaxHistBonus",  10,     16000,  () => Fispur.CaptureHistMaxBonus,   v => Fispur.CaptureHistMaxBonus = v),
         new("CaptureHistBonusMult", 50,     800,    () => Fispur.CaptureHistBonusMult,  v => Fispur.CaptureHistBonusMult = v),
         new("CaptureHistBonusBase", -600,   200,    () => Fispur.CaptureHistBonusBase,  v => Fispur.CaptureHistBonusBase = v),
+        new("CaptureHistSEEMult",   20,     330,    () => Fispur.CaptureHistSEEMult,    v => Fispur.CaptureHistSEEMult = v),
         new("MvvMult",              4,      40,     () => Fispur.MvvMult,               v => Fispur.MvvMult = v),
 
         new("CHistoryDivisor",      512,    65536,  () => Fispur.CHistoryDivisor,       v => Fispur.CHistoryDivisor = v),

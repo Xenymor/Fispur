@@ -91,6 +91,7 @@ namespace FispurEngine
         public static int CaptureHistMaxBonus = 3940;
         public static int CaptureHistBonusMult = 553;
         public static int CaptureHistBonusBase = -320;
+        public static int CaptureHistSEEMult = 80;
         public static int MvvMult = 15;
 
         public static int HHLMRDiv = 10262;
@@ -130,7 +131,7 @@ namespace FispurEngine
         int[] captureHist = new int[2 * 7 * 64 * 7]; // [stm][movingPiece][to][captured]
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int ContHistIndex(int stm, int prevPiece, int prevTo, int piece, int to)
+        static int getContinuationHistoryIndex(int stm, int prevPiece, int prevTo, int piece, int to)
         {
             return (((stm * 7 + prevPiece) * 64 + prevTo) * 7 + piece) * 64 + to;
         }
@@ -451,7 +452,11 @@ namespace FispurEngine
             Move* mv = stackalloc Move[218];
             Span<Move> moves = new Span<Move>(mv, 218);
             board.GetLegalMovesNonAlloc(ref moves, qSearch && !inCheck);
+            int moveCount = moves.Length;
 
+            Move* srchd = stackalloc Move[moveCount];
+            Span<Move> searched = new Span<Move>(srchd, moveCount);
+            int searchedCount = 0;
 
             if (moves.Length == 0)
                 return inCheck ? -MATE + ply
@@ -469,9 +474,7 @@ namespace FispurEngine
             Move bestMove = Move.NullMove;
             int bestScore = qSearch && !inCheck ? eval : -INFINITY;
             int fpMargin = FpMargin * depthLeft;
-            int movesSearched = 0;
 
-            int moveCount = moves.Length;
             for (int i = 0; i < moveCount; i++)
             {
                 int best = i;
@@ -494,17 +497,17 @@ namespace FispurEngine
 
                 if (!pvNode && !inCheck && !qSearch)
                 {
-                    if (depthLeft <= FpMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -INFINITY && Math.Abs(alpha) < MATE_BOUND && eval + fpMargin <= alpha)
+                    if (depthLeft <= FpMaxDepth && !move.IsCapture && !move.IsPromotion && searchedCount > 0 && Math.Abs(alpha) < MATE_BOUND && eval + fpMargin <= alpha)
                     {
                         continue;
                     }
 
-                    if (depthLeft <= LMPMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -MATE_BOUND && movesSearched >= (LMPBase + (depthLeft * depthLeft)) / (improving ? 1 : 2))
+                    if (depthLeft <= LMPMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -MATE_BOUND && searchedCount >= (LMPBase + (depthLeft * depthLeft)) / (improving ? 1 : 2))
                     {
                         continue;
                     }
 
-                    if (depthLeft <= SEEPMaxDepth && movesSearched > 0)
+                    if (depthLeft <= SEEPMaxDepth && searchedCount > 0)
                     {
                         if (move.IsCapture && !SEE(board, move, -SEEPCaptureThreshold * depthLeft))
                         {
@@ -522,7 +525,7 @@ namespace FispurEngine
                     continue;
                 }
 
-                int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicInd(board, move)] + continuationHist[ContHistIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
+                int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
 
                 long nodesBefore = nodes;
 
@@ -531,16 +534,16 @@ namespace FispurEngine
                 NNUE.makeMove(board, move, !board.IsWhiteToMove);
 
                 int score;
-                if (movesSearched == 0)
+                if (searchedCount == 0)
                 {
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
                 }
                 else
                 {
                     int reduction = 0;
-                    if (depthLeft >= LmrMinDepth && movesSearched >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
+                    if (depthLeft >= LmrMinDepth && searchedCount >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = LmrReduction(depthLeft, movesSearched) - quietHist/HHLMRDiv;
+                        reduction = LmrReduction(depthLeft, searchedCount) - quietHist/HHLMRDiv;
                         reduction = Math.Clamp(reduction + (improving ? 0 : 1), 0, depthLeft);
                     }
                     score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
@@ -556,8 +559,6 @@ namespace FispurEngine
 
                 NNUE.undoMove();
                 board.UndoMove(move);
-
-                movesSearched++;
 
                 if (ply == 0)
                 {
@@ -578,45 +579,51 @@ namespace FispurEngine
                         
                         if (!move.IsCapture)
                         {
-                            ref int h = ref historyHeuristic[getHistoryHeuristicInd(board, move)];
+                            ref int h = ref historyHeuristic[getHistoryHeuristicIndex(board, move)];
                             h += hhBonus - h * hhBonus / HistDivisor;
 
-                            ref int c = ref continuationHist[ContHistIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
+                            ref int c = ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
                             c += contBonus - c * contBonus / CHistoryDivisor;
 
-                            for (int j = 0; j < i; j++)
+                            for (int j = 0; j < searchedCount; j++)
                             {
-                                if (moves[j].IsCapture)
+                                Move currMove = searched[j];
+
+                                if (currMove.IsCapture)
                                 {
-                                    continue;
+                                    ref int p = ref captureHist[getCaptureHistoryIndex(sideToMove, currMove)];
+                                    p += -capBonus - p * capBonus / CaptureHistDivisor;
                                 }
+                                else
+                                {
+                                    ref int p = ref historyHeuristic[getHistoryHeuristicIndex(board, currMove)];
+                                    p += -hhBonus - p * hhBonus / HistDivisor;
 
-                                ref int p = ref historyHeuristic[getHistoryHeuristicInd(board, moves[j])];
-                                p += -hhBonus - p * hhBonus / HistDivisor;
-
-                                ref int cp = ref continuationHist[ContHistIndex(sideToMove, prevPiece, prevTo, (int)moves[j].MovePieceType, moves[j].TargetSquare.Index)];
-                                cp += -contBonus - cp * contBonus / CHistoryDivisor;
+                                    ref int cp = ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)currMove.MovePieceType, currMove.TargetSquare.Index)];
+                                    cp += -contBonus - cp * contBonus / CHistoryDivisor;
+                                }
                             }
 
                             killers[ply] = move;
                         } else
                         {
-                            ref int c = ref captureHist[((sideToMove * 7 + (int)move.MovePieceType) * 64 + move.TargetSquare.Index) * 7 + (int)move.CapturePieceType];
+                            ref int c = ref captureHist[getCaptureHistoryIndex(sideToMove, move)];
                             c += capBonus - c * capBonus / CaptureHistDivisor;
 
-                            for (int j = 0; j < i; j++)
+                            for (int j = 0; j < searchedCount; j++)
                             {
-                                Move currMove = moves[j];
+                                Move currMove = searched[j];
                                 if (!currMove.IsCapture)
                                 {
                                     continue;
                                 }
 
-                                ref int p = ref captureHist[((sideToMove * 7 + (int)currMove.MovePieceType) * 64 + currMove.TargetSquare.Index) * 7 + (int)currMove.CapturePieceType];
+                                ref int p = ref captureHist[getCaptureHistoryIndex(sideToMove, currMove)];
                                 p += -capBonus - p * capBonus / CaptureHistDivisor;
                             }
                         }
                     }
+
 
                     StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move, rawEval);
                     if (!qSearch && !inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > eval)
@@ -631,6 +638,9 @@ namespace FispurEngine
 
                     return score;
                 }
+
+                searched[searchedCount++] = move;
+
                 if (score > bestScore)
                 {
                     bestScore = score;
@@ -660,6 +670,11 @@ namespace FispurEngine
             }
 
             return bestScore;
+        }
+
+        int getCaptureHistoryIndex(int sideToMove, Move move)
+        {
+            return ((sideToMove * 7 + (int)move.MovePieceType) * 64 + move.TargetSquare.Index) * 7 + (int)move.CapturePieceType;
         }
 
         void UpdateCorrHist(ref int entry, int score, int rawEval, int depth)
@@ -745,8 +760,8 @@ namespace FispurEngine
 
             if (move.IsCapture)
             {
-                int captureHistScore = captureHist[((sideToMove * 7 + (int)move.MovePieceType) * 64 + move.TargetSquare.Index) * 7 + (int)move.CapturePieceType];
-                return (SEE(board, move, 0) ? 1_000_000 : -1_000_000) 
+                int captureHistScore = getCaptureHistoryIndex(sideToMove, move);
+                return (SEE(board, move, -captureHistScore * CaptureHistSEEMult / 32_768) ? 1_000_000 : -1_000_000) 
                     + MvvMult * pieceVals[(int)move.CapturePieceType] 
                     + captureHistScore;
             }
@@ -756,7 +771,7 @@ namespace FispurEngine
                 return 900_000;
             }
 
-            return historyHeuristic[getHistoryHeuristicInd(board, move)] + continuationHist[ContHistIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
+            return historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
         }
 
         public static readonly int[] pieceVals = [0, 100, 290, 337, 504, 926, 1_000_000];
@@ -903,7 +918,7 @@ namespace FispurEngine
                  | (BitboardHelper.GetSliderAttacks(PieceType.Rook, to, occ) & (rooks | queens));
         }
 
-        private static int getHistoryHeuristicInd(Board board, Move move)
+        private static int getHistoryHeuristicIndex(Board board, Move move)
         {
             return (board.IsWhiteToMove ? 0 : 1) * 64 * 64 + (move.StartSquare.Index | move.TargetSquare.Index << 6);
         }
