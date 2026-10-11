@@ -265,7 +265,7 @@ internal class Program
         new("HistBonusBase",        -600,   200,    () => Fispur.HistBonusBase,         v => Fispur.HistBonusBase = v),
 
         new("CaptureHistDivisor",   512,    65536,  () => Fispur.CaptureHistDivisor,    v => Fispur.CaptureHistDivisor = v),
-        new("CaptureMaxHistBonus",  10,     16000,  () => Fispur.CaptureHistMaxBonus,   v => Fispur.CaptureHistMaxBonus = v),
+        new("CaptureMaxHistBonus",  1500,   8000,   () => Fispur.CaptureHistMaxBonus,   v => Fispur.CaptureHistMaxBonus = v),
         new("CaptureHistBonusMult", 50,     800,    () => Fispur.CaptureHistBonusMult,  v => Fispur.CaptureHistBonusMult = v),
         new("CaptureHistBonusBase", -600,   200,    () => Fispur.CaptureHistBonusBase,  v => Fispur.CaptureHistBonusBase = v),
         new("CaptureHistSEEMult",   20,     330,    () => Fispur.CaptureHistSEEMult,    v => Fispur.CaptureHistSEEMult = v),
@@ -280,7 +280,7 @@ internal class Program
         new("NMPReductionB",        1,      6,      () => Fispur.NMPReductionB,         v => Fispur.NMPReductionB = v,          true),
         new("NMPReductionDiv",      2,      10,     () => Fispur.NMPReductionDiv,       v => Fispur.NMPReductionDiv = v,        true),
 
-        new("ASPWindowDelta",       10,     200,    () => Fispur.ASPWindowDelta,        v => Fispur.ASPWindowDelta = v),
+        new("ASPWindowDelta",       5,      200,    () => Fispur.ASPWindowDelta,        v => Fispur.ASPWindowDelta = v),
         new("ASPWindowReset",       100,    2000,   () => Fispur.ASPWindowReset,        v => Fispur.ASPWindowReset = v),
 
         new("SEEPMaxDepth",         1,      8,      () => Fispur.SEEPMaxDepth,          v => Fispur.SEEPMaxDepth = v,           true),
