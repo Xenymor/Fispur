@@ -77,6 +77,8 @@ namespace FispurEngine
         public static int SEEPMaxDepth = 3;
         public static int SEEPThreshold = 0;
         public static int SEEPCaptureThreshold = 104;
+        public static int SEEPCaptureHistMult = 96;
+        public static int SEEPHistHeuristicMult = 64;
 
         public static int LMPMaxDepth = 4;
         public static int LMPBase = 9;
@@ -509,11 +511,11 @@ namespace FispurEngine
 
                     if (depthLeft <= SEEPMaxDepth && searchedCount > 0)
                     {
-                        if (move.IsCapture && !SEE(board, move, -SEEPCaptureThreshold * depthLeft))
+                        if (move.IsCapture && !SEE(board, move, Math.Min(0, -SEEPCaptureThreshold * depthLeft - captureHist[getCaptureHistoryIndex(sideToMove, move)] * SEEPCaptureHistMult / 32_768)))
                         {
                             continue;
                         }
-                        if (!move.IsCapture && !SEE(board, move, -SEEPThreshold * depthLeft))
+                        if (!move.IsCapture && !SEE(board, move, Math.Min(0, -SEEPThreshold * depthLeft - historyHeuristic[getHistoryHeuristicIndex(board, move)] * SEEPHistHeuristicMult / 32_768)))
                         {
                             continue;
                         }
