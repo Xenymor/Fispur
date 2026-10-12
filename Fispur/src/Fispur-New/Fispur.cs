@@ -76,7 +76,7 @@ namespace FispurEngine
 
         public static int SEEPMaxDepth = 3;
         public static int SEEPThreshold = 0;
-        public static int SEEPCaptureThreshold = 104;
+        public static int SEEPCaptureThreshold = 93;
 
         public static int LMPMaxDepth = 4;
         public static int LMPBase = 9;
@@ -88,10 +88,10 @@ namespace FispurEngine
         public static int CorrMax = 64 * CorrGrain;
 
         public static int CaptureHistDivisor = 32961;
-        public static int CaptureHistMaxBonus = 3940;
-        public static int CaptureHistBonusMult = 553;
-        public static int CaptureHistBonusBase = -320;
-        public static int CaptureHistSEEMult = 80;
+        public static int CaptureHistMaxBonus = 3888;
+        public static int CaptureHistBonusMult = 555;
+        public static int CaptureHistBonusBase = -290;
+        public static int CaptureHistSEEMult = 72;
         public static int MvvMult = 15;
 
         public static int HHLMRDiv = 10262;
