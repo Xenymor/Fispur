@@ -74,11 +74,11 @@ namespace FispurEngine
         public static int ASPWindowDelta = 80;
         public static int ASPWindowReset = 1456;
 
-        public static int SEEPMaxDepth = 3;
-        public static int SEEPThreshold = 0;
-        public static int SEEPCaptureThreshold = 104;
-        public static int SEEPCaptureHistMult = 96;
-        public static int SEEPHistHeuristicMult = 64;
+        public static int SEEPMaxDepth = 4;
+        public static int SEEPThreshold = 3;
+        public static int SEEPCaptureThreshold = 108;
+        public static int SEEPCaptureHistMult = 92;
+        public static int SEEPHistHeuristicMult = 60;
 
         public static int LMPMaxDepth = 4;
         public static int LMPBase = 9;
@@ -90,10 +90,10 @@ namespace FispurEngine
         public static int CorrMax = 64 * CorrGrain;
 
         public static int CaptureHistDivisor = 32961;
-        public static int CaptureHistMaxBonus = 3940;
-        public static int CaptureHistBonusMult = 553;
-        public static int CaptureHistBonusBase = -320;
-        public static int CaptureHistSEEMult = 80;
+        public static int CaptureHistMaxBonus = 3825;
+        public static int CaptureHistBonusMult = 571;
+        public static int CaptureHistBonusBase = -324;
+        public static int CaptureHistSEEMult = 89;
         public static int MvvMult = 15;
 
         public static int HHLMRDiv = 10262;
