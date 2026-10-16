@@ -78,7 +78,7 @@ namespace FispurEngine
         public static int SEEPThreshold = 3;
         public static int SEEPCaptureThreshold = 108;
         public static int SEEPCaptureHistMult = 92;
-        public static int SEEPHistHeuristicMult = 60;
+        public static int SEEPHistMult = 60;
 
         public static int LMPMaxDepth = 4;
         public static int LMPBase = 9;
@@ -496,6 +496,7 @@ namespace FispurEngine
                 scores[i] = bestVal;
 
                 Move move = mv[i];
+                int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
 
                 if (!pvNode && !inCheck && !qSearch)
                 {
@@ -515,7 +516,7 @@ namespace FispurEngine
                         {
                             continue;
                         }
-                        if (!move.IsCapture && !SEE(board, move, Math.Min(0, -SEEPThreshold * depthLeft - historyHeuristic[getHistoryHeuristicIndex(board, move)] * SEEPHistHeuristicMult / 32_768)))
+                        if (!move.IsCapture && !SEE(board, move, Math.Min(0, -SEEPThreshold * depthLeft - quietHist * SEEPHistMult / 32_768)))
                         {
                             continue;
                         }
@@ -527,7 +528,6 @@ namespace FispurEngine
                     continue;
                 }
 
-                int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
 
                 long nodesBefore = nodes;
 

@@ -287,7 +287,7 @@ internal class Program
         new("SEEPThreshold",        0,      500,    () => Fispur.SEEPThreshold,         v => Fispur.SEEPThreshold = v),
         new("SEEPCaptureThreshold", 0,      500,    () => Fispur.SEEPCaptureThreshold,  v => Fispur.SEEPCaptureThreshold = v),
         new("SEEPCaptureHistMult",  0,      320,    () => Fispur.SEEPCaptureHistMult,   v => Fispur.SEEPCaptureHistMult = v),
-        new("SEEPHistHeuristicMult",0,      256,    () => Fispur.SEEPHistHeuristicMult,  v => Fispur.SEEPHistHeuristicMult = v),
+        new("SEEPHistMult",         0,      256,    () => Fispur.SEEPHistMult,          v => Fispur.SEEPHistMult = v),
 
         new("KnightValue",          150,    500,    () => Fispur.pieceVals[2],          v => Fispur.pieceVals[2] = v),
         new("BishopValue",          150,    550,    () => Fispur.pieceVals[3],          v => Fispur.pieceVals[3] = v),
