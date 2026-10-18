@@ -496,7 +496,6 @@ namespace FispurEngine
                 scores[i] = bestVal;
 
                 Move move = mv[i];
-                int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
 
                 if (!pvNode && !inCheck && !qSearch)
                 {
@@ -516,9 +515,13 @@ namespace FispurEngine
                         {
                             continue;
                         }
-                        if (!move.IsCapture && !SEE(board, move, Math.Min(0, -SEEPThreshold * depthLeft - quietHist * SEEPHistMult / 32_768)))
+                        if (!move.IsCapture)
                         {
-                            continue;
+                            int seepHist = historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
+                            if (!SEE(board, move, Math.Min(0, -SEEPThreshold * depthLeft - seepHist * SEEPHistMult / 32_768)))
+                            {
+                                continue;
+                            }
                         }
                     }
                 }
@@ -528,6 +531,7 @@ namespace FispurEngine
                     continue;
                 }
 
+                int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
 
                 long nodesBefore = nodes;
 
