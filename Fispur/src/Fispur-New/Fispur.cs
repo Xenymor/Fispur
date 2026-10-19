@@ -75,10 +75,10 @@ namespace FispurEngine
         public static int ASPWindowReset = 1456;
 
         public static int SEEPMaxDepth = 4;
-        public static int SEEPThreshold = 3;
-        public static int SEEPCaptureThreshold = 108;
-        public static int SEEPCaptureHistMult = 92;
-        public static int SEEPHistMult = 60;
+        public static int SEEPThreshold = 18;
+        public static int SEEPCaptureThreshold = 90;
+        public static int SEEPCaptureHistMult = 96;
+        public static int SEEPHistMult = 58;
 
         public static int LMPMaxDepth = 4;
         public static int LMPBase = 9;
