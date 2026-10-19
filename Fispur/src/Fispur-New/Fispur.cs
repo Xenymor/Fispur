@@ -1,5 +1,6 @@
 ﻿using FispurEngine.API;
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics.X86;
 
@@ -139,6 +140,8 @@ namespace FispurEngine
         }
 
         int[] staticEvals = new int[MAX_DEPTH];
+        int[] piecesMoved = new int[MAX_DEPTH];
+        byte[] targetSquares = new byte[MAX_DEPTH];
 
         long[] rootNodes = new long[64 * 64]; // [from][to]
 
@@ -263,7 +266,7 @@ namespace FispurEngine
                     while (true)
                     {
                         int alpha = dl <= -ASPWindowReset ? -INFINITY : eval + dl, beta = dh >= ASPWindowReset ? INFINITY : eval + dh;
-                        score = AlphaBeta(board, 0, depth, alpha, beta, 0, 0);
+                        score = AlphaBeta(board, 0, depth, alpha, beta);
 
                         if (score <= alpha)
                         {
@@ -285,7 +288,7 @@ namespace FispurEngine
                     }
                 } else
                 {
-                    score = AlphaBeta(board, 0, depth, -INFINITY, INFINITY, 0, 0);
+                    score = AlphaBeta(board, 0, depth, -INFINITY, INFINITY);
                 }
 
                 if (stopSearch || failed)
@@ -338,8 +341,9 @@ namespace FispurEngine
             return (bestMove, eval);
         }
 
+
         [SkipLocalsInit]
-        private unsafe int AlphaBeta(Board board, int ply, int depthLeft, int alpha, int beta, int prevPiece, int prevTo, bool canNull = true)
+        private unsafe int AlphaBeta(Board board, int ply, int depthLeft, int alpha, int beta, bool canNull = true, bool cutNode = false)
         {
             if (stopSearch)
             {
@@ -435,7 +439,9 @@ namespace FispurEngine
                     int reduction = NMPReductionB + depthLeft / NMPReductionDiv;
 
                     board.ForceSkipTurn();
-                    int score = -AlphaBeta(board, ply + 1, depthLeft - reduction - 1, -beta, -beta + 1, 0, 1, canNull: false);
+                    piecesMoved[ply] = 0;
+                    targetSquares[ply] = 1;
+                    int score = -AlphaBeta(board, ply + 1, depthLeft - reduction - 1, -beta, -beta + 1, canNull: false, cutNode: !cutNode);
                     board.UndoSkipTurn();
 
                     if (stopSearch)
@@ -468,6 +474,9 @@ namespace FispurEngine
             int sideToMove = board.IsWhiteToMove ? 0 : 1;
             
             int* scores = stackalloc int[moves.Length];
+            int prevPiece = ply == 0 ? 0 : piecesMoved[ply - 1];
+            int prevTo = ply == 0 ? 0 : targetSquares[ply - 1];
+
             for (int i = 0; i < moves.Length; i++)
             {
                 scores[i] = scoreMove(board, ply, mv[i], ttMove, prevPiece, prevTo, sideToMove);
@@ -539,10 +548,13 @@ namespace FispurEngine
                 PrefetchTT(board.ZobristKey);
                 NNUE.makeMove(board, move, !board.IsWhiteToMove);
 
+                piecesMoved[ply] = (int)move.MovePieceType;
+                targetSquares[ply] = (byte)move.TargetSquare.Index;
+
                 int score;
                 if (searchedCount == 0)
                 {
-                    score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
+                    score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha, cutNode: !pvNode && !cutNode);
                 }
                 else
                 {
@@ -552,14 +564,14 @@ namespace FispurEngine
                         reduction = LmrReduction(depthLeft, searchedCount) - quietHist/HHLMRDiv;
                         reduction = Math.Clamp(reduction + (improving ? 0 : 1), 0, depthLeft);
                     }
-                    score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
+                    score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha, cutNode: pvNode || !cutNode);
                     if (reduction > 0 && score > alpha)
                     {
-                        score = -AlphaBeta(board, ply + 1, depthLeft - 1, -(alpha + 1), -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
+                        score = -AlphaBeta(board, ply + 1, depthLeft - 1, -(alpha + 1), -alpha, cutNode: pvNode || !cutNode);
                     }
                     if (score > alpha && score < beta)
                     {
-                        score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
+                        score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha, cutNode: false);
                     }
                 }
 
