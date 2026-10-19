@@ -276,6 +276,11 @@ internal class Program
         new("CHistBonusMult",       50,     800,    () => Fispur.CHistBonusMult,        v => Fispur.CHistBonusMult = v),
         new("CHistBonusBase",       -600,   200,    () => Fispur.CHistBonusBase,        v => Fispur.CHistBonusBase = v),
 
+        new("TPCHistoryDivisor",    512,    65536,  () => Fispur.TwoPlyCHistoryDivisor,       v => Fispur.TwoPlyCHistoryDivisor = v),
+        new("TPMaxCHistBonus",      10,     16000,  () => Fispur.TwoPlyMaxCHistBonus,         v => Fispur.TwoPlyMaxCHistBonus = v),
+        new("TPCHistBonusMult",     50,     800,    () => Fispur.TwoPlyCHistBonusMult,        v => Fispur.TwoPlyCHistBonusMult = v),
+        new("TPCHistBonusBase",     -600,   200,    () => Fispur.TwoPlyCHistBonusBase,        v => Fispur.TwoPlyCHistBonusBase = v),
+
         new("NMPMinDepth",          1,      8,      () => Fispur.NMPMinDepth,           v => Fispur.NMPMinDepth = v,            true),
         new("NMPReductionB",        1,      6,      () => Fispur.NMPReductionB,         v => Fispur.NMPReductionB = v,          true),
         new("NMPReductionDiv",      2,      10,     () => Fispur.NMPReductionDiv,       v => Fispur.NMPReductionDiv = v,        true),
