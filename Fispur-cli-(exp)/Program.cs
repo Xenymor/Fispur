@@ -299,6 +299,10 @@ internal class Program
 
         new("MinIIRDepth",          0,      8,      () => Fispur.MinIIRDepth,           v => Fispur.MinIIRDepth = v,            true),
 
+        new("SEMinDepth",           4,      12,     () => Fispur.SEMinDepth,            v => Fispur.SEMinDepth = v,             true),
+        new("SEMargin",             8,      56,     () => Fispur.SEMargin,              v => Fispur.SEMargin = v),
+        new("SEDepthMargin",        1,      6,      () => Fispur.SEDepthMargin,         v => Fispur.SEDepthMargin = v,          true),
+
         new("CorrHistGrain",        1,      500,    () => Fispur.CorrGrain,            v => Fispur.CorrGrain = v),
         new("CorrHistScale",        16,     500,    () => Fispur.CorrScale,            v => Fispur.CorrScale = v),
         new("CorrHistMax",          0,      50000,  () => Fispur.CorrMax,              v => Fispur.CorrMax = v),
