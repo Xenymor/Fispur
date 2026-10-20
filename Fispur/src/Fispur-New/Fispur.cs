@@ -201,6 +201,7 @@ namespace FispurEngine
             Array.Clear(killers);
             Array.Clear(correctionHist);
             Array.Clear(continuationHist);
+            Array.Clear(twoPlycontinuationHist);
             Array.Clear(captureHist);
             eval = 0;
         }
@@ -552,7 +553,7 @@ namespace FispurEngine
 
                 int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicIndex(board, move)] 
                     + continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)] 
-                    + twoPlycontinuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
+                    + twoPlycontinuationHist[getContinuationHistoryIndex(sideToMove, tPPrevPiece, tPPrevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
 
                 long nodesBefore = nodes;
 
@@ -616,7 +617,7 @@ namespace FispurEngine
                             ref int c = ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
                             c += contBonus - c * contBonus / CHistoryDivisor;
 
-                            ref int tPC = ref continuationHist[getContinuationHistoryIndex(sideToMove, tPPrevPiece, tPPrevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
+                            ref int tPC = ref twoPlycontinuationHist[getContinuationHistoryIndex(sideToMove, tPPrevPiece, tPPrevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
                             tPC += twoPlyContBonus - tPC * twoPlyContBonus / TwoPlyCHistoryDivisor;
 
                             for (int j = 0; j < searchedCount; j++)
@@ -636,8 +637,8 @@ namespace FispurEngine
                                     ref int cp = ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)currMove.MovePieceType, currMove.TargetSquare.Index)];
                                     cp += -contBonus - cp * contBonus / CHistoryDivisor;
 
-                                    ref int tPCp = ref continuationHist[getContinuationHistoryIndex(sideToMove, tPPrevPiece, tPPrevTo, (int)currMove.MovePieceType, currMove.TargetSquare.Index)];
-                                    tPC += -twoPlyContBonus - tPC * twoPlyContBonus / TwoPlyCHistoryDivisor;
+                                    ref int tPCp = ref twoPlycontinuationHist[getContinuationHistoryIndex(sideToMove, tPPrevPiece, tPPrevTo, (int)currMove.MovePieceType, currMove.TargetSquare.Index)];
+                                    tPCp += -twoPlyContBonus - tPCp * twoPlyContBonus / TwoPlyCHistoryDivisor;
                                 }
                             }
 
