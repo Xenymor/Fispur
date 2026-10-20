@@ -2,6 +2,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics.X86;
+using System.Text;
 
 namespace FispurEngine
 {
@@ -146,6 +147,23 @@ namespace FispurEngine
         long nodes;
         long hardLimit;
         Move rootBestMove;
+
+        Move[,] pvTable = new Move[MAX_DEPTH, MAX_DEPTH];
+        int[] pvLength = new int[MAX_DEPTH];
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void updatePV(int ply, Move move)
+        {
+            pvTable[ply, ply] = move;
+
+            int childLength = pvLength[ply + 1];
+            for (int i = ply + 1; i < childLength; i++)
+            {
+                pvTable[ply, i] = pvTable[ply + 1, i];
+            }
+
+            pvLength[ply] = Math.Max(childLength, ply + 1);
+        }
 
         public Fispur()
         {
@@ -297,9 +315,15 @@ namespace FispurEngine
                 stability = bestMove.Equals(rootBestMove) ? Math.Min(stability + 1, 4) : 0;
                 bestMove = rootBestMove;
 
+                var pvString = new StringBuilder();
+                for (int i = 0; i < pvLength[0]; i++)
+                {
+                    pvString.Append(' ').Append(Chess.MoveUtility.GetMoveNameUCI(pvTable[0, i].move));
+                }
+
                 Console.WriteLine("info depth " + depth + " score " + ScoreToUCI(eval)
                     + " nodes " + nodes + " time " + timer.MillisecondsElapsedThisTurn
-                    + " pv " + Chess.MoveUtility.GetMoveNameUCI(bestMove.move));
+                    + " pv" + pvString);
 
                 if (timer.isInfinite && stopSearch)
                 {
@@ -341,6 +365,7 @@ namespace FispurEngine
         [SkipLocalsInit]
         private unsafe int AlphaBeta(Board board, int ply, int depthLeft, int alpha, int beta, int prevPiece, int prevTo, bool canNull = true)
         {
+            pvLength[ply] = ply;
             if (stopSearch)
             {
                 return 0;
@@ -660,6 +685,7 @@ namespace FispurEngine
                 if (score > alpha)
                 {
                     alpha = score;
+                    updatePV(ply, move);
                 }
             }
 
