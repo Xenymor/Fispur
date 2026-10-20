@@ -139,9 +139,7 @@ namespace FispurEngine
             return (((stm * 7 + prevPiece) * 64 + prevTo) * 7 + piece) * 64 + to;
         }
 
-        int[] staticEvals = new int[MAX_DEPTH];
-        int[] piecesMoved = new int[MAX_DEPTH];
-        byte[] targetSquares = new byte[MAX_DEPTH];
+        (int staticEval, byte pieceMoved, byte targetSquare, ushort excludedMove)[] ppStack = new (int staticEval, byte pieceMoved, byte targetSquare, ushort excludedMove)[MAX_DEPTH];
 
         long[] rootNodes = new long[64 * 64]; // [from][to]
 
@@ -406,8 +404,13 @@ namespace FispurEngine
                      : NNUE.Evaluate(board));
             int eval = rawEval + (rawEval > -INFINITY ? corrHistEntry / CorrGrain : 0);
 
-            staticEvals[ply] = inCheck ? -INFINITY : eval;
-            bool improving = !inCheck && ply >= 2 ? eval > staticEvals[ply - 2] : false;
+            ref var ppEntry = ref ppStack[ply];
+            var prevPPE = ply > 0 ? ppStack[ply - 1] : default;
+            var tpPrevPPE = ply > 1 ? ppStack[ply - 2] : default;
+
+            ppEntry.staticEval = inCheck ? -INFINITY : eval;
+
+            bool improving = !inCheck && ply >= 2 ? eval > tpPrevPPE.staticEval : false;
 
             int rfpMargin = RfpMargin * depthLeft - (improving ? RFPImpMargin : 0);
 
@@ -439,8 +442,8 @@ namespace FispurEngine
                     int reduction = NMPReductionB + depthLeft / NMPReductionDiv;
 
                     board.ForceSkipTurn();
-                    piecesMoved[ply] = 0;
-                    targetSquares[ply] = 1;
+                    ppEntry.pieceMoved = 0;
+                    ppEntry.targetSquare = 1;
                     int score = -AlphaBeta(board, ply + 1, depthLeft - reduction - 1, -beta, -beta + 1, canNull: false, cutNode: !cutNode);
                     board.UndoSkipTurn();
 
@@ -474,12 +477,11 @@ namespace FispurEngine
             int sideToMove = board.IsWhiteToMove ? 0 : 1;
             
             int* scores = stackalloc int[moves.Length];
-            int prevPiece = ply == 0 ? 0 : piecesMoved[ply - 1];
-            int prevTo = ply == 0 ? 0 : targetSquares[ply - 1];
+
 
             for (int i = 0; i < moves.Length; i++)
             {
-                scores[i] = scoreMove(board, ply, mv[i], ttMove, prevPiece, prevTo, sideToMove);
+                scores[i] = scoreMove(board, ply, mv[i], ttMove, prevPPE.pieceMoved, prevPPE.targetSquare, sideToMove);
             }
 
             Move bestMove = Move.NullMove;
@@ -526,7 +528,7 @@ namespace FispurEngine
                         }
                         if (!move.IsCapture)
                         {
-                            int seepHist = historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
+                            int seepHist = historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPPE.pieceMoved, prevPPE.targetSquare, (int)move.MovePieceType, move.TargetSquare.Index)];
                             if (!SEE(board, move, Math.Min(0, -SEEPThreshold * depthLeft - seepHist * SEEPHistMult / 32_768)))
                             {
                                 continue;
@@ -540,7 +542,7 @@ namespace FispurEngine
                     continue;
                 }
 
-                int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
+                int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPPE.pieceMoved, prevPPE.targetSquare, (int)move.MovePieceType, move.TargetSquare.Index)];
 
                 long nodesBefore = nodes;
 
@@ -548,8 +550,8 @@ namespace FispurEngine
                 PrefetchTT(board.ZobristKey);
                 NNUE.makeMove(board, move, !board.IsWhiteToMove);
 
-                piecesMoved[ply] = (int)move.MovePieceType;
-                targetSquares[ply] = (byte)move.TargetSquare.Index;
+                ppEntry.pieceMoved = (byte)move.MovePieceType;
+                ppEntry.targetSquare = (byte)move.TargetSquare.Index;
 
                 int score;
                 if (searchedCount == 0)
@@ -600,7 +602,7 @@ namespace FispurEngine
                             ref int h = ref historyHeuristic[getHistoryHeuristicIndex(board, move)];
                             h += hhBonus - h * hhBonus / HistDivisor;
 
-                            ref int c = ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
+                            ref int c = ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPPE.pieceMoved, prevPPE.targetSquare, (int)move.MovePieceType, move.TargetSquare.Index)];
                             c += contBonus - c * contBonus / CHistoryDivisor;
 
                             for (int j = 0; j < searchedCount; j++)
@@ -617,7 +619,7 @@ namespace FispurEngine
                                     ref int p = ref historyHeuristic[getHistoryHeuristicIndex(board, currMove)];
                                     p += -hhBonus - p * hhBonus / HistDivisor;
 
-                                    ref int cp = ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)currMove.MovePieceType, currMove.TargetSquare.Index)];
+                                    ref int cp = ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPPE.pieceMoved, prevPPE.targetSquare, (int)currMove.MovePieceType, currMove.TargetSquare.Index)];
                                     cp += -contBonus - cp * contBonus / CHistoryDivisor;
                                 }
                             }
