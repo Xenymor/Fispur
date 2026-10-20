@@ -1,5 +1,6 @@
 ﻿using FispurEngine.API;
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
@@ -108,6 +109,9 @@ namespace FispurEngine
         public static int TmNodeMult = 127;
         public static readonly int[] StabScale = { 208, 144, 107, 98, 80 };
 
+        public static int SEMinPly = 0;
+        public static int SEMinDepth = 7;
+        public static int SEMargin = 24;
 
         struct TTEntry
         {
@@ -139,7 +143,7 @@ namespace FispurEngine
             return (((stm * 7 + prevPiece) * 64 + prevTo) * 7 + piece) * 64 + to;
         }
 
-        int[] staticEvals = new int[MAX_DEPTH];
+        (int staticEval, byte pieceMoved, byte targetSquare, ushort excludedMove)[] ppStack = new (int staticEval, byte pieceMoved, byte targetSquare, ushort excludedMove)[MAX_DEPTH];
 
         long[] rootNodes = new long[64 * 64]; // [from][to]
 
@@ -283,7 +287,7 @@ namespace FispurEngine
                     while (true)
                     {
                         int alpha = dl <= -ASPWindowReset ? -INFINITY : eval + dl, beta = dh >= ASPWindowReset ? INFINITY : eval + dh;
-                        score = AlphaBeta(board, 0, depth, alpha, beta, 0, 0);
+                        score = AlphaBeta(board, 0, depth, alpha, beta);
 
                         if (score <= alpha)
                         {
@@ -305,7 +309,7 @@ namespace FispurEngine
                     }
                 } else
                 {
-                    score = AlphaBeta(board, 0, depth, -INFINITY, INFINITY, 0, 0);
+                    score = AlphaBeta(board, 0, depth, -INFINITY, INFINITY);
                 }
 
                 if (stopSearch || failed)
@@ -364,8 +368,9 @@ namespace FispurEngine
             return (bestMove, eval);
         }
 
+
         [SkipLocalsInit]
-        private unsafe int AlphaBeta(Board board, int ply, int depthLeft, int alpha, int beta, int prevPiece, int prevTo, bool canNull = true)
+        private unsafe int AlphaBeta(Board board, int ply, int depthLeft, int alpha, int beta, bool canNull = true, bool cutNode = false)
         {
             pvLength[ply] = ply;
             if (stopSearch)
@@ -389,6 +394,10 @@ namespace FispurEngine
 
             ref int corrHistEntry = ref correctionHist[(board.IsWhiteToMove ? 0 : CORR_HIST_ENTRIES) + (int)idx];
 
+            ref var ppEntry = ref ppStack[ply];
+            var prevPPE = ply > 0 ? ppStack[ply - 1] : default;
+            var tpPrevPPE = ply > 1 ? ppStack[ply - 2] : default;
+
             if (ply >= MAX_DEPTH - 1)
             {
                 return NNUE.Evaluate(board) + corrHistEntry / CorrGrain;
@@ -409,11 +418,13 @@ namespace FispurEngine
                     return 0;
             }
 
+            bool inSE = ppEntry.excludedMove != 0;
+
             ulong zobrist = board.ZobristKey;
             ref TTEntry entry = ref transpositionTable[zobrist & ttMask];
             bool hasEntry = entry.bound != BOUND_NONE && entry.key == (uint)(zobrist >> 32);
 
-            if (hasEntry && ply > 0 && entry.depth >= depthLeft)
+            if (!inSE && hasEntry && ply > 0 && entry.depth >= depthLeft)
             {
                 int ttScore = ScoreFromTT(entry.score, ply);
                 if (entry.bound == BOUND_EXACT
@@ -424,7 +435,7 @@ namespace FispurEngine
                 }
             }
 
-            if (!hasEntry && depthLeft >= MinIIRDepth)
+            if (!inSE && !hasEntry && depthLeft >= MinIIRDepth)
             {
                 depthLeft--;
             }
@@ -434,12 +445,14 @@ namespace FispurEngine
                      : NNUE.Evaluate(board));
             int eval = rawEval + (rawEval > -INFINITY ? corrHistEntry / CorrGrain : 0);
 
-            staticEvals[ply] = inCheck ? -INFINITY : eval;
-            bool improving = !inCheck && ply >= 2 ? eval > staticEvals[ply - 2] : false;
+
+            ppEntry.staticEval = inCheck ? -INFINITY : eval;
+
+            bool improving = !inCheck && ply >= 2 ? eval > tpPrevPPE.staticEval : false;
 
             int rfpMargin = RfpMargin * depthLeft - (improving ? RFPImpMargin : 0);
 
-            if (!qSearch && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + rfpMargin)
+            if (!inSE && !qSearch && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + rfpMargin)
             {
                 return eval;
             }
@@ -460,14 +473,16 @@ namespace FispurEngine
             }
 
 
-            if (eval >= beta && !pvNode && !inCheck && canNull && depthLeft >= NMPMinDepth && beta < MATE_BOUND) {
+            if (!inSE && eval >= beta && !pvNode && !inCheck && canNull && depthLeft >= NMPMinDepth && beta < MATE_BOUND) {
                 bool isPawnEndgame = board.IsWhiteToMove ? ((board.WhitePiecesBitboard ^ board.GetPieceBitboard(PieceType.Pawn, true) ^ board.GetPieceBitboard(PieceType.King, true)) == 0)
                                                          : ((board.BlackPiecesBitboard ^ board.GetPieceBitboard(PieceType.Pawn, false) ^ board.GetPieceBitboard(PieceType.King, false)) == 0);
                 if (!isPawnEndgame) {
                     int reduction = NMPReductionB + depthLeft / NMPReductionDiv;
 
                     board.ForceSkipTurn();
-                    int score = -AlphaBeta(board, ply + 1, depthLeft - reduction - 1, -beta, -beta + 1, 0, 1, canNull: false);
+                    ppEntry.pieceMoved = 0;
+                    ppEntry.targetSquare = 1;
+                    int score = -AlphaBeta(board, ply + 1, depthLeft - reduction - 1, -beta, -beta + 1, canNull: false, cutNode: !cutNode);
                     board.UndoSkipTurn();
 
                     if (stopSearch)
@@ -482,6 +497,26 @@ namespace FispurEngine
             }
 
             Move ttMove = hasEntry ? entry.move : Move.NullMove;
+
+            int seExtension = 0;
+
+            if (!inSE && hasEntry && ply > SEMinPly && depthLeft >= SEMinDepth && entry.depth >= depthLeft - 3 && !ttMove.IsNull && (entry.bound == BOUND_LOWER || entry.bound == BOUND_EXACT) && Math.Abs(entry.score) < MATE_BOUND)
+            {
+                int sBeta = entry.score - depthLeft * SEMargin / 16;
+                ppStack[ply].excludedMove = ttMove.RawValue;
+                int score = AlphaBeta(board, ply, (depthLeft - 1) / 2, sBeta - 1, sBeta, canNull, cutNode);
+                ppStack[ply].excludedMove = 0;
+
+                if (stopSearch)
+                {
+                    return 0;
+                }
+
+                if (score < sBeta)
+                {
+                    seExtension = 1;
+                }
+            }
 
             Move* mv = stackalloc Move[218];
             Span<Move> moves = new Span<Move>(mv, 218);
@@ -498,11 +533,12 @@ namespace FispurEngine
                      : 0;
 
             int sideToMove = board.IsWhiteToMove ? 0 : 1;
-            
+
             int* scores = stackalloc int[moves.Length];
+
             for (int i = 0; i < moves.Length; i++)
             {
-                scores[i] = scoreMove(board, ply, mv[i], ttMove, prevPiece, prevTo, sideToMove);
+                scores[i] = scoreMove(board, ply, mv[i], ttMove, prevPPE.pieceMoved, prevPPE.targetSquare, sideToMove);
             }
 
             Move bestMove = Move.NullMove;
@@ -529,6 +565,11 @@ namespace FispurEngine
 
                 Move move = mv[i];
 
+                if (inSE && move.RawValue == ppEntry.excludedMove)
+                {
+                    continue;
+                }
+
                 if (!pvNode && !inCheck && !qSearch)
                 {
                     if (depthLeft <= FpMaxDepth && !move.IsCapture && !move.IsPromotion && searchedCount > 0 && Math.Abs(alpha) < MATE_BOUND && eval + fpMargin <= alpha)
@@ -549,7 +590,7 @@ namespace FispurEngine
                         }
                         if (!move.IsCapture)
                         {
-                            int seepHist = historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
+                            int seepHist = historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPPE.pieceMoved, prevPPE.targetSquare, (int)move.MovePieceType, move.TargetSquare.Index)];
                             if (!SEE(board, move, Math.Min(0, -SEEPThreshold * depthLeft - seepHist * SEEPHistMult / 32_768)))
                             {
                                 continue;
@@ -563,7 +604,7 @@ namespace FispurEngine
                     continue;
                 }
 
-                int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
+                int quietHist = move.IsCapture ? 0 : historyHeuristic[getHistoryHeuristicIndex(board, move)] + continuationHist[getContinuationHistoryIndex(sideToMove, prevPPE.pieceMoved, prevPPE.targetSquare, (int)move.MovePieceType, move.TargetSquare.Index)];
 
                 long nodesBefore = nodes;
 
@@ -571,10 +612,15 @@ namespace FispurEngine
                 PrefetchTT(board.ZobristKey);
                 NNUE.makeMove(board, move, !board.IsWhiteToMove);
 
+                ppEntry.pieceMoved = (byte)move.MovePieceType;
+                ppEntry.targetSquare = (byte)move.TargetSquare.Index;
+
                 int score;
+                int baseSearchDepth = depthLeft - 1 + (move.Equals(ttMove) ? seExtension : 0);
+
                 if (searchedCount == 0)
                 {
-                    score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
+                    score = -AlphaBeta(board, ply + 1, baseSearchDepth, -beta, -alpha, cutNode: !pvNode && !cutNode);
                 }
                 else
                 {
@@ -584,14 +630,14 @@ namespace FispurEngine
                         reduction = LmrReduction(depthLeft, searchedCount) - quietHist/HHLMRDiv;
                         reduction = Math.Clamp(reduction + (improving ? 0 : 1), 0, depthLeft);
                     }
-                    score = -AlphaBeta(board, ply + 1, depthLeft - 1 - reduction, -(alpha + 1), -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
+                    score = -AlphaBeta(board, ply + 1, baseSearchDepth - reduction, -(alpha + 1), -alpha, cutNode: pvNode || !cutNode);
                     if (reduction > 0 && score > alpha)
                     {
-                        score = -AlphaBeta(board, ply + 1, depthLeft - 1, -(alpha + 1), -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
+                        score = -AlphaBeta(board, ply + 1, baseSearchDepth, -(alpha + 1), -alpha, cutNode: pvNode || !cutNode);
                     }
                     if (score > alpha && score < beta)
                     {
-                        score = -AlphaBeta(board, ply + 1, depthLeft - 1, -beta, -alpha, (int)move.MovePieceType, move.TargetSquare.Index);
+                        score = -AlphaBeta(board, ply + 1, baseSearchDepth, -beta, -alpha, cutNode: false);
                     }
                 }
 
@@ -609,18 +655,18 @@ namespace FispurEngine
                 if (score >= beta)
                 {
 
-                    if (!qSearch)
+                    if (!qSearch && !inSE)
                     {
                         int hhBonus = Math.Min(HistMaxBonus, HistBonusMult * depthLeft + HistBonusBase);
                         int contBonus = Math.Min(MaxCHistBonus, CHistBonusMult * depthLeft + CHistBonusBase);
                         int capBonus = Math.Min(CaptureHistMaxBonus, CaptureHistBonusMult * depthLeft + CaptureHistBonusBase);
-                        
+
                         if (!move.IsCapture)
                         {
                             ref int h = ref historyHeuristic[getHistoryHeuristicIndex(board, move)];
                             h += hhBonus - h * hhBonus / HistDivisor;
 
-                            ref int c = ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)];
+                            ref int c = ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPPE.pieceMoved, prevPPE.targetSquare, (int)move.MovePieceType, move.TargetSquare.Index)];
                             c += contBonus - c * contBonus / CHistoryDivisor;
 
                             for (int j = 0; j < searchedCount; j++)
@@ -637,13 +683,14 @@ namespace FispurEngine
                                     ref int p = ref historyHeuristic[getHistoryHeuristicIndex(board, currMove)];
                                     p += -hhBonus - p * hhBonus / HistDivisor;
 
-                                    ref int cp = ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)currMove.MovePieceType, currMove.TargetSquare.Index)];
+                                    ref int cp = ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPPE.pieceMoved, prevPPE.targetSquare, (int)currMove.MovePieceType, currMove.TargetSquare.Index)];
                                     cp += -contBonus - cp * contBonus / CHistoryDivisor;
                                 }
                             }
 
                             killers[ply] = move;
-                        } else
+                        }
+                        else
                         {
                             ref int c = ref captureHist[getCaptureHistoryIndex(sideToMove, move)];
                             c += capBonus - c * capBonus / CaptureHistDivisor;
@@ -662,12 +709,16 @@ namespace FispurEngine
                         }
                     }
 
-
-                    StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move, rawEval);
-                    if (!qSearch && !inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > eval)
+                    if (!inSE)
                     {
-                        UpdateCorrHist(ref corrHistEntry, score, rawEval, depthLeft);
+                        StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move, rawEval);
+
+                        if (!qSearch && !inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > eval)
+                        {
+                            UpdateCorrHist(ref corrHistEntry, score, rawEval, depthLeft);
+                        }
                     }
+
 
                     if (ply == 0)
                     {
@@ -696,11 +747,10 @@ namespace FispurEngine
                 }
             }
 
-            if (!qSearch)
+            if (!qSearch && !inSE)
             {
                 byte bound = bestScore <= ogAlpha ? BOUND_UPPER : BOUND_EXACT;
-                StoreTT(zobrist, bestScore, depthLeft, ply,
-                    bound, bestMove, rawEval);
+                StoreTT(zobrist, bestScore, depthLeft, ply, bound, bestMove, rawEval);
                 if (!inCheck && !bestMove.IsCapture && !bestMove.IsPromotion && Math.Abs(bestScore) < MATE_BOUND 
                     && ((bound == BOUND_UPPER && bestScore < eval) || bound == BOUND_EXACT))
                 {
