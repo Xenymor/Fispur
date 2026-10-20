@@ -224,8 +224,10 @@ namespace FispurEngine
 
         int eval = 0;
         int stability = 0;
+        int selDepth = 0;
         public (Move move, int eval) Think(Board board, Timer timer, int maxDepth)
         {
+            selDepth = 0;
             this.timer = timer;
             stopSearch = false;
             EnsureLmrTable();
@@ -321,8 +323,8 @@ namespace FispurEngine
                     pvString.Append(' ').Append(Chess.MoveUtility.GetMoveNameUCI(pvTable[0, i].move));
                 }
 
-                Console.WriteLine("info depth " + depth + " score " + ScoreToUCI(eval)
-                    + " nodes " + nodes + " time " + timer.MillisecondsElapsedThisTurn
+                Console.WriteLine("info depth " + depth + " score " + ScoreToUCI(eval) + " seldepth " + selDepth
+                    + " nodes " + nodes + " time " + timer.MillisecondsElapsedThisTurn + " nps " + (nodes * 1000 / Math.Max(1, timer.MillisecondsElapsedThisTurn))
                     + " pv" + pvString);
 
                 if (timer.isInfinite && stopSearch)
@@ -375,6 +377,11 @@ namespace FispurEngine
             {
                 stopSearch = true;
                 return 0;
+            }
+
+            if (ply + 1 > selDepth)
+            {
+                selDepth = ply + 1;
             }
 
             ulong x = board.GetPieceBitboard(PieceType.Pawn, true) * 0x9E3779B97F4A7C15UL ^ board.GetPieceBitboard(PieceType.Pawn, false) * 0xC2B2AE3D27D4EB4FUL;
