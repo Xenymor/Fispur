@@ -409,10 +409,12 @@ namespace FispurEngine
 
             int ogAlpha = alpha;
             bool inCheck = board.IsInCheck();
-            if (inCheck)
+
+            if (inCheck && ply <= rootDepth * 2)
             {
                 depthLeft++;
             }
+
             bool qSearch = depthLeft <= 0;
             bool pvNode = beta - alpha > 1;
 
@@ -504,7 +506,7 @@ namespace FispurEngine
 
             int seExtension = 0;
 
-            if (!inSE && hasEntry && ply > SEMinPly && depthLeft >= SEMinDepth && entry.depth >= depthLeft - SEDepthMargin && !ttMove.IsNull && (entry.bound == BOUND_LOWER || entry.bound == BOUND_EXACT) && Math.Abs(entry.score) < MATE_BOUND)
+            if (!inSE && ply <= rootDepth * 2 && hasEntry && ply > SEMinPly && depthLeft >= SEMinDepth && entry.depth >= depthLeft - SEDepthMargin && !ttMove.IsNull && (entry.bound == BOUND_LOWER || entry.bound == BOUND_EXACT) && Math.Abs(entry.score) < MATE_BOUND)
             {
                 int sBeta = entry.score - depthLeft * SEMargin / 16;
                 ppStack[ply].excludedMove = ttMove.RawValue;
