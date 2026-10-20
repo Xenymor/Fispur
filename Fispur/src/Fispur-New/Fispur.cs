@@ -709,13 +709,14 @@ namespace FispurEngine
                         }
                     }
 
-                    if (!inSE)
+                    if (!inSE && !qSearch)
                     {
-                        StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move, rawEval);
+                            StoreTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move, rawEval);
 
-                        if (!qSearch && !inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > eval)
+                        
+                        if (!inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > eval)
                         {
-                            UpdateCorrHist(ref corrHistEntry, score, rawEval, depthLeft);
+                                UpdateCorrHist(ref corrHistEntry, score, rawEval, depthLeft);
                         }
                     }
 
