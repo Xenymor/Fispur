@@ -518,9 +518,14 @@ namespace FispurEngine
                     return 0;
                 }
 
+                
+
                 if (score < sBeta)
                 {
                     seExtension = 1;
+                } else if (score >= beta)
+                {
+                    return score;
                 }
             }
 
