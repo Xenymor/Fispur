@@ -424,7 +424,7 @@ namespace FispurEngine
             ref TTEntry entry = ref transpositionTable[zobrist & ttMask];
             bool hasEntry = entry.bound != BOUND_NONE && entry.key == (uint)(zobrist >> 32);
 
-            if (!inSE && hasEntry && ply > 0 && entry.depth >= depthLeft)
+            if (!pvNode && !inSE && hasEntry && ply > 0 && entry.depth >= depthLeft)
             {
                 int ttScore = ScoreFromTT(entry.score, ply);
                 if (entry.bound == BOUND_EXACT
