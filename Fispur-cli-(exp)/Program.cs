@@ -301,7 +301,9 @@ internal class Program
 
         new("SEMinDepth",           4,      12,     () => Fispur.SEMinDepth,            v => Fispur.SEMinDepth = v,             true),
         new("SEMargin",             8,      56,     () => Fispur.SEMargin,              v => Fispur.SEMargin = v),
+        new("SEDMargin",            0,      60,     () => Fispur.SEDMargin,             v => Fispur.SEDMargin = v),
         new("SEDepthMargin",        1,      6,      () => Fispur.SEDepthMargin,         v => Fispur.SEDepthMargin = v,          true),
+        
 
         new("CorrHistGrain",        1,      500,    () => Fispur.CorrGrain,            v => Fispur.CorrGrain = v),
         new("CorrHistScale",        16,     500,    () => Fispur.CorrScale,            v => Fispur.CorrScale = v),

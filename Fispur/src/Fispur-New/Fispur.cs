@@ -113,6 +113,7 @@ namespace FispurEngine
         public static int SEMinDepth = 7;
         public static int SEMargin = 24;
         public static int SEDepthMargin = 3;
+        public static int SEDMargin = 17;
 
         struct TTEntry
         {
@@ -429,10 +430,13 @@ namespace FispurEngine
             ulong zobrist = board.ZobristKey;
             ref TTEntry entry = ref transpositionTable[zobrist & ttMask];
             bool hasEntry = entry.bound != BOUND_NONE && entry.key == (uint)(zobrist >> 32);
+            int ttScore = hasEntry ? ScoreFromTT(entry.score, ply) : -INFINITY;
+            int ttDepth = hasEntry ? entry.depth : -1;
+            int ttBound = hasEntry ? entry.bound : BOUND_NONE;
+            Move ttMove = hasEntry ? entry.move : Move.NullMove;
 
-            if (!pvNode && !inSE && hasEntry && ply > 0 && entry.depth >= depthLeft)
+            if (!pvNode && !inSE && hasEntry && ply > 0 && ttDepth >= depthLeft)
             {
-                int ttScore = ScoreFromTT(entry.score, ply);
                 if (entry.bound == BOUND_EXACT
                     || (entry.bound == BOUND_LOWER && ttScore >= beta)
                     || (entry.bound == BOUND_UPPER && ttScore <= alpha))
@@ -502,13 +506,11 @@ namespace FispurEngine
                 }
             }
 
-            Move ttMove = hasEntry ? entry.move : Move.NullMove;
-
             int seExtension = 0;
 
-            if (!inSE && ply <= rootDepth * 2 && hasEntry && ply > SEMinPly && depthLeft >= SEMinDepth && entry.depth >= depthLeft - SEDepthMargin && !ttMove.IsNull && (entry.bound == BOUND_LOWER || entry.bound == BOUND_EXACT) && Math.Abs(entry.score) < MATE_BOUND)
+            if (!inSE && ply <= rootDepth * 2 && hasEntry && ply > SEMinPly && depthLeft >= SEMinDepth && ttDepth >= depthLeft - SEDepthMargin && !ttMove.IsNull && (ttBound == BOUND_LOWER || ttBound == BOUND_EXACT) && Math.Abs(ttScore) < MATE_BOUND)
             {
-                int sBeta = entry.score - depthLeft * SEMargin / 16;
+                int sBeta = ttScore - depthLeft * SEMargin / 16;
                 ppStack[ply].excludedMove = ttMove.RawValue;
                 int score = AlphaBeta(board, ply, (depthLeft - 1) / 2, sBeta - 1, sBeta, canNull, cutNode);
                 ppStack[ply].excludedMove = 0;
@@ -518,14 +520,22 @@ namespace FispurEngine
                     return 0;
                 }
 
-                
-
                 if (score < sBeta)
                 {
-                    seExtension = 1;
+                    if (score < sBeta - SEDMargin)
+                    {
+                        seExtension = 2;
+                    }
+                    else
+                    {
+                        seExtension = 1;
+                    }
                 } else if (score >= beta)
                 {
                     return score;
+                } else if (ttScore >= beta)
+                {
+                    seExtension = -1;
                 }
             }
 
