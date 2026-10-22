@@ -522,7 +522,7 @@ namespace FispurEngine
 
                 if (score < sBeta)
                 {
-                    if (score < sBeta - SEDMargin)
+                    if (!pvNode && score < sBeta - SEDMargin)
                     {
                         seExtension = 2;
                     }
