@@ -112,6 +112,7 @@ namespace FispurEngine
         public static int SEMinPly = 0;
         public static int SEMinDepth = 7;
         public static int SEMargin = 24;
+        public static int SEDepthMargin = 3;
 
         struct TTEntry
         {
@@ -229,6 +230,7 @@ namespace FispurEngine
         int eval = 0;
         int stability = 0;
         int selDepth = 0;
+        int rootDepth = 0;
         public (Move move, int eval) Think(Board board, Timer timer, int maxDepth)
         {
             selDepth = 0;
@@ -281,6 +283,8 @@ namespace FispurEngine
                 dl = -ASPWindowDelta; dh = ASPWindowDelta;
                 int score;
                 bool failed = false;
+
+                rootDepth = depth;
 
                 if (depth >= 5)
                 {
@@ -405,10 +409,12 @@ namespace FispurEngine
 
             int ogAlpha = alpha;
             bool inCheck = board.IsInCheck();
-            if (inCheck)
+
+            if (inCheck && ply <= rootDepth * 2)
             {
                 depthLeft++;
             }
+
             bool qSearch = depthLeft <= 0;
             bool pvNode = beta - alpha > 1;
 
@@ -500,7 +506,7 @@ namespace FispurEngine
 
             int seExtension = 0;
 
-            if (!inSE && hasEntry && ply > SEMinPly && depthLeft >= SEMinDepth && entry.depth >= depthLeft - 3 && !ttMove.IsNull && (entry.bound == BOUND_LOWER || entry.bound == BOUND_EXACT) && Math.Abs(entry.score) < MATE_BOUND)
+            if (!inSE && ply <= rootDepth * 2 && hasEntry && ply > SEMinPly && depthLeft >= SEMinDepth && entry.depth >= depthLeft - SEDepthMargin && !ttMove.IsNull && (entry.bound == BOUND_LOWER || entry.bound == BOUND_EXACT) && Math.Abs(entry.score) < MATE_BOUND)
             {
                 int sBeta = entry.score - depthLeft * SEMargin / 16;
                 ppStack[ply].excludedMove = ttMove.RawValue;
