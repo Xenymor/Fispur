@@ -113,42 +113,42 @@ namespace FispurEngine
 
             for (int i = 0; i < FINNY_ENTRIES; i++)
             {
-                Copy(finnyAcc + i * HL, l0b);
+                copy(finnyAcc + i * HL, l0b);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static short* Acc(int ply, int perspective)
+        static short* getAcc(int ply, int perspective)
         {
             return acc + ply * PLY_STRIDE + perspective * HL;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int RelKingSq(Board board, int perspective)
+        static int relKingSq(Board board, int perspective)
         {
             return board.GetKingSquare(perspective == 0).Index ^ (perspective * 56);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int FlipOf(int relKingSq)
+        static int flipOf(int relKingSq)
         {
             return (relKingSq & 7) > 3 ? 7 : 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int Feature(int perspective, int bucket, int flip, int color, int pc, int sq)
+        static int feature(int perspective, int bucket, int flip, int color, int pc, int sq)
         {
             int relColor = color ^ perspective;
             int relSq = sq ^ (perspective * 56) ^ flip;
             return (bucket * INPUT + 384 * relColor + 64 * pc + relSq) * HL;
         }
 
-        public static int Evaluate(Board board)
+        public static int evaluate(Board board)
         {
             short bucket = (short)((ulong.PopCount(board.AllPiecesBitboard) - 2) / 4);
 
-            short* boys = Acc(currPly, board.IsWhiteToMove ? 0 : 1);
-            short* opps = Acc(currPly, board.IsWhiteToMove ? 1 : 0);
+            short* boys = getAcc(currPly, board.IsWhiteToMove ? 0 : 1);
+            short* opps = getAcc(currPly, board.IsWhiteToMove ? 1 : 0);
             short* w = l1w + bucket * 2 * HL;
 
             Vector256<short> zero = Vector256<short>.Zero;
@@ -175,18 +175,18 @@ namespace FispurEngine
             return (int)((total / QA + l1b[bucket]) * SCALE / QAB);
         }
 
-        public static void UpdateAccumulators(Board board)
+        public static void updateAccumulators(Board board)
         {
             currPly = 0;
-            Refresh(board, 0, Acc(0, 0));
-            Refresh(board, 1, Acc(0, 1));
+            refresh(board, 0, getAcc(0, 0));
+            refresh(board, 1, getAcc(0, 1));
         }
 
-        static void Refresh(Board board, int perspective, short* dst)
+        static void refresh(Board board, int perspective, short* dst)
         {
-            int ksq = RelKingSq(board, perspective);
+            int ksq = relKingSq(board, perspective);
             int bucket = KING_BUCKET[ksq];
-            int flip = FlipOf(ksq);
+            int flip = flipOf(ksq);
 
             int entry = (perspective * KING_BUCKETS + bucket) * 2 + (flip != 0 ? 1 : 0);
             short* cached = finnyAcc + entry * HL;
@@ -207,19 +207,19 @@ namespace FispurEngine
                     while (added != 0)
                     {
                         int sq = BitboardHelper.ClearAndGetIndexOfLSB(ref added);
-                        AddInPlace(cached, l0w + Feature(perspective, bucket, flip, color, pc, sq));
+                        addInPlace(cached, l0w + feature(perspective, bucket, flip, color, pc, sq));
                     }
                     while (removed != 0)
                     {
                         int sq = BitboardHelper.ClearAndGetIndexOfLSB(ref removed);
-                        SubInPlace(cached, l0w + Feature(perspective, bucket, flip, color, pc, sq));
+                        subInPlace(cached, l0w + feature(perspective, bucket, flip, color, pc, sq));
                     }
 
                     finnyBB[idx] = curr;
                 }
             }
 
-            Copy(dst, cached);
+            copy(dst, cached);
         }
 
         internal static void makeMove(Board board, Move move, bool isWhite)
@@ -229,15 +229,15 @@ namespace FispurEngine
             int destPc = (int)(move.IsPromotion ? move.PromotionPieceType : move.MovePieceType) - 1;
             int from = move.StartSquare.Index, to = move.TargetSquare.Index;
 
-            short* src0 = Acc(currPly, 0), src1 = Acc(currPly, 1);
+            short* src0 = getAcc(currPly, 0), src1 = getAcc(currPly, 1);
             currPly++;
-            short* dst0 = Acc(currPly, 0), dst1 = Acc(currPly, 1);
+            short* dst0 = getAcc(currPly, 0), dst1 = getAcc(currPly, 1);
 
             bool refreshMover = false;
             if (move.MovePieceType == PieceType.King)
             {
                 int oldK = from ^ (color * 56), newK = to ^ (color * 56);
-                refreshMover = KING_BUCKET[oldK] != KING_BUCKET[newK] || FlipOf(oldK) != FlipOf(newK);
+                refreshMover = KING_BUCKET[oldK] != KING_BUCKET[newK] || flipOf(oldK) != flipOf(newK);
             }
 
             for (int p = 0; p <= 1; p++)
@@ -247,16 +247,16 @@ namespace FispurEngine
 
                 if (refreshMover && p == color)
                 {
-                    Refresh(board, p, dst);
+                    refresh(board, p, dst);
                     continue;
                 }
 
-                int ksq = RelKingSq(board, p);
+                int ksq = relKingSq(board, p);
                 int bucket = KING_BUCKET[ksq];
-                int flip = FlipOf(ksq);
+                int flip = flipOf(ksq);
 
-                int sub = Feature(p, bucket, flip, color, pc, from);
-                int add = Feature(p, bucket, flip, color, destPc, to);
+                int sub = feature(p, bucket, flip, color, pc, from);
+                int add = feature(p, bucket, flip, color, destPc, to);
 
                 if (move.IsCastles)
                 {
@@ -264,19 +264,19 @@ namespace FispurEngine
                     int rookFrom = kingside ? to + 1 : to - 2;
                     int rookTo = kingside ? to - 1 : to + 1;
                     int rpc = (int)PieceType.Rook - 1;
-                    AddAddSubSub(dst, src,
-                        l0w + add, l0w + Feature(p, bucket, flip, color, rpc, rookTo),
-                        l0w + sub, l0w + Feature(p, bucket, flip, color, rpc, rookFrom));
+                    addAddSubSub(dst, src,
+                        l0w + add, l0w + feature(p, bucket, flip, color, rpc, rookTo),
+                        l0w + sub, l0w + feature(p, bucket, flip, color, rpc, rookFrom));
                 }
                 else if (move.IsCapture)
                 {
                     int capSq = move.IsEnPassant ? to + (isWhite ? -8 : 8) : to;
                     int capPc = (int)move.CapturePieceType - 1;
-                    AddSubSub(dst, src, l0w + add, l0w + sub, l0w + Feature(p, bucket, flip, 1 - color, capPc, capSq));
+                    addSubSub(dst, src, l0w + add, l0w + sub, l0w + feature(p, bucket, flip, 1 - color, capPc, capSq));
                 }
                 else
                 {
-                    AddSub(dst, src, l0w + add, l0w + sub);
+                    addSub(dst, src, l0w + add, l0w + sub);
                 }
             }
         }
@@ -286,14 +286,14 @@ namespace FispurEngine
             currPly--;
         }
 
-        internal static bool VerifyAccumulators(Board board)
+        internal static bool verifyAccumulators(Board board)
         {
             short* tmp = stackalloc short[HL];
             for (int p = 0; p <= 1; p++)
             {
-                int ksq = RelKingSq(board, p);
+                int ksq = relKingSq(board, p);
                 int bucket = KING_BUCKET[ksq];
-                int flip = FlipOf(ksq);
+                int flip = flipOf(ksq);
 
                 for (int h = 0; h < HL; h++) tmp[h] = l0b[h];
                 for (int color = 0; color <= 1; color++)
@@ -305,13 +305,13 @@ namespace FispurEngine
                         while (bb != 0)
                         {
                             int sq = BitboardHelper.ClearAndGetIndexOfLSB(ref bb);
-                            short* wf = l0w + Feature(p, bucket, flip, color, pc, sq);
+                            short* wf = l0w + feature(p, bucket, flip, color, pc, sq);
                             for (int h = 0; h < HL; h++) tmp[h] += wf[h];
                         }
                     }
                 }
 
-                short* a = Acc(currPly, p);
+                short* a = getAcc(currPly, p);
                 for (int h = 0; h < HL; h++)
                 {
                     if (a[h] != tmp[h]) return false;
@@ -320,7 +320,7 @@ namespace FispurEngine
             return true;
         }
 
-        static void Copy(short* dst, short* src)
+        static void copy(short* dst, short* src)
         {
             for (int i = 0; i < HL; i += 16)
             {
@@ -328,7 +328,7 @@ namespace FispurEngine
             }
         }
 
-        static void AddInPlace(short* acc, short* a)
+        static void addInPlace(short* acc, short* a)
         {
             for (int i = 0; i < HL; i += 16)
             {
@@ -336,7 +336,7 @@ namespace FispurEngine
             }
         }
 
-        static void SubInPlace(short* acc, short* s)
+        static void subInPlace(short* acc, short* s)
         {
             for (int i = 0; i < HL; i += 16)
             {
@@ -345,7 +345,7 @@ namespace FispurEngine
         }
 
         // dst = src + a - s   (one pass: read src once, write dst once)
-        static void AddSub(short* dst, short* src, short* a, short* s)
+        static void addSub(short* dst, short* src, short* a, short* s)
         {
             for (int i = 0; i < HL; i += 16)
             {
@@ -356,7 +356,7 @@ namespace FispurEngine
             }
         }
 
-        static void AddSubSub(short* dst, short* src, short* a, short* s1, short* s2)
+        static void addSubSub(short* dst, short* src, short* a, short* s1, short* s2)
         {
             for (int i = 0; i < HL; i += 16)
             {
@@ -368,7 +368,7 @@ namespace FispurEngine
             }
         }
 
-        static void AddAddSubSub(short* dst, short* src, short* a1, short* a2, short* s1, short* s2)
+        static void addAddSubSub(short* dst, short* src, short* a1, short* a2, short* s1, short* s2)
         {
             for (int i = 0; i < HL; i += 16)
             {
