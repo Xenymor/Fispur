@@ -214,7 +214,7 @@ namespace FispurEngine.Application
 
         static (int totalTokenCount, int debugTokenCount) GetTokenCount()
         {
-            string path = Path.Combine(Directory.GetCurrentDirectory(), "src", "Fispur-New", "Fispur.cs");
+            string path = Path.Combine(Directory.GetCurrentDirectory(), "src", "Fispur", "Fispur.cs");
 
             using StreamReader reader = new(path);
             string txt = reader.ReadToEnd();
