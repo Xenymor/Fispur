@@ -235,7 +235,6 @@ namespace FispurEngine
         {
             selDepth = 0;
             this.timer = timer;
-            stopSearch = false;
             EnsureLmrTable();
             Array.Clear(rootNodes);
             nodes = 0;

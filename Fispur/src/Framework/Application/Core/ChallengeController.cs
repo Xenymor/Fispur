@@ -145,6 +145,7 @@ namespace FispurEngine.Application
             try
             {
                 API.Timer timer = new(PlayerToMove.TimeRemainingMs, PlayerNotOnMove.TimeRemainingMs, GameDurationMilliseconds, IncrementMilliseconds);
+                ((Fispur)PlayerToMove.Bot).PrepareSearch();
                 API.Move move = PlayerToMove.Bot.Think(botBoard, timer).move;
                 return new Move(move.RawValue);
             }
