@@ -1,6 +1,7 @@
 ﻿using FispurEngine.API;
 using System;
 using System.Runtime.CompilerServices;
+using static FispurEngine.Fispur.Tunables;
 
 namespace FispurEngine
 {
@@ -32,7 +33,7 @@ namespace FispurEngine
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int correctEval(int rawEval, int corrHistEntry)
         {
-            return rawEval + (rawEval > -INFINITY ? corrHistEntry / CorrGrain : 0);
+            return rawEval + (rawEval > -INFINITY ? corrHistEntry / CorrHistGrain : 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -51,7 +52,7 @@ namespace FispurEngine
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void updateQuietHist(Board board, Move move, int sideToMove, int prevPiece, int prevTo, int hhBonus, int contBonus, bool malus)
         {
-            updateHist(ref historyHeuristic[getHistoryHeuristicIndex(board, move)], hhBonus, HistDivisor, malus);
+            updateHist(ref historyHeuristic[getHistoryHeuristicIndex(board, move)], hhBonus, HistoryDivisor, malus);
             updateHist(ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)], contBonus, CHistoryDivisor, malus);
         }
 
@@ -69,10 +70,10 @@ namespace FispurEngine
 
         void updateCorrHist(ref int entry, int score, int rawEval, int depth)
         {
-            int diff = (score - rawEval) * CorrGrain;
+            int diff = (score - rawEval) * CorrHistGrain;
             int w = Math.Min(depth + 1, 16);
-            entry = (entry * (CorrScale - w) + diff * w) / CorrScale;
-            entry = Math.Clamp(entry, -CorrMax, CorrMax);
+            entry = (entry * (CorrHistScale - w) + diff * w) / CorrHistScale;
+            entry = Math.Clamp(entry, -CorrHistMax, CorrHistMax);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

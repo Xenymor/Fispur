@@ -1,6 +1,7 @@
 ﻿using FispurEngine.API;
 using System;
 using System.Runtime.CompilerServices;
+using static FispurEngine.Fispur.Tunables;
 
 namespace FispurEngine
 {
@@ -36,7 +37,7 @@ namespace FispurEngine
 
             if (ply >= MAX_DEPTH - 1)
             {
-                return NNUE.evaluate(board) + corrHistEntry / CorrGrain;
+                return NNUE.evaluate(board) + corrHistEntry / CorrHistGrain;
             }
 
             int ogAlpha = alpha;
@@ -216,9 +217,9 @@ namespace FispurEngine
                 {
                     if (!inSE)
                     {
-                        int hhBonus = Math.Min(HistMaxBonus, HistBonusMult * depthLeft + HistBonusBase);
+                        int hhBonus = Math.Min(MaxHistBonus, HistBonusMult * depthLeft + HistBonusBase);
                         int contBonus = Math.Min(MaxCHistBonus, CHistBonusMult * depthLeft + CHistBonusBase);
-                        int capBonus = Math.Min(CaptureHistMaxBonus, CaptureHistBonusMult * depthLeft + CaptureHistBonusBase);
+                        int capBonus = Math.Min(CaptureMaxHistBonus, CaptureHistBonusMult * depthLeft + CaptureHistBonusBase);
 
                         if (!move.IsCapture)
                         {
@@ -347,7 +348,7 @@ namespace FispurEngine
 
             if (ply >= MAX_DEPTH - 1)
             {
-                return NNUE.evaluate(board) + corrHistEntry / CorrGrain;
+                return NNUE.evaluate(board) + corrHistEntry / CorrHistGrain;
             }
 
             bool pvNode = beta - alpha > 1;

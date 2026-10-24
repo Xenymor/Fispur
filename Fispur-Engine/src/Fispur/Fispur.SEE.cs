@@ -1,11 +1,10 @@
 ﻿using FispurEngine.API;
+using static FispurEngine.Fispur.Tunables;
 
 namespace FispurEngine
 {
     public partial class Fispur : IChessBot
     {
-        public static readonly int[] pieceVals = [0, 100, 290, 337, 504, 926, 1_000_000];
-
         private bool see(Board board, Move move, int threshold)
         {
             ulong from = 1UL << move.StartSquare.Index, to = 1UL << move.TargetSquare.Index;

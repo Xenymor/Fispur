@@ -231,7 +231,7 @@ internal class Program
     {
         foreach ((string name, Fispur.TunableAttribute attribute) in Fispur.Tuning.all())
         {
-            double cEnd = attribute.poisoned ? 0.1 : (attribute.max - attribute.min) / 20.0;
+            double cEnd = attribute.poisoned ? 0.5 : (attribute.max - attribute.min) / 20.0;
             double rEnd = attribute.poisoned ? 0.05 : 0.002;
             Console.WriteLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
                 "{0}, int, {1:0.0}, {2:0.0}, {3:0.0}, {4:0.0##}, {5:0.0##}",
@@ -298,4 +298,3 @@ internal class Program
         return bestMoveFormattedString;
     }
 }
-

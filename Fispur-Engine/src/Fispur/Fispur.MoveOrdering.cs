@@ -1,5 +1,6 @@
 ﻿using FispurEngine.API;
 using System.Runtime.CompilerServices;
+using static FispurEngine.Fispur.Tunables;
 
 namespace FispurEngine
 {

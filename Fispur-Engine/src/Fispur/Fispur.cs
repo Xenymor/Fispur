@@ -23,6 +23,8 @@ namespace FispurEngine
 
         const short NO_EVAL = short.MinValue;
 
+        public static int MoveOverhead = 30;
+
         public string GetAuthor()
         {
             return "Xenymor";
