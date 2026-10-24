@@ -252,6 +252,10 @@ internal class Program
         new("LmrBase",              0,      400,    () => Fispur.LmrBase,               v => Fispur.LmrBase = v),
         new("LmrDivisor",           50,     1000,   () => Fispur.LmrDivisor,            v => Fispur.LmrDivisor = v),
 
+        new("CutNodeReduction",     0,      4,      () => Fispur.CutNodeReduction,      v => Fispur.CutNodeReduction = v,       true),
+        new("PVNodeReduction",      -4,     0,      () => Fispur.PVNodeReduction,       v => Fispur.PVNodeReduction = v,        true),
+        new("TTCaptReduction",      0,      4,      () => Fispur.TTCaptReduction,       v => Fispur.TTCaptReduction = v,        true),
+
         new("RfpMaxDepth",          1,      16,     () => Fispur.RfpMaxDepth,           v => Fispur.RfpMaxDepth = v,            true),
         new("RfpMargin",            10,     500,    () => Fispur.RfpMargin,             v => Fispur.RfpMargin = v),
         new("RFPImpMargin",         10,     500,    () => Fispur.RFPImpMargin,          v => Fispur.RFPImpMargin = v),
