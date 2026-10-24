@@ -205,7 +205,12 @@ internal class Program
                             case "infinite":
                                 infinite = true;
                                 break;
-                            
+                            case "nodes":
+                                if (hasValue)
+                                {
+                                    nodes = int.Parse(tokens[i + 1]);
+                                }
+                                break;
                         }
                     }
 

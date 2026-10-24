@@ -51,6 +51,7 @@ namespace FispurEngine.API
             IncrementMilliseconds = incrementMs;
             this.moveTime = -1;
             this.isInfinite = false;
+            this.nodes = -1;
         }
 
         public Timer(int remainingMs, int opponentRemainingMs, int startingMs, int incrementMs = 0, int time = -1, int nodes = -1, bool infinite = false) : this(remainingMs, opponentRemainingMs, startingMs, incrementMs)
