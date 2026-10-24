@@ -278,7 +278,7 @@ internal class Program
             try
             {
                 var result = fispur.Think(board, timer, depth);
-                Say("bestmove " + Uci(result.move));
+                Say("bestmove " + FispurEngine.Chess.MoveUtility.GetMoveNameUCI(result.move.move));
             }
             catch (Exception e)
             {
@@ -289,12 +289,5 @@ internal class Program
         { IsBackground = true };
 
         searchThread.Start();
-    }
-
-    private static string Uci(Move move)
-    {
-        string bestMoveString = move.ToString();
-        string bestMoveFormattedString = bestMoveString.Substring(7, bestMoveString.Length - 8);
-        return bestMoveFormattedString;
     }
 }

@@ -44,24 +44,7 @@ namespace FispurEngine
             bestMove = moves.Length == 0 ? Move.NullMove : moves[0];
             rootBestMove = bestMove;
 
-            long softLimit;
-
-            if (timer.isInfinite)
-            {
-                softLimit = hardLimit = long.MaxValue;
-            }
-            else if (timer.moveTime != -1)
-            {
-                softLimit = hardLimit = Math.Max(1, timer.moveTime - MoveOverhead);
-            }
-            else
-            {
-                long remaining = Math.Max(1, timer.MillisecondsRemaining - MoveOverhead);
-                int movesToGo = TmBaseDiv;
-                long baseTime = remaining / movesToGo + timer.IncrementMilliseconds * TmIncPct / 100;
-                hardLimit = Math.Min(baseTime * TmHardPct / 100, remaining * 3 / 4);
-                softLimit = Math.Min(baseTime * TmSoftPct / 100, hardLimit);
-            }
+            long softLimit = calculateTimeLimits(timer);
 
             NNUE.updateAccumulators(board);
 
@@ -165,6 +148,29 @@ namespace FispurEngine
             }
 
             return (bestMove, eval);
+        }
+
+        private long calculateTimeLimits(Timer timer)
+        {
+            long softLimit;
+            if (timer.isInfinite)
+            {
+                softLimit = hardLimit = long.MaxValue;
+            }
+            else if (timer.moveTime != -1)
+            {
+                softLimit = hardLimit = Math.Max(1, timer.moveTime - MoveOverhead);
+            }
+            else
+            {
+                long remaining = Math.Max(1, timer.MillisecondsRemaining - MoveOverhead);
+                int movesToGo = TmBaseDiv;
+                long baseTime = remaining / movesToGo + timer.IncrementMilliseconds * TmIncPct / 100;
+                hardLimit = Math.Min(baseTime * TmHardPct / 100, remaining * 3 / 4);
+                softLimit = Math.Min(baseTime * TmSoftPct / 100, hardLimit);
+            }
+
+            return softLimit;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

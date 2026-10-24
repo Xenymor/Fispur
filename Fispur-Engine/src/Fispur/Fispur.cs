@@ -11,11 +11,6 @@ namespace FispurEngine
 
         const int MATE_BOUND = MATE - 256;
 
-        const byte BOUND_NONE = 0;
-        const byte BOUND_LOWER = 1;
-        const byte BOUND_UPPER = 2;
-        const byte BOUND_EXACT = 3;
-
         public const int DEFAULT_HASH_MB = 256;
         public const int MAX_HASH_MB = 1024;
 

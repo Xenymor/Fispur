@@ -8,25 +8,31 @@ namespace FispurEngine
     {
         Move[] killers = new Move[MAX_DEPTH];
 
+        const int TT_SCORE = int.MaxValue;
+        const int GOOD_CAPTURE_SCORE = 1_000_000;
+        const int BAD_CAPTURE_SCORE = -1_000_000;
+        const int BAD_CAPTURE_CUTOFF = -500_000;
+        const int KILLER_SCORE = 900_000;
+
         private int scoreMove(Board board, int ply, Move move, Move ttMove, int prevPiece, int prevTo, int sideToMove)
         {
             if (move.Equals(ttMove))
             {
-                return int.MaxValue;
+                return TT_SCORE;
             }
 
             if (move.IsCapture)
             {
                 int captureHistScore = captureHist[getCaptureHistIndex(sideToMove, move)];
                 int seeThreshold = move.IsPromotion || move.IsEnPassant ? 0 : -captureHistScore * CaptureHistSEEMult / 32_768;
-                return (see(board, move, seeThreshold) ? 1_000_000 : -1_000_000)
+                return (see(board, move, seeThreshold) ? GOOD_CAPTURE_SCORE : BAD_CAPTURE_SCORE)
                     + MvvMult * pieceVals[(int)move.CapturePieceType]
                     + captureHistScore;
             }
 
             if (move.Equals(killers[ply]))
             {
-                return 900_000;
+                return KILLER_SCORE;
             }
 
             return quietHistory(board, move, sideToMove, prevPiece, prevTo);

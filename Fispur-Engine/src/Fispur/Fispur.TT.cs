@@ -9,13 +9,19 @@ namespace FispurEngine
     {
         TTEntry[] transpositionTable;
         ulong ttMask;
+
+        enum Bound : byte
+        {
+            BOUND_NONE, BOUND_LOWER, BOUND_UPPER, BOUND_EXACT
+        }
+
         struct TTEntry
         {
             public uint key; //first 32 bit
             public int score;
             public Move move;
             public byte depth;
-            public byte bound;
+            public Bound bound;
             public short staticEval; // NNUE eval of this position, NO_EVAL if unknown
         }
 
@@ -23,16 +29,16 @@ namespace FispurEngine
         TTEntry probeTT(ulong zobrist, out bool hasEntry)
         {
             ref TTEntry entry = ref transpositionTable[zobrist & ttMask];
-            hasEntry = entry.bound != BOUND_NONE && entry.key == (uint)(zobrist >> 32);
+            hasEntry = entry.bound != Bound.BOUND_NONE && entry.key == (uint)(zobrist >> 32);
             return hasEntry ? entry : default;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static bool isTTCutoff(byte bound, int ttScore, int alpha, int beta)
+        static bool isTTCutoff(Bound bound, int ttScore, int alpha, int beta)
         {
-            return bound == BOUND_EXACT
-                    || (bound == BOUND_LOWER && ttScore >= beta)
-                    || (bound == BOUND_UPPER && ttScore <= alpha);
+            return bound == Bound.BOUND_EXACT
+                    || (bound == Bound.BOUND_LOWER && ttScore >= beta)
+                    || (bound == Bound.BOUND_UPPER && ttScore <= alpha);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -50,13 +56,13 @@ namespace FispurEngine
                 Sse.Prefetch0(Unsafe.AsPointer(ref transpositionTable[zobrist & ttMask]));
         }
 
-        private void storeTT(ulong zobrist, int score, int depthLeft, int ply, byte bound, Move move, int staticEval)
+        private void storeTT(ulong zobrist, int score, int depthLeft, int ply, Bound bound, Move move, int staticEval)
         {
             ref TTEntry entry = ref transpositionTable[zobrist & ttMask];
             uint key = (uint)(zobrist >> 32);
             byte depth = (byte)Math.Clamp(depthLeft, 0, 255);
 
-            if (entry.bound != BOUND_NONE && entry.key == key && depth < entry.depth)
+            if (entry.bound != Bound.BOUND_NONE && entry.key == key && depth < entry.depth)
             {
                 return;
             }

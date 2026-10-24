@@ -7,7 +7,14 @@ namespace FispurEngine
 {
     public partial class Fispur : IChessBot
     {
-        (int staticEval, byte pieceMoved, byte targetSquare, ushort excludedMove)[] ppStack = new (int staticEval, byte pieceMoved, byte targetSquare, ushort excludedMove)[MAX_DEPTH];
+        struct PlyEntry
+        {
+            public int staticEval; 
+            public byte pieceMoved; 
+            public byte targetSquare; 
+            public ushort excludedMove;
+        }
+        PlyEntry[] ppStack = new PlyEntry[MAX_DEPTH];
 
         [SkipLocalsInit]
         private unsafe int alphaBeta(Board board, int ply, int depthLeft, int alpha, int beta, bool canNull = true, bool cutNode = false)
@@ -106,7 +113,7 @@ namespace FispurEngine
 
             int seExtension = 0;
 
-            if (!inSE && ply <= rootDepth * 2 && hasEntry && ply > SEMinPly && depthLeft >= SEMinDepth && ttEntry.depth >= depthLeft - SEDepthMargin && !ttEntry.move.IsNull && (ttEntry.bound == BOUND_LOWER || ttEntry.bound == BOUND_EXACT) && Math.Abs(ttScore) < MATE_BOUND)
+            if (!inSE && ply <= rootDepth * 2 && hasEntry && ply > SEMinPly && depthLeft >= SEMinDepth && ttEntry.depth >= depthLeft - SEDepthMargin && !ttEntry.move.IsNull && (ttEntry.bound == Bound.BOUND_LOWER || ttEntry.bound == Bound.BOUND_EXACT) && Math.Abs(ttScore) < MATE_BOUND)
             {
                 int sBeta = ttScore - depthLeft * SEMargin / 16;
                 ppStack[ply].excludedMove = ttEntry.move.RawValue;
@@ -245,7 +252,7 @@ namespace FispurEngine
                             }
                         }
 
-                        storeTT(zobrist, score, depthLeft, ply, BOUND_LOWER, move, rawEval);
+                        storeTT(zobrist, score, depthLeft, ply, Bound.BOUND_LOWER, move, rawEval);
 
                         if (!inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > eval)
                         {
@@ -282,10 +289,10 @@ namespace FispurEngine
 
             if (!inSE)
             {
-                byte bound = bestScore <= ogAlpha ? BOUND_UPPER : BOUND_EXACT;
+                Bound bound = bestScore <= ogAlpha ? Bound.BOUND_UPPER : Bound.BOUND_EXACT;
                 storeTT(zobrist, bestScore, depthLeft, ply, bound, bestMove, rawEval);
                 if (!inCheck && !bestMove.IsCapture && !bestMove.IsPromotion && Math.Abs(bestScore) < MATE_BOUND
-                    && ((bound == BOUND_UPPER && bestScore < eval) || bound == BOUND_EXACT))
+                    && ((bound == Bound.BOUND_UPPER && bestScore < eval) || bound == Bound.BOUND_EXACT))
                 {
                     updateCorrHist(ref corrHistEntry, bestScore, rawEval, depthLeft);
                 }
@@ -401,8 +408,7 @@ namespace FispurEngine
             {
                 Move move = pickMove(mv, scores, i, moveCount);
 
-                // score lower than -500_000 is losing capture
-                if (!inCheck && scores[i] < -500_000)
+                if (!inCheck && scores[i] < BAD_CAPTURE_CUTOFF)
                 {
                     break;
                 }
