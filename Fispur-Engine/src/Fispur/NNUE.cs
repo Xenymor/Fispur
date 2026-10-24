@@ -53,6 +53,11 @@ namespace FispurEngine
 
         static NNUE()
         {
+            if (!Avx2.IsSupported)
+            {
+                throw new Exception("Avx2 is not supported on your device");
+            }
+
             int maxBucket = 0;
             foreach (int b in KING_BUCKET_LAYOUT)
             {

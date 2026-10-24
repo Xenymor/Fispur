@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.3.32901.215
+# Visual Studio Version 18
+VisualStudioVersion = 18.11.12306.390 stable
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fispur", "Fispur\Fispur.csproj", "{2803E64F-15AC-430B-A5A2-69C00EA7505F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fispur-gui", "Fispur\Fispur-gui.csproj", "{2803E64F-15AC-430B-A5A2-69C00EA7505F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9FC5D849-F0B6-4C89-A541-C36A341AE67C}"
 	ProjectSection(SolutionItems) = preProject
