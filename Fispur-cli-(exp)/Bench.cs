@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FispurEngine;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -85,6 +86,7 @@ internal static class Bench
 
         // Own thread: the default 1 MB stack is not enough for the search recursion.
         Thread searchThread = new Thread(() => SearchAll(depth), STACK_BYTES);
+        Fispur.Tuning.Freeze();
         searchThread.Start();
         searchThread.Join();
 

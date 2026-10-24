@@ -44,10 +44,10 @@ internal class Program
                         + " min 1 max " + Fispur.MAX_HASH_MB);
                     Console.WriteLine("option name Threads type spin default 1 min 1 max 1");
                     Console.WriteLine("option name MoveOverhead type spin default 30 min 0 max 5000");
-                    foreach (SpsaOption option in SpsaOptions)
+                    foreach ((string name, Fispur.TunableAttribute attribute) in Fispur.Tuning.all())
                     {
-                        Console.WriteLine("option name " + option.Name + " type spin default "
-                            + option.Get() + " min " + option.Min + " max " + option.Max);
+                        Console.WriteLine("option name " + name + " type spin default "
+                            + Fispur.Tuning.current(name) + " min " + attribute.min + " max " + attribute.max);
                     }
                     Console.WriteLine("uciok");
                     break;
@@ -74,11 +74,14 @@ internal class Program
                         }
                         else if (int.TryParse(optionValue, out int tuned))
                         {
-                            foreach (SpsaOption option in SpsaOptions)
+                            foreach ((string name, _) in Fispur.Tuning.all())
                             {
-                                if (optionName.Equals(option.Name, StringComparison.OrdinalIgnoreCase))
+                                if (optionName.Equals(name, StringComparison.OrdinalIgnoreCase))
                                 {
-                                    option.Set(Math.Clamp(tuned, option.Min, option.Max));
+                                    if (!Fispur.Tuning.trySet(name, tuned))
+                                    {
+                                        Console.WriteLine("info string tunables are frozen, ignoring " + name);
+                                    }
                                     break;
                                 }
                             }
@@ -224,116 +227,15 @@ internal class Program
         }
     }
 
-    private sealed class SpsaOption
-    {
-        public string Name { get; }
-        public int Min { get; }
-        public int Max { get; }
-        public Func<int> Get { get; }
-        public Action<int> Set { get; }
-        public bool IsPoisoned { get; }
-
-        public SpsaOption(string name, int min, int max, Func<int> get, Action<int> set, bool isPoisoned = false)
-        {
-            Name = name;
-            Min = min;
-            Max = max;
-            Get = get;
-            Set = set;
-            IsPoisoned = isPoisoned;
-        }
-
-    }
-
-    private static readonly SpsaOption[] SpsaOptions =
-    {
-        new("LmrMinDepth",          1,      16,     () => Fispur.LmrMinDepth,           v => Fispur.LmrMinDepth = v,            true),
-        new("LmrMinMoves",          1,      16,     () => Fispur.LmrMinMoves,           v => Fispur.LmrMinMoves = v,            true),
-        new("LmrBase",              0,      400,    () => Fispur.LmrBase,               v => Fispur.LmrBase = v),
-        new("LmrDivisor",           50,     1000,   () => Fispur.LmrDivisor,            v => Fispur.LmrDivisor = v),
-
-        new("RfpMaxDepth",          1,      16,     () => Fispur.RfpMaxDepth,           v => Fispur.RfpMaxDepth = v,            true),
-        new("RfpMargin",            10,     500,    () => Fispur.RfpMargin,             v => Fispur.RfpMargin = v),
-        new("RFPImpMargin",         10,     500,    () => Fispur.RFPImpMargin,          v => Fispur.RFPImpMargin = v),
-
-        new("FpMaxDepth",           1,      16,     () => Fispur.FpMaxDepth,            v => Fispur.FpMaxDepth = v,             true),
-        new("FpMargin",             10,     500,    () => Fispur.FpMargin,              v => Fispur.FpMargin = v),
-
-        new("HistoryDivisor",       512,    65536,  () => Fispur.HistDivisor,           v => Fispur.HistDivisor = v),
-        new("MaxHistBonus",         10,     16000,  () => Fispur.HistMaxBonus,          v => Fispur.HistMaxBonus = v),
-        new("HistBonusMult",        50,     800,    () => Fispur.HistBonusMult,         v => Fispur.HistBonusMult = v),
-        new("HistBonusBase",        -600,   200,    () => Fispur.HistBonusBase,         v => Fispur.HistBonusBase = v),
-
-        new("CaptureHistDivisor",   512,    65536,  () => Fispur.CaptureHistDivisor,    v => Fispur.CaptureHistDivisor = v),
-        new("CaptureMaxHistBonus",  1500,   8000,   () => Fispur.CaptureHistMaxBonus,   v => Fispur.CaptureHistMaxBonus = v),
-        new("CaptureHistBonusMult", 50,     800,    () => Fispur.CaptureHistBonusMult,  v => Fispur.CaptureHistBonusMult = v),
-        new("CaptureHistBonusBase", -600,   200,    () => Fispur.CaptureHistBonusBase,  v => Fispur.CaptureHistBonusBase = v),
-        new("CaptureHistSEEMult",   20,     330,    () => Fispur.CaptureHistSEEMult,    v => Fispur.CaptureHistSEEMult = v),
-        new("MvvMult",              4,      40,     () => Fispur.MvvMult,               v => Fispur.MvvMult = v),
-
-        new("CHistoryDivisor",      512,    65536,  () => Fispur.CHistoryDivisor,       v => Fispur.CHistoryDivisor = v),
-        new("MaxCHistBonus",        10,     16000,  () => Fispur.MaxCHistBonus,         v => Fispur.MaxCHistBonus = v),
-        new("CHistBonusMult",       50,     800,    () => Fispur.CHistBonusMult,        v => Fispur.CHistBonusMult = v),
-        new("CHistBonusBase",       -600,   200,    () => Fispur.CHistBonusBase,        v => Fispur.CHistBonusBase = v),
-
-        new("NMPMinDepth",          1,      8,      () => Fispur.NMPMinDepth,           v => Fispur.NMPMinDepth = v,            true),
-        new("NMPReductionB",        1,      6,      () => Fispur.NMPReductionB,         v => Fispur.NMPReductionB = v,          true),
-        new("NMPReductionDiv",      2,      10,     () => Fispur.NMPReductionDiv,       v => Fispur.NMPReductionDiv = v,        true),
-
-        new("ASPWindowDelta",       5,      200,    () => Fispur.ASPWindowDelta,        v => Fispur.ASPWindowDelta = v),
-        new("ASPWindowReset",       100,    2000,   () => Fispur.ASPWindowReset,        v => Fispur.ASPWindowReset = v),
-
-        new("SEEPMaxDepth",         1,      8,      () => Fispur.SEEPMaxDepth,          v => Fispur.SEEPMaxDepth = v,           true),
-        new("SEEPThreshold",        0,      500,    () => Fispur.SEEPThreshold,         v => Fispur.SEEPThreshold = v),
-        new("SEEPCaptureThreshold", 0,      500,    () => Fispur.SEEPCaptureThreshold,  v => Fispur.SEEPCaptureThreshold = v),
-        new("SEEPCaptureHistMult",  0,      320,    () => Fispur.SEEPCaptureHistMult,   v => Fispur.SEEPCaptureHistMult = v),
-        new("SEEPHistMult",         0,      256,    () => Fispur.SEEPHistMult,          v => Fispur.SEEPHistMult = v),
-
-        new("KnightValue",          150,    500,    () => Fispur.pieceVals[2],          v => Fispur.pieceVals[2] = v),
-        new("BishopValue",          150,    550,    () => Fispur.pieceVals[3],          v => Fispur.pieceVals[3] = v),
-        new("RookValue",            300,    800,    () => Fispur.pieceVals[4],          v => Fispur.pieceVals[4] = v),
-        new("QueenValue",           600,    1400,   () => Fispur.pieceVals[5],          v => Fispur.pieceVals[5] = v),
-
-        new("LMPMaxDepth",          1,      8,      () => Fispur.LMPMaxDepth,           v => Fispur.LMPMaxDepth = v,            true),
-        new("LMPBase",              1,      20,     () => Fispur.LMPBase,               v => Fispur.LMPBase = v,                true),
-
-        new("MinIIRDepth",          0,      8,      () => Fispur.MinIIRDepth,           v => Fispur.MinIIRDepth = v,            true),
-
-        new("SEMinDepth",           4,      12,     () => Fispur.SEMinDepth,            v => Fispur.SEMinDepth = v,             true),
-        new("SEMargin",             8,      56,     () => Fispur.SEMargin,              v => Fispur.SEMargin = v),
-        new("SEDMargin",            0,      60,     () => Fispur.SEDMargin,             v => Fispur.SEDMargin = v),
-        new("SEDepthMargin",        1,      6,      () => Fispur.SEDepthMargin,         v => Fispur.SEDepthMargin = v,          true),
-        
-
-        new("CorrHistGrain",        1,      500,    () => Fispur.CorrGrain,            v => Fispur.CorrGrain = v),
-        new("CorrHistScale",        16,     500,    () => Fispur.CorrScale,            v => Fispur.CorrScale = v),
-        new("CorrHistMax",          0,      50000,  () => Fispur.CorrMax,              v => Fispur.CorrMax = v),
-
-        new("HHLMRDiv",             512,    49152,  () => Fispur.HHLMRDiv,              v => Fispur.HHLMRDiv = v),
-
-        new("TmBaseDiv",            10,     40,     () => Fispur.TmBaseDiv,             v => Fispur.TmBaseDiv = v),
-        new("TmIncPct",             25,     150,    () => Fispur.TmIncPct,              v => Fispur.TmIncPct = v),
-        new("TmSoftPct",            20,     150,    () => Fispur.TmSoftPct,             v => Fispur.TmSoftPct = v),
-        new("TmHardPct",            100,    600,    () => Fispur.TmHardPct,             v => Fispur.TmHardPct = v),
-        new("TmNodeBase",           100,    250,    () => Fispur.TmNodeBase,            v => Fispur.TmNodeBase = v),
-        new("TmNodeMult",           50,     300,    () => Fispur.TmNodeMult,            v => Fispur.TmNodeMult = v),
-
-        new("StabScale0",           100,    400,    () => Fispur.StabScale[0],          v => Fispur.StabScale[0] = v),
-        new("StabScale1",           80,     300,    () => Fispur.StabScale[1],          v => Fispur.StabScale[1] = v),
-        new("StabScale2",           60,     200,    () => Fispur.StabScale[2],          v => Fispur.StabScale[2] = v),
-        new("StabScale3",           50,     150,    () => Fispur.StabScale[3],          v => Fispur.StabScale[3] = v),
-        new("StabScale4",           40,     150,    () => Fispur.StabScale[4],          v => Fispur.StabScale[4] = v)
-    };
-
     static void PrintSpsaInputs()
     {
-        foreach (SpsaOption option in SpsaOptions)
+        foreach ((string name, Fispur.TunableAttribute attribute) in Fispur.Tuning.all())
         {
-            double cEnd = option.IsPoisoned ? 0.1 : (option.Max - option.Min) / 20.0;
-            double rEnd = option.IsPoisoned ? 0.05 : 0.002;
+            double cEnd = attribute.poisoned ? 0.1 : (attribute.max - attribute.min) / 20.0;
+            double rEnd = attribute.poisoned ? 0.05 : 0.002;
             Console.WriteLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
                 "{0}, int, {1:0.0}, {2:0.0}, {3:0.0}, {4:0.0##}, {5:0.0##}",
-                option.Name, option.Get(), option.Min, option.Max, cEnd, rEnd));
+                name, Fispur.Tuning.current(name), attribute.min, attribute.max, cEnd, rEnd));
         }
     }
 
@@ -368,6 +270,7 @@ internal class Program
     static void StartSearch(Board board, FispurEngine.API.Timer timer, int depth)
     {
         StopAndWait();
+        Fispur.Tuning.Freeze();
         fispur.PrepareSearch();
 
         searchThread = new Thread(() =>

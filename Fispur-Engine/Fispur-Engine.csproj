@@ -8,10 +8,17 @@
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <FispurNet>$(MSBuildProjectDirectory)\Training\Nets\10kb-1024hl-8ob.bin</FispurNet>
+    <FispurNet Condition="'$(EVALFILE)' != ''">$([MSBuild]::NormalizePath('$(MSBuildStartupDirectory)', '$(EVALFILE)'))</FispurNet>
+  </PropertyGroup>
+
   <ItemGroup>
-    <EmbeddedResource Include="Training\Nets\10kb-1024hl-8ob.bin">
-      <LogicalName>10kb-1024hl-8ob.bin</LogicalName>
-    </EmbeddedResource>
+    <EmbeddedResource Include="$(FispurNet)" LogicalName="net.bin" />
   </ItemGroup>
+
+  <Target Name="CheckFispurNet" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(FispurNet)')" Text="NNUE net not found: $(FispurNet)" />
+  </Target>
 
 </Project>

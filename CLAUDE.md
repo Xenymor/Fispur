@@ -7,27 +7,26 @@ project memory — read it first to orient before diving into files.
 
 ## What this is
 
-- A UCI-compatible chess engine (`GetName` / `GetAuthor` / `Think(board, timer)`).
+- A UCI-compatible chess engine with an NNUE evaluation.
 - Ships two things: a **Raylib GUI** (Lague's challenge app, for watching bots
   play) and a **UCI command-line wrapper** so the engine can run in any UCI
   GUI / tester (cutechess, OpenBench, etc.).
-- Old versions are not kept as source snapshots in the tree any more — they
-  live in git history; regression testing runs through OpenBench.
+- Old versions are not kept as source snapshots in the tree — they live in git
+  history; regression testing and SPSA tuning run through OpenBench.
 
-## Solution layout (`Fispur.sln`, VS 2022)
+## Solution layout (`Fispur.sln`)
 
-Three projects:
+Three projects, all `net10.0`:
 
-| Project | TFM | Role |
-|---|---|---|
-| `Fispur-Engine` | net10.0 | Class library: the API, the chess framework and the WIP bot, plus the embedded net. No UI dependencies. This is where all engine code lives. |
-| `Fispur` | net6.0 | The Raylib GUI. References `Fispur-Engine`; depends on `Raylib-cs 4.5` and `Microsoft.CodeAnalysis` (token counter). |
-| `Fispur-cli-(exp)` | net8.0 | UCI wrapper that runs the **current/WIP** engine — class `Fispur`. |
+| Project | Role |
+|---|---|
+| `Fispur-Engine/Fispur-Engine.csproj` | Class library: the API, the chess framework, the engine and the embedded NNUE net. No UI dependencies. All engine code lives here. |
+| `Fispur/Fispur-gui.csproj` | The Raylib GUI. References `Fispur-Engine`; depends on `Raylib-cs 4.5` and `Microsoft.CodeAnalysis` (token counter). |
+| `Fispur-cli-(exp)/Fispur-cli-(exp).csproj` | UCI wrapper around the engine (`Program.cs`) plus the OpenBench bench (`Bench.cs`). |
 
-The CLI just `ProjectReference`s `Fispur-Engine` and exposes it over UCI, so the
-GUI is not part of its build. The root namespace of `Fispur-Engine` and `Fispur`
-is **`FispurEngine`** (not `Fispur`) — `Fispur` is the WIP bot class, so the
-namespace has to differ from it.
+The CLI only `ProjectReference`s `Fispur-Engine`, so the GUI is not part of its
+build. The root namespace of `Fispur-Engine` and the GUI is **`FispurEngine`**
+(not `Fispur`) — `Fispur` is the engine class, so the namespace has to differ.
 
 ## Where the code lives
 
@@ -35,66 +34,131 @@ namespace has to differ from it.
 
 - **`API/`** — the restricted bot-facing API (namespace `FispurEngine.API`):
   `Board`, `Move`, `Timer`, `Piece`, `Square`, `PieceList`, `PieceType`,
-  `BitboardHelper`, and the `IChessBot` interface. Bots are written against
-  *this*, not the full engine.
-- **`Framework/Chess/`** — the actual chess engine (namespace `FispurEngine.Chess`):
-  `Board`, `MoveGenerator` (magic bitboards under `Move Generation/Magics` +
-  `Bitboards`), `Zobrist`, `RepetitionTable`, FEN/PGN helpers, `Arbiter`/result logic.
+  `BitboardHelper`, and the `IChessBot` interface. The engine is written against
+  *this*, not the full framework.
+- **`Framework/Chess/`** — the underlying chess implementation (namespace
+  `FispurEngine.Chess`): `Board`, `MoveGenerator` (magic bitboards), `Zobrist`,
+  `RepetitionTable`, FEN/PGN helpers, `Arbiter`/result logic.
 - **`Framework/Application/Helpers/API Helpers/`** — move generation / move
   parsing helpers the API calls into (namespace `FispurEngine.Application.APIHelpers`).
-- **`Fispur-New/Fispur.cs`** (+ `NNUE.cs`) — the **current WIP engine**
-  (class `Fispur`, namespace `FispurEngine`). This is the one to edit when
-  improving the engine.
+- **`Fispur/`** — the **engine**, class `Fispur` (namespace `FispurEngine`),
+  split into partial files:
+  - `Fispur.cs` — constants (`MATE`, `INFINITY`, `MAX_DEPTH` = 256, hash
+    defaults 256 MB / max 1024 MB), `GetName` / `GetAuthor`, `SetHashSize`,
+    `NewGame`, `Stop` / `PrepareSearch`.
+  - `Fispur.Think.cs` — `Think(board, timer, maxDepth)`: iterative deepening,
+    aspiration windows, time management, UCI `info` lines with PV.
+  - `Fispur.Search.cs` — `alphaBeta`, `qSearch`, `shouldPrune`, make/undo
+    wrappers, LMR table.
+  - `Fispur.TT.cs` — transposition table.
+  - `Fispur.History.cs` — butterfly, continuation, capture and correction history.
+  - `Fispur.MoveOrdering.cs` — move scoring, killers, selection sort `pickMove`.
+  - `Fispur.SEE.cs` — static exchange evaluation.
+  - `Fispur.Tune.cs` — `Tunables` (SPSA parameters) and the `Tuning` registry.
+  - `NNUE.cs` — the network: loading, accumulators, evaluation.
 
 `Fispur/src/`:
 
 - **`Framework/Application/`** — the Raylib GUI + match runner (namespace
   `FispurEngine.Application`): `Core/Program.cs` (GUI entry point),
-  `ChallengeController`, `Settings.cs`, players, UI, `Token Counter`.
+  `Core/ChallengeController.cs`, `Core/Settings.cs`, players, UI, `Token Counter`.
 
-## Current engine techniques (STALE — describes v0.2.1)
+## Engine techniques
 
-> ⚠ Out of date: the WIP engine is at 0.19.0 and uses an NNUE eval
-> (`Fispur-New/NNUE.cs`, net embedded via `Fispur-Engine/Training/Nets/10kb-1024hl-8ob.bin`).
-> Re-read the source before relying on this section.
+**Search** (`Fispur.Search.cs`, `Fispur.Think.cs`)
+- PVS negamax with iterative deepening; aspiration windows from depth 5
+  (widened by doubling, full window past `ASPWindowReset`).
+- Check extension (limited to ply ≤ 2·rootDepth), internal iterative reduction
+  without a TT hit.
+- Reverse futility pruning (with improving), null-move pruning (skipped in
+  pawn-only endgames), singular extensions with double extensions (non-PV),
+  negative extensions and multicut.
+- Move-loop pruning: futility pruning, late move pruning, SEE pruning for
+  captures and quiets with history-scaled thresholds.
+- LMR from a log·log table, reduced by quiet history, increased when not improving.
+- Quiescence search with TT cutoffs, stand pat, check evasions, losing captures skipped.
+- Draws: fifty-move rule, repetition, insufficient material.
 
-Negamax **alpha-beta** with **quiescence search**, **iterative deepening**,
-a Zobrist-keyed **transposition table**, MVV-LVA-style **move ordering**
-(TT move first, then captures by victim/attacker value), and a simple
-**material-only eval** (`pieceVal = {100,300,350,500,900,10000}`). Time
-management: spends roughly `remaining/20 + increment/2` ms per move.
+**Transposition table** (`Fispur.TT.cs`) — one entry per slot, 32-bit key check,
+stores score, move, depth, bound and the raw static eval; depth-preferred
+replacement for the same key; prefetch after `MakeMove`; mate scores ply-adjusted.
 
-## UCI CLI notes
+**Move ordering** (`Fispur.MoveOrdering.cs`) — TT move > SEE-good captures
+(MVV + capture history) > killer > quiet history (butterfly + 1-ply
+continuation history) > SEE-bad captures.
 
-`Fispur-cli-(exp)/Program.cs` implements `uci` / `isready` / `ucinewgame` /
-`position [startpos|fen ...] [moves ...]` / `go` / `quit`. Quirk: `go movetime X`
-is passed to the engine as `X * 12`. `bestmove` is parsed out of `Move.ToString()`
-via a substring. `ucinewgame` reflectively re-news the bot instance.
+**Evaluation** — NNUE, corrected by a pawn-hash correction history
+(`Fispur.History.cs`).
 
-## Supporting folders
+**Time management** (`Fispur.Think.cs`) — soft/hard limits derived from
+`remaining / TmBaseDiv + increment * TmIncPct`; the soft limit is scaled by the
+best move's node fraction and best-move stability. `MoveOverhead` is subtracted
+from every budget. `go movetime` and `go depth` / `infinite` are handled separately.
 
-- **`Openings/`** — `UHO_4060_v2.epd` (opening/test positions, ~15 MB),
-  `startPos` (start FEN).
-- **`Testing/`** — `imgui.ini`. SPRT patch testing runs through OpenBench.
-- **`Fispur/resources/`** — `Fens.txt`, `Pieces.png`, `Fonts/` (GUI assets).
-- `.github/copilot-instructions.md` currently only has Azure boilerplate (ignore).
+**Tunables** (`Fispur.Tune.cs`) — every `[Tunable(default, min, max)]` field in
+`Tunables` is exposed as a UCI spin option; `poisoned = true` marks
+integer-step parameters that get small SPSA steps. Values are frozen at the
+first search (`Tuning.Freeze`), later `setoption`s for them are ignored. The CLI
+command `spsa` prints the OpenBench SPSA input lines.
+
+## NNUE (`NNUE.cs`)
+
+- Architecture: (768 → 1024)×2 → 1, 10 king buckets with horizontal mirroring
+  (king on files e–h flips the board), 8 output buckets by piece count, SCReLU,
+  QA 255 / QB 64 / scale 400. Requires AVX2.
+- Accumulator stack per ply with incremental updates; king-bucket changes refresh
+  through Finny tables (cached accumulators per bucket and mirror state).
+- The net is embedded as manifest resource **`net.bin`**. Default source:
+  `Fispur-Engine/Training/Nets/10kb-1024hl-8ob.bin`. Building with
+  `-p:EVALFILE=<path>` (or `make EVALFILE=<path>`) embeds that file instead;
+  relative paths resolve against the directory the build was started in, a
+  missing file fails the build. The loader checks the file size against the
+  architecture constants, so a net of a different shape needs matching constant
+  changes in `NNUE.cs`.
+
+## UCI CLI (`Fispur-cli-(exp)`)
+
+- `Program.cs` implements `uci`, `isready`, `ucinewgame`,
+  `position [startpos|fen ...] [moves ...]`, `go` (`wtime`/`btime`/`winc`/`binc`/
+  `movetime`/`depth`/`infinite`), `stop`, `setoption` (`Hash`, `MoveOverhead`,
+  `Threads` fixed at 1, all tunables), `bench [depth]`, `spsa`, `quit`.
+- The search runs on its own thread with a 32 MB stack; `bestmove` is formatted
+  from `Move.ToString()` via a substring.
+- `<exe> bench [depth]` as a command-line argument runs the bench and exits.
+- `Bench.cs`: depth 12, fixed 16 MB hash, fixed position list, engine reset per
+  position. The node count is the OpenBench fingerprint — changing the depth, the
+  positions, the search or the net changes it.
 
 ## Build / run
 
-- Requires .NET SDK 10 (all three projects target `net10.0`). VS 2022 17.14 builds it with warning NETSDK1233; VS 2026 / Rider / `dotnet` CLI are fine.
-- GUI: run the `Fispur` project (Raylib window).
+- Requires .NET SDK 10. VS 2022 17.14 builds it with warning NETSDK1233;
+  VS 2026 / Rider / `dotnet` CLI are fine.
+- GUI: run the `Fispur-gui` project (Raylib window).
 - Engine for a UCI GUI/tester: build/run `Fispur-cli-(exp)`.
-- OpenBench: `make EXE=<name>` in the repo root publishes `Fispur-cli-(exp)` as a
-  single self-contained `<name>.exe` — that is the exact contract the OpenBench
-  worker expects. The `OB_EXE` property drives the rename and switches off the
-  GUI's asset copies. The publish goes to `ob-publish/` and a Copy target in
-  `Fispur-cli-(exp).csproj` puts the binary into the root — never publish with
-  `-o .` (SDK 10.0.2xx+ excludes PublishDir/** from compilation, i.e. every project). Server/worker
-  setup is documented in `Docs/OpenBench-Setup.md`.
+- OpenBench: `make EXE=<name> [EVALFILE=<net>]` in the repo root publishes
+  `Fispur-cli-(exp)` as a single self-contained `<name>[.exe]` — that is the exact
+  contract the OpenBench worker expects. The `OB_EXE` property drives the rename
+  and switches the GUI's asset copies off. The publish goes to `ob-publish/` and a
+  Copy target in `Fispur-cli-(exp).csproj` puts the binary into the root — never
+  publish with `-o .` (SDK 10.0.2xx+ excludes PublishDir/** from compilation,
+  i.e. every project).
+- OpenBench networks: upload a net on the server's Networks page and pick it as
+  dev/base network of a test (or set it as Fispur's default); the worker passes
+  it as `EVALFILE`. The test's bench must be the one the engine prints with that
+  net (`make EXE=Fispur EVALFILE=<net>`, then `Fispur bench`).
+- Worker setup: `Scripts/setup-worker.ps1` (Windows) and `Scripts/setup-worker.sh` (Linux).
+
+## Supporting folders
+
+- **`Openings/`** — `UHO_4060_v2.epd` (opening/test positions, ~15 MB).
+- **`Fispur-Engine/Training/Nets/`** — the default NNUE net.
+- **`Fispur/resources/`** — `Fens.txt`, `Pieces.png`, `Fonts/` (GUI assets).
+- **`Scripts/`** — OpenBench worker setup scripts.
+- `.github/copilot-instructions.md` currently only has Azure boilerplate (ignore).
 
 ## Conventions
 
-- New engine work goes in `Fispur-Engine/src/Fispur-New/Fispur.cs`. When cutting a
-  release, bump `GetName` — no source snapshot is archived.
-- Git: work on `main`; commits are short and version-oriented
+- New engine work goes in `Fispur-Engine/src/Fispur/`. `GetName` returns `"dev"`
+  during development; set it when cutting a release — no source snapshot is archived.
+- Git: work on `main` or a feature branch; commits are short and version-oriented
   (e.g. "Implement basic transposition table").

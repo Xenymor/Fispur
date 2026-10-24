@@ -37,11 +37,15 @@ else
   RID ?= linux-x64
 endif
 
+ifneq ($(EVALFILE),)
+  NET_FLAG := "-p:EVALFILE=$(EVALFILE)"
+endif
+
 .PHONY: all clean
 all:
 	dotnet publish "$(PROJECT)" -c Release -r $(RID) --self-contained true \
 	  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
-	  -p:OB_EXE=$(EXE) -p:DebugType=none -o $(OB_PUBLISH_DIR)
+	  -p:OB_EXE=$(EXE) -p:DebugType=none $(NET_FLAG) -o $(OB_PUBLISH_DIR)
 
 clean:
 	dotnet clean "$(PROJECT)" -c Release
