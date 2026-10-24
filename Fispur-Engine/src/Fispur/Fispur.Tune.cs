@@ -1,4 +1,5 @@
 ﻿using FispurEngine.API;
+using System;
 
 namespace FispurEngine
 {
@@ -71,5 +72,13 @@ namespace FispurEngine
         public static int SEMargin = 24;
         public static int SEDepthMargin = 3;
         public static int SEDMargin = 17;
+
+        [AttributeUsage(AttributeTargets.Field)]
+        public sealed class TunableAttribute(int min, int max) : Attribute
+        {
+            public int min { get; } = min;
+            public int max { get; } = max;
+            public bool poisoned { get; init; }
+        }
     }
 }

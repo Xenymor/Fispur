@@ -1,7 +1,6 @@
 ﻿using FispurEngine.API;
 using System;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace FispurEngine
 {
@@ -169,7 +168,7 @@ namespace FispurEngine
             {
                 Move move = pickMove(mv, scores, i, moveCount);
 
-                if (shouldPrune(board, depthLeft, alpha, inCheck, ppEntry, prevPPE, pvNode, inSE, eval, improving, searchedCount, sideToMove, bestScore, fpMargin, move))
+                if (shouldPrune(board, depthLeft, alpha, inCheck, ppEntry.excludedMove, prevPPE.pieceMoved, prevPPE.targetSquare, pvNode, inSE, eval, improving, searchedCount, sideToMove, bestScore, fpMargin, move))
                 {
                     continue;
                 }
@@ -298,9 +297,9 @@ namespace FispurEngine
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool shouldPrune(Board board, int depthLeft, int alpha, bool inCheck, (int staticEval, byte pieceMoved, byte targetSquare, ushort excludedMove) ppEntry, (int staticEval, byte pieceMoved, byte targetSquare, ushort excludedMove) prevPPE, bool pvNode, bool inSE, int eval, bool improving, int searchedCount, int sideToMove, int bestScore, int fpMargin, Move move)
+        private bool shouldPrune(Board board, int depthLeft, int alpha, bool inCheck, int excludedMove, int prevPiece, int prevTo, bool pvNode, bool inSE, int eval, bool improving, int searchedCount, int sideToMove, int bestScore, int fpMargin, Move move)
         {
-            if (inSE && move.RawValue == ppEntry.excludedMove)
+            if (move.RawValue == excludedMove)
             {
                 return true;
             }
@@ -325,7 +324,7 @@ namespace FispurEngine
                     }
                     if (!move.IsCapture)
                     {
-                        int seepHist = quietHistory(board, move, sideToMove, prevPPE.pieceMoved, prevPPE.targetSquare);
+                        int seepHist = quietHistory(board, move, sideToMove, prevPiece, prevTo);
                         if (!see(board, move, Math.Min(0, -SEEPThreshold * depthLeft - seepHist * SEEPHistMult / 32_768)))
                         {
                             return true;
@@ -482,37 +481,6 @@ namespace FispurEngine
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe void scoreMoves(Board board, int ply, Move* moves, int* scores, int moveCount, Move ttMove, int prevPiece, int prevTo, int sideToMove)
-        {
-            for (int i = 0; i < moveCount; i++)
-            {
-                scores[i] = scoreMove(board, ply, moves[i], ttMove, prevPiece, prevTo, sideToMove);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static unsafe Move pickMove(Move* moves, int* scores, int i, int moveCount)
-        {
-            int best = i;
-            int bestVal = scores[i];
-            for (int j = i + 1; j < moveCount; j++)
-            {
-                int v = scores[j];
-                if (v > bestVal)
-                {
-                    best = j;
-                    bestVal = v;
-                }
-            }
-
-            (moves[i], moves[best]) = (moves[best], moves[i]);
-            scores[best] = scores[i];
-            scores[i] = bestVal;
-
-            return moves[i];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void makeMove(Board board, Move move, int ply)
         {
             board.MakeMove(move);
@@ -559,30 +527,6 @@ namespace FispurEngine
             return depth < LMR_DEPTHS && moves < LMR_MOVES
                         ? lmrTable[depth * LMR_MOVES + moves]
                         : (int)(LmrBase / 100.0 + Math.Log(depth) * Math.Log(moves) / (LmrDivisor / 100.0));
-        }
-
-        private int scoreMove(Board board, int ply, Move move, Move ttMove, int prevPiece, int prevTo, int sideToMove)
-        {
-            if (move.Equals(ttMove))
-            {
-                return int.MaxValue;
-            }
-
-            if (move.IsCapture)
-            {
-                int captureHistScore = captureHist[getCaptureHistIndex(sideToMove, move)];
-                int seeThreshold = move.IsPromotion || move.IsEnPassant ? 0 : -captureHistScore * CaptureHistSEEMult / 32_768;
-                return (see(board, move, seeThreshold) ? 1_000_000 : -1_000_000)
-                    + MvvMult * pieceVals[(int)move.CapturePieceType]
-                    + captureHistScore;
-            }
-
-            if (move.Equals(killers[ply]))
-            {
-                return 900_000;
-            }
-
-            return quietHistory(board, move, sideToMove, prevPiece, prevTo);
         }
     }
 }

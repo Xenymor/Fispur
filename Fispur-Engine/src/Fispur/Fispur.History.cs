@@ -1,14 +1,12 @@
 ﻿using FispurEngine.API;
 using System;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace FispurEngine
 {
     public partial class Fispur : IChessBot
     {
         int[] historyHeuristic = new int[2 * 64 * 64];
-        Move[] killers = new Move[MAX_DEPTH];
         private const int CORR_HIST_EXP = 14;
         private const int CORR_HIST_ENTRIES = 1 << CORR_HIST_EXP;
         int[] correctionHist = new int[2 * CORR_HIST_ENTRIES]; // [stm][pawnKey]
