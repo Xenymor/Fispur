@@ -50,13 +50,10 @@ namespace FispurEngine
             bool inSE = ppEntry.excludedMove != 0;
 
             ulong zobrist = board.ZobristKey;
-            ref TTEntry entry = ref probeTT(zobrist, out bool hasEntry);
-            int ttScore = hasEntry ? scoreFromTT(entry.score, ply) : -INFINITY;
-            int ttDepth = hasEntry ? entry.depth : -1;
-            int ttBound = hasEntry ? entry.bound : BOUND_NONE;
-            Move ttMove = hasEntry ? entry.move : Move.NullMove;
+            TTEntry ttEntry = probeTT(zobrist, out bool hasEntry);
+            int ttScore = hasEntry ? scoreFromTT(ttEntry.score, ply) : -INFINITY;
 
-            if (!pvNode && !inSE && hasEntry && ply > 0 && ttDepth >= depthLeft && isTTCutoff(entry.bound, ttScore, alpha, beta))
+            if (!pvNode && !inSE && hasEntry && ply > 0 && ttEntry.depth >= depthLeft && isTTCutoff(ttEntry.bound, ttScore, alpha, beta))
             {
                 return ttScore;
             }
@@ -66,7 +63,7 @@ namespace FispurEngine
                 depthLeft--;
             }
 
-            int rawEval = getRawEval(board, inCheck, hasEntry, in entry);
+            int rawEval = getRawEval(board, inCheck, hasEntry, in ttEntry);
             int eval = correctEval(rawEval, corrHistEntry);
 
 
@@ -108,10 +105,10 @@ namespace FispurEngine
 
             int seExtension = 0;
 
-            if (!inSE && ply <= rootDepth * 2 && hasEntry && ply > SEMinPly && depthLeft >= SEMinDepth && ttDepth >= depthLeft - SEDepthMargin && !ttMove.IsNull && (ttBound == BOUND_LOWER || ttBound == BOUND_EXACT) && Math.Abs(ttScore) < MATE_BOUND)
+            if (!inSE && ply <= rootDepth * 2 && hasEntry && ply > SEMinPly && depthLeft >= SEMinDepth && ttEntry.depth >= depthLeft - SEDepthMargin && !ttEntry.move.IsNull && (ttEntry.bound == BOUND_LOWER || ttEntry.bound == BOUND_EXACT) && Math.Abs(ttScore) < MATE_BOUND)
             {
                 int sBeta = ttScore - depthLeft * SEMargin / 16;
-                ppStack[ply].excludedMove = ttMove.RawValue;
+                ppStack[ply].excludedMove = ttEntry.move.RawValue;
                 int score = alphaBeta(board, ply, (depthLeft - 1) / 2, sBeta - 1, sBeta, canNull, cutNode);
                 ppStack[ply].excludedMove = 0;
 
@@ -158,7 +155,7 @@ namespace FispurEngine
             int sideToMove = board.IsWhiteToMove ? 0 : 1;
 
             int* scores = stackalloc int[moveCount];
-            scoreMoves(board, ply, mv, scores, moveCount, ttMove, prevPPE.pieceMoved, prevPPE.targetSquare, sideToMove);
+            scoreMoves(board, ply, mv, scores, moveCount, ttEntry.move, prevPPE.pieceMoved, prevPPE.targetSquare, sideToMove);
 
             Move bestMove = Move.NullMove;
             int bestScore = -INFINITY;
@@ -180,7 +177,7 @@ namespace FispurEngine
                 makeMove(board, move, ply);
 
                 int score;
-                int baseSearchDepth = depthLeft - 1 + (move.Equals(ttMove) ? seExtension : 0);
+                int baseSearchDepth = depthLeft - 1 + (move.Equals(ttEntry.move) ? seExtension : 0);
 
                 if (searchedCount == 0)
                 {
@@ -360,16 +357,15 @@ namespace FispurEngine
                 return 0;
             }
 
-            ref TTEntry entry = ref probeTT(board.ZobristKey, out bool hasEntry);
-            int ttScore = hasEntry ? scoreFromTT(entry.score, ply) : -INFINITY;
-            Move ttMove = hasEntry ? entry.move : Move.NullMove;
+            TTEntry ttEntry = probeTT(board.ZobristKey, out bool hasEntry);
+            int ttScore = hasEntry ? scoreFromTT(ttEntry.score, ply) : -INFINITY;
 
-            if (!pvNode && hasEntry && isTTCutoff(entry.bound, ttScore, alpha, beta))
+            if (!pvNode && hasEntry && isTTCutoff(ttEntry.bound, ttScore, alpha, beta))
             {
                 return ttScore;
             }
 
-            int eval = correctEval(getRawEval(board, inCheck, hasEntry, in entry), corrHistEntry);
+            int eval = correctEval(getRawEval(board, inCheck, hasEntry, in ttEntry), corrHistEntry);
 
             if (!inCheck)
             {
@@ -396,7 +392,7 @@ namespace FispurEngine
             int sideToMove = board.IsWhiteToMove ? 0 : 1;
 
             int* scores = stackalloc int[moveCount];
-            scoreMoves(board, ply, mv, scores, moveCount, ttMove, prevPPE.pieceMoved, prevPPE.targetSquare, sideToMove);
+            scoreMoves(board, ply, mv, scores, moveCount, ttEntry.move, prevPPE.pieceMoved, prevPPE.targetSquare, sideToMove);
 
             int bestScore = inCheck ? -INFINITY : eval;
 

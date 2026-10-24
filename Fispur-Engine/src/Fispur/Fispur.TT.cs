@@ -20,11 +20,11 @@ namespace FispurEngine
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ref TTEntry probeTT(ulong zobrist, out bool hasEntry)
+        TTEntry probeTT(ulong zobrist, out bool hasEntry)
         {
             ref TTEntry entry = ref transpositionTable[zobrist & ttMask];
             hasEntry = entry.bound != BOUND_NONE && entry.key == (uint)(zobrist >> 32);
-            return ref entry;
+            return hasEntry ? entry : default;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
