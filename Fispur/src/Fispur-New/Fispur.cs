@@ -51,9 +51,9 @@ namespace FispurEngine
         public static int LmrBase = 93;
         public static int LmrDivisor = 236;
 
-        public static int CutNodeReduction = 2;
-        public static int PVNodeReduction = -1;
-        public static int TTCaptReduction = 1;
+        public static int CutNodeReduction = 2048;
+        public static int PVNodeReduction = -1024;
+        public static int TTCaptReduction = 1024;
 
         public static int RfpMaxDepth = 9;
         public static int RfpMargin = 107;
@@ -651,7 +651,7 @@ namespace FispurEngine
                     int reduction = 0;
                     if (depthLeft >= LmrMinDepth && searchedCount >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = LmrReduction(depthLeft, searchedCount) - quietHist/HHLMRDiv;
+                        reduction = LmrReduction(depthLeft, searchedCount) * 1024 - quietHist * 1024 / HHLMRDiv;
                         if (cutNode)
                         {
                             reduction += CutNodeReduction;
@@ -664,7 +664,7 @@ namespace FispurEngine
                         {
                             reduction += TTCaptReduction;
                         }
-                        reduction = Math.Clamp(reduction + (improving ? 0 : 1), 0, depthLeft);
+                        reduction = Math.Clamp((reduction + (improving ? 0 : 1024)) / 1024, 0, depthLeft);
                         
                     }
                     score = -AlphaBeta(board, ply + 1, baseSearchDepth - reduction, -(alpha + 1), -alpha, cutNode: pvNode || !cutNode);
