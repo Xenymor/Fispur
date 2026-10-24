@@ -1,6 +1,5 @@
 ﻿using FispurEngine.API;
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
@@ -17,7 +16,7 @@ namespace FispurEngine
 
         public string GetName()
         {
-            return "Fispur 0.19.0";
+            return "dev";
         }
 
         private static string ScoreToUCI(int score)

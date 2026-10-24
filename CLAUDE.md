@@ -16,18 +16,22 @@ project memory — read it first to orient before diving into files.
 
 ## Solution layout (`Fispur.sln`, VS 2022)
 
-Two projects:
+Three projects:
 
 | Project | TFM | Role |
 |---|---|---|
-| `Fispur` | net6.0 | The framework + all bot code + the Raylib GUI. Depends on `Raylib-cs 4.5` and `Microsoft.CodeAnalysis` (token counter). This is where all real code lives. |
+| `Fispur-Engine` | net10.0 | Class library: the API, the chess framework and the WIP bot, plus the embedded net. No UI dependencies. This is where all engine code lives. |
+| `Fispur` | net6.0 | The Raylib GUI. References `Fispur-Engine`; depends on `Raylib-cs 4.5` and `Microsoft.CodeAnalysis` (token counter). |
 | `Fispur-cli-(exp)` | net8.0 | UCI wrapper that runs the **current/WIP** engine — class `Fispur`. |
 
-The CLI just `ProjectReference`s the `Fispur` project and exposes it over UCI.
-The root namespace of the `Fispur` project is **`FispurEngine`** (not `Fispur`) —
-`Fispur` is the WIP bot class, so the namespace has to differ from it.
+The CLI just `ProjectReference`s `Fispur-Engine` and exposes it over UCI, so the
+GUI is not part of its build. The root namespace of `Fispur-Engine` and `Fispur`
+is **`FispurEngine`** (not `Fispur`) — `Fispur` is the WIP bot class, so the
+namespace has to differ from it.
 
-## Where the code lives (`Fispur/src/`)
+## Where the code lives
+
+`Fispur-Engine/src/`:
 
 - **`API/`** — the restricted bot-facing API (namespace `FispurEngine.API`):
   `Board`, `Move`, `Timer`, `Piece`, `Square`, `PieceList`, `PieceType`,
@@ -36,17 +40,22 @@ The root namespace of the `Fispur` project is **`FispurEngine`** (not `Fispur`) 
 - **`Framework/Chess/`** — the actual chess engine (namespace `FispurEngine.Chess`):
   `Board`, `MoveGenerator` (magic bitboards under `Move Generation/Magics` +
   `Bitboards`), `Zobrist`, `RepetitionTable`, FEN/PGN helpers, `Arbiter`/result logic.
-- **`Framework/Application/`** — the Raylib GUI + match runner (namespace
-  `FispurEngine.Application`): `Core/Program.cs` (GUI entry point),
-  `ChallengeController`, `Settings.cs`, players, UI, `Token Counter`.
+- **`Framework/Application/Helpers/API Helpers/`** — move generation / move
+  parsing helpers the API calls into (namespace `FispurEngine.Application.APIHelpers`).
 - **`Fispur-New/Fispur.cs`** (+ `NNUE.cs`) — the **current WIP engine**
   (class `Fispur`, namespace `FispurEngine`). This is the one to edit when
   improving the engine.
 
+`Fispur/src/`:
+
+- **`Framework/Application/`** — the Raylib GUI + match runner (namespace
+  `FispurEngine.Application`): `Core/Program.cs` (GUI entry point),
+  `ChallengeController`, `Settings.cs`, players, UI, `Token Counter`.
+
 ## Current engine techniques (STALE — describes v0.2.1)
 
 > ⚠ Out of date: the WIP engine is at 0.19.0 and uses an NNUE eval
-> (`Fispur-New/NNUE.cs`, net embedded via `Training/Nets/10kb-1024hl-8ob.bin`).
+> (`Fispur-New/NNUE.cs`, net embedded via `Fispur-Engine/Training/Nets/10kb-1024hl-8ob.bin`).
 > Re-read the source before relying on this section.
 
 Negamax **alpha-beta** with **quiescence search**, **iterative deepening**,
@@ -72,7 +81,7 @@ via a substring. `ucinewgame` reflectively re-news the bot instance.
 
 ## Build / run
 
-- Requires .NET SDK 10 (both projects target `net10.0`). VS 2022 17.14 builds it with warning NETSDK1233; VS 2026 / Rider / `dotnet` CLI are fine.
+- Requires .NET SDK 10 (all three projects target `net10.0`). VS 2022 17.14 builds it with warning NETSDK1233; VS 2026 / Rider / `dotnet` CLI are fine.
 - GUI: run the `Fispur` project (Raylib window).
 - Engine for a UCI GUI/tester: build/run `Fispur-cli-(exp)`.
 - OpenBench: `make EXE=<name>` in the repo root publishes `Fispur-cli-(exp)` as a
@@ -85,7 +94,7 @@ via a substring. `ucinewgame` reflectively re-news the bot instance.
 
 ## Conventions
 
-- New engine work goes in `Fispur-New/Fispur.cs`. When cutting a
+- New engine work goes in `Fispur-Engine/src/Fispur-New/Fispur.cs`. When cutting a
   release, bump `GetName` — no source snapshot is archived.
 - Git: work on `main`; commits are short and version-oriented
   (e.g. "Implement basic transposition table").

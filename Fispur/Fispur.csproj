@@ -13,9 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<EmbeddedResource Include="Training\Nets\10kb-1024hl-8ob.bin">
-		<LogicalName>10kb-1024hl-8ob.bin</LogicalName>
-	</EmbeddedResource>
+    <ProjectReference Include="..\Fispur-Engine\Fispur-Engine.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,9 +33,9 @@
        build (OB_EXE set, see Fispur-cli-(exp)) publishes into the repo root and only
        ships a single file, so it skips these copies. -->
   <ItemGroup Condition="'$(OB_EXE)' == ''">
-    <Compile Update="src\Fispur-New\Fispur.cs">
+    <None Include="..\Fispur-Engine\src\Fispur-New\Fispur.cs" Link="src\Fispur-New\Fispur.cs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
+    </None>
     <Compile Update="src\Framework\Application\UI\BotBrainCapacityUI.cs">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Compile>
@@ -56,10 +54,6 @@
     <None Update="resources\Pieces.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="src\Framework\Chess\" />
   </ItemGroup>
 
   <ItemGroup>
