@@ -16,12 +16,6 @@
 	<EmbeddedResource Include="Training\Nets\10kb-1024hl-8ob.bin">
 		<LogicalName>10kb-1024hl-8ob.bin</LogicalName>
 	</EmbeddedResource>
-    <EmbeddedResource Include="Training\Nets\net0.3.0.bin">
-      <LogicalName>net0.3.0.bin</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Training\Nets\net0.12.0.bin">
-      <LogicalName>net0.12.0.bin</LogicalName>
-    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>
@@ -46,9 +40,6 @@
     </Compile>
     <Compile Update="src\Framework\Application\UI\BotBrainCapacityUI.cs">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="src\Fispur\EvilBot.cs">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
   </ItemGroup>
 
