@@ -20,6 +20,7 @@ namespace FispurEngine
         Timer timer;
         long nodes;
         long hardLimit;
+        long nodeLimit;
         Move rootBestMove;
 
         Move[,] pvTable = new Move[MAX_DEPTH, MAX_DEPTH];
@@ -113,7 +114,7 @@ namespace FispurEngine
                     + " nodes " + nodes + " time " + timer.MillisecondsElapsedThisTurn + " nps " + (nodes * 1000 / Math.Max(1, timer.MillisecondsElapsedThisTurn))
                     + " pv" + pvString);
 
-                if (timer.isInfinite && stopSearch)
+                if ((timer.isInfinite && stopSearch) || (nodeLimit != -1 && nodes > nodeLimit))
                 {
                     break;
                 }
@@ -153,9 +154,14 @@ namespace FispurEngine
         private long calculateTimeLimits(Timer timer)
         {
             long softLimit;
+            nodeLimit = -1;
             if (timer.isInfinite)
             {
                 softLimit = hardLimit = long.MaxValue;
+            } else if (timer.nodes != -1)
+            {
+                softLimit = hardLimit = long.MaxValue;
+                nodeLimit = timer.nodes;
             }
             else if (timer.moveTime != -1)
             {

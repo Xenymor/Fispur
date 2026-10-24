@@ -123,9 +123,7 @@ internal static class Bench
                 engine.ResetState();
                 engine.PrepareSearch();
 
-                // The three time values are irrelevant: "infinite" makes Think ignore the
-                // clock entirely, so the search stops exactly at the requested depth.
-                ApiTimer timer = new ApiTimer(-1, -1, -1, 0, -1, true);
+                ApiTimer timer = new ApiTimer(-1, -1, -1, 0, -1, infinite: true);
 
                 stopwatch.Start();
                 engine.Think(board, timer, depth);

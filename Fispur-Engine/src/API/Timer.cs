@@ -26,6 +26,7 @@ namespace FispurEngine.API
 
         public bool isInfinite { get; }
         public int moveTime { get; }
+        public int nodes { get; }
 
         /// <summary>
         /// Amount of time left on the clock for the other player (in milliseconds)
@@ -52,7 +53,7 @@ namespace FispurEngine.API
             this.isInfinite = false;
         }
 
-        public Timer(int remainingMs, int opponentRemainingMs, int startingMs, int incrementMs = 0, int time = -1, bool infinite = false) : this(remainingMs, opponentRemainingMs, startingMs, incrementMs)
+        public Timer(int remainingMs, int opponentRemainingMs, int startingMs, int incrementMs = 0, int time = -1, int nodes = -1, bool infinite = false) : this(remainingMs, opponentRemainingMs, startingMs, incrementMs)
         {
             if (infinite)
             {
@@ -60,6 +61,7 @@ namespace FispurEngine.API
             }
             this.isInfinite = infinite;
             this.moveTime = time;
+            this.nodes = nodes;
             millisRemainingAtStartOfTurn = remainingMs;
             sw = System.Diagnostics.Stopwatch.StartNew();
             GameStartTimeMilliseconds = startingMs;

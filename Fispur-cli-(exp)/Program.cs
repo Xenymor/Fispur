@@ -214,7 +214,7 @@ internal class Program
                     int oppRemaining = whiteToMove ? btime : wtime;
                     int increment = time != -1 ? 0 : (whiteToMove ? winc : binc);
 
-                    var timer = new FispurEngine.API.Timer(remaining, oppRemaining, remaining, increment, time, infinite || depth != -1);
+                    var timer = new FispurEngine.API.Timer(remaining, oppRemaining, remaining, increment, time, nodes, infinite || depth != -1);
 
                     StartSearch(board, timer, depth);
 
