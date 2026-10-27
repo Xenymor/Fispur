@@ -91,7 +91,7 @@ namespace FispurEngine
 
             if (!inSE && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + rfpMargin)
             {
-                return eval;
+                return (eval + beta) / 2;
             }
 
             if (!inSE && eval >= beta && !pvNode && !inCheck && canNull && depthLeft >= NMPMinDepth && beta < MATE_BOUND)
