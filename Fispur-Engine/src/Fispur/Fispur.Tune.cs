@@ -208,6 +208,13 @@ namespace FispurEngine
             public static readonly int StabScale4 = Tuning.resolve();
 
             public static readonly int[] StabScale = [StabScale0, StabScale1, StabScale2, StabScale3, StabScale4];
+
+            
+            [Tunable(    4,     0,     8, poisoned = true)]
+            public static readonly int QHPMaxDepth = Tuning.resolve(); 
+            
+            [Tunable( 3000,   500,  8000)]
+            public static readonly int QHPMargin = Tuning.resolve();
         }
 
         public static class Tuning

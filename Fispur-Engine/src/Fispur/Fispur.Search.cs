@@ -311,12 +311,20 @@ namespace FispurEngine
 
             if (!pvNode && !inCheck)
             {
-                if (depthLeft <= FpMaxDepth && !move.IsCapture && !move.IsPromotion && searchedCount > 0 && Math.Abs(alpha) < MATE_BOUND && eval + fpMargin <= alpha)
+                bool isQuiet = !move.IsCapture && !move.IsPromotion;
+                if (depthLeft <= FpMaxDepth && isQuiet && searchedCount > 0 && Math.Abs(alpha) < MATE_BOUND && eval + fpMargin <= alpha)
                 {
                     return true;
                 }
 
-                if (depthLeft <= LMPMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -MATE_BOUND && searchedCount >= (LMPBase + (depthLeft * depthLeft)) / (improving ? 1 : 2))
+                if (depthLeft <= LMPMaxDepth && isQuiet && bestScore > -MATE_BOUND && searchedCount >= (LMPBase + (depthLeft * depthLeft)) / (improving ? 1 : 2))
+                {
+                    return true;
+                }
+
+                int quietHist = quietHistory(board, move, sideToMove, prevPiece, prevTo);
+
+                if (depthLeft <= QHPMaxDepth && isQuiet && searchedCount > 0 && bestScore > -MATE_BOUND && quietHist < -QHPMargin * depthLeft)
                 {
                     return true;
                 }
@@ -329,8 +337,7 @@ namespace FispurEngine
                     }
                     if (!move.IsCapture)
                     {
-                        int seepHist = quietHistory(board, move, sideToMove, prevPiece, prevTo);
-                        if (!see(board, move, Math.Min(0, -SEEPThreshold * depthLeft - seepHist * SEEPHistMult / 32_768)))
+                        if (!see(board, move, Math.Min(0, -SEEPThreshold * depthLeft - quietHist * SEEPHistMult / 32_768)))
                         {
                             return true;
                         }
