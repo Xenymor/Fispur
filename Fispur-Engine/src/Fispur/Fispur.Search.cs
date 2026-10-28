@@ -92,7 +92,7 @@ namespace FispurEngine
                                                          : ((board.BlackPiecesBitboard ^ board.GetPieceBitboard(PieceType.Pawn, false) ^ board.GetPieceBitboard(PieceType.King, false)) == 0);
                 if (!isPawnEndgame)
                 {
-                    int reduction = NMPReductionB + depthLeft / NMPReductionDiv;
+                    int reduction = NMPReductionB + depthLeft / NMPReductionDiv + Math.Min((eval - beta) / NMPEvalDiv, 3);
 
                     board.ForceSkipTurn();
                     ppEntry.pieceMoved = 0;

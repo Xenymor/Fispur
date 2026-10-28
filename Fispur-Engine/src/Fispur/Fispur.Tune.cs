@@ -94,6 +94,8 @@ namespace FispurEngine
             [Tunable(    4,     2,    10, poisoned = true)]
             public static readonly int NMPReductionDiv = Tuning.resolve();
 
+            [Tunable(  200,    80,   400)]
+            public static readonly int NMPEvalDiv = Tuning.resolve();
 
             [Tunable(   80,     5,   200)]
             public static readonly int ASPWindowDelta = Tuning.resolve();
