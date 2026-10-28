@@ -365,6 +365,8 @@ namespace FispurEngine
                 return 0;
             }
 
+            int ogAlpha = alpha;
+
             TTEntry ttEntry = probeTT(board.ZobristKey, out bool hasEntry);
             int ttScore = hasEntry ? scoreFromTT(ttEntry.score, ply) : -INFINITY;
 
@@ -373,17 +375,18 @@ namespace FispurEngine
                 return ttScore;
             }
 
-            int eval = correctEval(getRawEval(board, inCheck, hasEntry, in ttEntry), corrHistEntry);
+            int rawEval = getRawEval(board, inCheck, hasEntry, in ttEntry);
+            int staticEval = correctEval(rawEval, corrHistEntry);
 
             if (!inCheck)
             {
-                if (eval >= beta)
+                if (staticEval >= beta)
                 {
-                    return eval;
+                    return staticEval;
                 }
-                if (eval > alpha)
+                if (staticEval > alpha)
                 {
-                    alpha = eval;
+                    alpha = staticEval;
                 }
             }
 
@@ -394,7 +397,7 @@ namespace FispurEngine
 
             if (moveCount == 0)
             {
-                return inCheck ? -MATE + ply : eval;
+                return inCheck ? -MATE + ply : staticEval;
             }
 
             int sideToMove = board.IsWhiteToMove ? 0 : 1;
@@ -402,7 +405,8 @@ namespace FispurEngine
             int* scores = stackalloc int[moveCount];
             scoreMoves(board, ply, mv, scores, moveCount, ttEntry.move, prevPPE.pieceMoved, prevPPE.targetSquare, sideToMove);
 
-            int bestScore = inCheck ? -INFINITY : eval;
+            int bestScore = inCheck ? -INFINITY : staticEval;
+            Move bestMove = Move.NullMove;
 
             for (int i = 0; i < moveCount; i++)
             {
@@ -437,12 +441,14 @@ namespace FispurEngine
 
                 if (score >= beta)
                 {
+                    storeTT(board.ZobristKey, score, -1, ply, Bound.BOUND_LOWER, move, rawEval);
                     return score;
                 }
 
                 if (score > bestScore)
                 {
                     bestScore = score;
+                    bestMove = move;
                 }
                 if (score > alpha)
                 {
@@ -450,6 +456,8 @@ namespace FispurEngine
                     updatePV(ply, move);
                 }
             }
+
+            storeTT(board.ZobristKey, bestScore, -1, ply, bestScore > ogAlpha ? Bound.BOUND_EXACT : Bound.BOUND_UPPER, bestMove, rawEval);
 
             return bestScore;
         }
