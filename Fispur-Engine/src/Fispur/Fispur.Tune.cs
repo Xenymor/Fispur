@@ -208,6 +208,9 @@ namespace FispurEngine
             public static readonly int StabScale4 = Tuning.resolve();
 
             public static readonly int[] StabScale = [StabScale0, StabScale1, StabScale2, StabScale3, StabScale4];
+
+            [Tunable(  150,    40,   300)]
+            public static readonly int DeltaPMargin = Tuning.resolve();
         }
 
         public static class Tuning

@@ -408,9 +408,14 @@ namespace FispurEngine
             {
                 Move move = pickMove(mv, scores, i, moveCount);
 
-                if (!inCheck && scores[i] < BAD_CAPTURE_CUTOFF)
+                if (!inCheck && scores[i] < BAD_CAPTURE_CUTOFF )
                 {
                     break;
+                }
+
+                if (!inCheck && !move.IsPromotion && eval + pieceVals[(int)move.CapturePieceType] + DeltaPMargin <= alpha)
+                {
+                    continue;
                 }
 
                 makeMove(board, move, ply);
