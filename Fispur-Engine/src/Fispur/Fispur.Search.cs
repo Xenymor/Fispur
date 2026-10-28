@@ -66,7 +66,7 @@ namespace FispurEngine
                 return ttScore;
             }
 
-            if (!inSE && !hasEntry && depthLeft >= MinIIRDepth)
+            if (!inSE && !hasEntry && (pvNode || cutNode) && depthLeft >= MinIIRDepth)
             {
                 depthLeft--;
             }
