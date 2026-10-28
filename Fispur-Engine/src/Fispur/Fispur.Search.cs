@@ -265,6 +265,17 @@ namespace FispurEngine
                         rootBestMove = move;
                     }
 
+                    if (score > alpha)
+                    {
+                        if (ply == 0)
+                        {
+                            iterBestMove = move;
+                            iterBestScore = score;
+                            iterBestBound = score > beta ? Bound.BOUND_LOWER : Bound.BOUND_EXACT;
+                            updatePV(ply, move);
+                        }
+                    }
+
                     return score;
                 }
 
@@ -282,6 +293,12 @@ namespace FispurEngine
                 }
                 if (score > alpha)
                 {
+                    if (ply == 0)
+                    {
+                        iterBestMove = move;
+                        iterBestScore = score;
+                        iterBestBound = score > beta ? Bound.BOUND_LOWER : Bound.BOUND_EXACT;
+                    }
                     alpha = score;
                     updatePV(ply, move);
                 }

@@ -26,6 +26,10 @@ namespace FispurEngine
         Move[,] pvTable = new Move[MAX_DEPTH, MAX_DEPTH];
         int[] pvLength = new int[MAX_DEPTH];
 
+        Move iterBestMove = Move.NullMove;
+        int iterBestScore = -INFINITY;
+        Bound iterBestBound = Bound.BOUND_NONE;
+
         public (Move move, int eval) Think(Board board, Timer timer, int maxDepth)
         {
             selDepth = 0;
@@ -58,9 +62,12 @@ namespace FispurEngine
             int dl, dh;
             for (int depth = 1; depth <= currMaxDepth; depth++)
             {
+                iterBestMove = Move.NullMove;
+                iterBestScore = -INFINITY;
+                iterBestBound = Bound.BOUND_NONE;
+
                 dl = -ASPWindowDelta; dh = ASPWindowDelta;
                 int score;
-                bool failed = false;
 
                 rootDepth = depth;
 
@@ -85,7 +92,6 @@ namespace FispurEngine
                         }
                         if (stopSearch)
                         {
-                            failed = true;
                             break;
                         }
                     }
@@ -95,20 +101,31 @@ namespace FispurEngine
                     score = alphaBeta(board, 0, depth, -INFINITY, INFINITY);
                 }
 
-                if (stopSearch || failed)
+                var pvString = new StringBuilder();
+                for (int i = 0; i < pvLength[0]; i++)
+                {
+                    pvString.Append(' ').Append(Chess.MoveUtility.GetMoveNameUCI(pvTable[0, i].move));
+                }
+
+                if (stopSearch)
+                {
+                    if (iterBestBound != Bound.BOUND_NONE)
+                    {
+                        bestMove = iterBestMove;
+                        eval = iterBestScore;
+
+                        Console.WriteLine("info depth " + depth + " score " + ScoreToUCI(eval) + (iterBestBound == Bound.BOUND_LOWER ? " lowerbound" : "") + " seldepth " + selDepth
+                    + " nodes " + nodes + " time " + timer.MillisecondsElapsedThisTurn + " nps " + (nodes * 1000 / Math.Max(1, timer.MillisecondsElapsedThisTurn))
+                    + " pv" + pvString);
+                    }
                     break;
+                }
 
                 eval = score;
 
 
                 stability = bestMove.Equals(rootBestMove) ? Math.Min(stability + 1, 4) : 0;
                 bestMove = rootBestMove;
-
-                var pvString = new StringBuilder();
-                for (int i = 0; i < pvLength[0]; i++)
-                {
-                    pvString.Append(' ').Append(Chess.MoveUtility.GetMoveNameUCI(pvTable[0, i].move));
-                }
 
                 Console.WriteLine("info depth " + depth + " score " + ScoreToUCI(eval) + " seldepth " + selDepth
                     + " nodes " + nodes + " time " + timer.MillisecondsElapsedThisTurn + " nps " + (nodes * 1000 / Math.Max(1, timer.MillisecondsElapsedThisTurn))
