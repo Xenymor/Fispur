@@ -39,6 +39,14 @@ namespace FispurEngine
             {
                 historyHeuristic[i] /= 2;
             }
+            for (int i = 0; i < captureHist.Length; i++)
+            {
+                captureHist[i] /= 2;
+            }
+            for (int i = 0; i < continuationHist.Length; i++)
+            {
+                continuationHist[i] /= 2;
+            }
             Array.Clear(killers);
 
             Move[] moves = board.GetLegalMoves();
