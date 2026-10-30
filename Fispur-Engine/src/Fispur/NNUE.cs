@@ -172,7 +172,7 @@ namespace FispurEngine
             s = Ssse3.HorizontalAdd(s, s);
 
             long total = s.ToScalar();
-            return (int)((total / QA + l1b[bucket]) * SCALE / QAB);
+            return (int)((total / QA + l1b[bucket]) * SCALE / QAB) * (200 - board.FiftyMoveCounter) / 200;
         }
 
         public static void updateAccumulators(Board board)
