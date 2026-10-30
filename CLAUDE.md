@@ -56,6 +56,7 @@ build. The root namespace of `Fispur-Engine` and the GUI is **`FispurEngine`**
   - `Fispur.SEE.cs` — static exchange evaluation.
   - `Fispur.Tune.cs` — `Tunables` (SPSA parameters) and the `Tuning` registry.
   - `NNUE.cs` — the network: loading, accumulators, evaluation.
+  - `NNUE.Calibration.cs` — the eval scale: calibrates every net on load.
 
 `Fispur/src/`:
 
@@ -115,13 +116,35 @@ command `spsa` prints the OpenBench SPSA input lines.
   missing file fails the build. The loader checks the file size against the
   architecture constants, so a net of a different shape needs matching constant
   changes in `NNUE.cs`.
+- **Eval scale** (`NNUE.Calibration.cs`): every eval is multiplied by
+  `EvalScale / 1024`. The scale is calibrated when the net loads: the net
+  evaluates the 4096 reference positions in
+  `Fispur-Engine/Training/Calibration/eval-scale-ref.txt` (512 per output bucket,
+  embedded as `eval-scale-ref.txt`) and the scale is the least-squares factor
+  onto the reference evals, which the net the search was tuned on wrote
+  (`10kb-1024hl-8ob.bin`, scale exactly 1.0). So any net — default, `EVALFILE`,
+  OpenBench network — gets the same centipawns and the eval-based tunables stay
+  valid without a manual step. Clamped to 0.25–4.0; evals are clamped to ±32000
+  for the short TT slot. A different net changes the bench as before.
+- `evalscale` (UCI command or `<exe> evalscale`) prints the scale, the fit and
+  its correlation/RMSE. `evalscale gen <out> <files...>` rewrites the reference
+  from datagen files (`fen | score | result`) or EPDs, using the embedded net's
+  *scaled* evals — so it keeps the current units; only regenerate it to
+  redefine them on purpose. Without the file the scale is 1.0.
+- **Units**: internal evals stay in the reference's units. UCI `score cp`
+  divides by `NORMALIZE_TO_PAWN` (354, `Fispur.cs`): an eval of 100 cp is a 50%
+  win chance in middlegames (Stockfish's definition, WDL fit on the datagen
+  games). SEE piece values are in eval units too: pawn 283 = the net's
+  middlegame pawn (eval-vs-material regression); the SPSA-tuned N/B/R/Q ratios
+  were kept. All SEE-unit tunables were scaled with them (×2.83); the MVV term is
+  `MvvMult * value / 16`.
 
 ## UCI CLI (`Fispur-cli-(exp)`)
 
 - `Program.cs` implements `uci`, `isready`, `ucinewgame`,
   `position [startpos|fen ...] [moves ...]`, `go` (`wtime`/`btime`/`winc`/`binc`/
   `movetime`/`depth`/`infinite`), `stop`, `setoption` (`Hash`, `MoveOverhead`,
-  `Threads` fixed at 1, all tunables), `bench [depth]`, `spsa`, `quit`.
+  `Threads` fixed at 1, all tunables), `bench [depth]`, `spsa`, `evalscale`, `quit`.
 - The search runs on its own thread with a 32 MB stack; `bestmove` is formatted
   from `Move.ToString()` via a substring.
 - `<exe> bench [depth]` as a command-line argument runs the bench and exits.
@@ -152,6 +175,7 @@ command `spsa` prints the OpenBench SPSA input lines.
 
 - **`Openings/`** — `UHO_4060_v2.epd` (opening/test positions, ~15 MB).
 - **`Fispur-Engine/Training/Nets/`** — the default NNUE net.
+- **`Fispur-Engine/Training/Calibration/`** — the eval scale calibration reference.
 - **`Fispur/resources/`** — `Fens.txt`, `Pieces.png`, `Fonts/` (GUI assets).
 - **`Scripts/`** — OpenBench worker setup scripts.
 - `.github/copilot-instructions.md` currently only has Azure boilerplate (ignore).

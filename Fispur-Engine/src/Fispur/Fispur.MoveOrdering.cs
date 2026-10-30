@@ -26,7 +26,7 @@ namespace FispurEngine
                 int captureHistScore = captureHist[getCaptureHistIndex(sideToMove, move)];
                 int seeThreshold = move.IsPromotion || move.IsEnPassant ? 0 : -captureHistScore * CaptureHistSEEMult / 32_768;
                 return (see(board, move, seeThreshold) ? GOOD_CAPTURE_SCORE : BAD_CAPTURE_SCORE)
-                    + MvvMult * pieceVals[(int)move.CapturePieceType]
+                    + MvvMult * pieceVals[(int)move.CapturePieceType] / 16
                     + captureHistScore;
             }
 

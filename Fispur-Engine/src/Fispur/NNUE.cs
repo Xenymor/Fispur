@@ -9,7 +9,7 @@ using System.Runtime.Intrinsics.X86;
 
 namespace FispurEngine
 {
-    public static unsafe class NNUE
+    public static unsafe partial class NNUE
     {
         const int INPUT = 768;
         const int HL = 1_024;
@@ -115,6 +115,11 @@ namespace FispurEngine
             {
                 copy(finnyAcc + i * HL, l0b);
             }
+
+            calibration = calibrate();
+            evalScale = calibration.positions > 0
+                ? Math.Clamp((int)Math.Round(calibration.fittedScale * EVAL_SCALE_ONE), MIN_EVAL_SCALE, MAX_EVAL_SCALE)
+                : EVAL_SCALE_ONE;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -145,6 +150,13 @@ namespace FispurEngine
 
         public static int evaluate(Board board)
         {
+            long scaled = output(board) * SCALE * evalScale / ((long)QAB * EVAL_SCALE_ONE);
+            return (int)Math.Clamp(scaled, -MAX_EVAL, MAX_EVAL);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static long output(Board board)
+        {
             short bucket = (short)((ulong.PopCount(board.AllPiecesBitboard) - 2) / 4);
 
             short* boys = getAcc(currPly, board.IsWhiteToMove ? 0 : 1);
@@ -172,7 +184,7 @@ namespace FispurEngine
             s = Ssse3.HorizontalAdd(s, s);
 
             long total = s.ToScalar();
-            return (int)((total / QA + l1b[bucket]) * SCALE / QAB);
+            return total / QA + l1b[bucket];
         }
 
         public static void updateAccumulators(Board board)

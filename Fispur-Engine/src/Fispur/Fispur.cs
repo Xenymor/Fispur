@@ -11,6 +11,8 @@ namespace FispurEngine
 
         const int MATE_BOUND = MATE - 256;
 
+        const int NORMALIZE_TO_PAWN = 354;
+
         public const int DEFAULT_HASH_MB = 256;
         public const int MAX_HASH_MB = 1024;
 
@@ -38,7 +40,7 @@ namespace FispurEngine
         private static string ScoreToUCI(int score)
         {
             if (Math.Abs(score) <= MATE_BOUND)
-                return "cp " + score;
+                return "cp " + score * 100 / NORMALIZE_TO_PAWN;
 
             int plies = MATE - Math.Abs(score);
             int moves = (plies + 1) / 2;

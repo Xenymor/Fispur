@@ -65,10 +65,10 @@ namespace FispurEngine
             [Tunable( -324,  -600,   200)]
             public static readonly int CaptureHistBonusBase = Tuning.resolve();
 
-            [Tunable(   89,    20,   330)]
+            [Tunable(  252,    57,   934)]
             public static readonly int CaptureHistSEEMult = Tuning.resolve();
 
-            [Tunable(   15,     4,    40)]
+            [Tunable(   85,    23,   226)]
             public static readonly int MvvMult = Tuning.resolve();
 
 
@@ -105,32 +105,32 @@ namespace FispurEngine
             [Tunable(    4,     1,     8, poisoned = true)]
             public static readonly int SEEPMaxDepth = Tuning.resolve();
 
-            [Tunable(   18,     0,   500)]
+            [Tunable(   51,     0,  1415)]
             public static readonly int SEEPThreshold = Tuning.resolve();
 
-            [Tunable(   90,     0,   500)]
+            [Tunable(  255,     0,  1415)]
             public static readonly int SEEPCaptureThreshold = Tuning.resolve();
 
-            [Tunable(   96,     0,   320)]
+            [Tunable(  272,     0,   906)]
             public static readonly int SEEPCaptureHistMult = Tuning.resolve();
 
-            [Tunable(   58,     0,   256)]
+            [Tunable(  164,     0,   724)]
             public static readonly int SEEPHistMult = Tuning.resolve();
 
 
-            [Tunable(  290,   150,   500)]
+            [Tunable(  821,   424,  1415)]
             public static readonly int KnightValue = Tuning.resolve();
 
-            [Tunable(  337,   150,   550)]
+            [Tunable(  954,   424,  1556)]
             public static readonly int BishopValue = Tuning.resolve();
 
-            [Tunable(  504,   300,   800)]
+            [Tunable( 1426,   849,  2264)]
             public static readonly int RookValue = Tuning.resolve();
 
-            [Tunable(  926,   600,  1400)]
+            [Tunable( 2621,  1698,  3962)]
             public static readonly int QueenValue = Tuning.resolve();
 
-            public static readonly int[] pieceVals = [0, 100, KnightValue, BishopValue, RookValue, QueenValue, 1_000_000];
+            public static readonly int[] pieceVals = [0, 283, KnightValue, BishopValue, RookValue, QueenValue, 1_000_000];
 
 
             [Tunable(    4,     1,     8, poisoned = true)]

@@ -6,6 +6,12 @@ internal class Program
 {
     private static void Main(string[] args)
     {
+        if (args.Length > 0 && args[0].Equals("evalscale", StringComparison.OrdinalIgnoreCase))
+        {
+            EvalScale.Run(args[1..]);
+            return;
+        }
+
         if (args.Length > 0)
         {
             string[] argTokens = string.Join(' ', args).Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -110,6 +116,11 @@ internal class Program
 
                 case "spsa":
                     PrintSpsaInputs();
+                    break;
+
+                case "evalscale":
+                    StopAndWait();
+                    EvalScale.Run(tokens[1..]);
                     break;
 
                 case "quit":
