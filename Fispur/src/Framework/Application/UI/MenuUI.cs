@@ -15,25 +15,15 @@ namespace FispurEngine.Application
             float breakSpacing = spacing * 0.6f;
 
             // Game Buttons
-            if (NextButtonInRow("Human vs Fispur (exp)", ref buttonPos, spacing, buttonSize))
-            {
-                var whiteType = controller.HumanWasWhiteLastGame ? ChallengeController.PlayerType.Fispur_Exp : ChallengeController.PlayerType.Human;
-                var blackType = !controller.HumanWasWhiteLastGame ? ChallengeController.PlayerType.Fispur_Exp : ChallengeController.PlayerType.Human;
-                controller.StartNewGame(whiteType, blackType);
-            }
             if (NextButtonInRow("Human vs Fispur", ref buttonPos, spacing, buttonSize))
             {
                 var whiteType = controller.HumanWasWhiteLastGame ? ChallengeController.PlayerType.Fispur : ChallengeController.PlayerType.Human;
                 var blackType = !controller.HumanWasWhiteLastGame ? ChallengeController.PlayerType.Fispur : ChallengeController.PlayerType.Human;
                 controller.StartNewGame(whiteType, blackType);
             }
-            if (NextButtonInRow("MyBot vs MyBot", ref buttonPos, spacing, buttonSize))
+            if (NextButtonInRow("Fispur vs Fispur", ref buttonPos, spacing, buttonSize))
             {
-                controller.StartNewBotMatch(ChallengeController.PlayerType.Fispur_Exp, ChallengeController.PlayerType.Fispur_Exp);
-            }
-            if (NextButtonInRow("MyBot vs EvilBot", ref buttonPos, spacing, buttonSize))
-            {
-                controller.StartNewBotMatch(ChallengeController.PlayerType.Fispur_Exp, ChallengeController.PlayerType.Fispur);
+                controller.StartNewBotMatch(ChallengeController.PlayerType.Fispur, ChallengeController.PlayerType.Fispur);
             }
 
             // Page buttons

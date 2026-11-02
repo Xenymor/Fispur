@@ -14,7 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Fispur\Fispur.csproj" />
+    <ProjectReference Include="..\Fispur-Engine\Fispur-Engine.csproj" />
   </ItemGroup>
 
   <!-- OpenBench build: the Makefile publishes into a scratch folder (never the repo root,

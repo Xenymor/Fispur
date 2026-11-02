@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FispurEngine;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -21,7 +22,7 @@ using ApiTimer = FispurEngine.API.Timer;
 internal static class Bench
 {
     /// <summary>Depth used when the caller does not pass one explicitly.</summary>
-    public const int DEFAULT_DEPTH = 12;
+    public const int DEFAULT_DEPTH = 14;
 
     /// <summary>
     /// Hash size for the bench. Deliberately fixed: if this followed the Hash UCI option
@@ -85,6 +86,7 @@ internal static class Bench
 
         // Own thread: the default 1 MB stack is not enough for the search recursion.
         Thread searchThread = new Thread(() => SearchAll(depth), STACK_BYTES);
+        Fispur.Tuning.Freeze();
         searchThread.Start();
         searchThread.Join();
 
@@ -121,9 +123,7 @@ internal static class Bench
                 engine.ResetState();
                 engine.PrepareSearch();
 
-                // The three time values are irrelevant: "infinite" makes Think ignore the
-                // clock entirely, so the search stops exactly at the requested depth.
-                ApiTimer timer = new ApiTimer(-1, -1, -1, 0, -1, true);
+                ApiTimer timer = new ApiTimer(-1, -1, -1, 0, -1, infinite: true);
 
                 stopwatch.Start();
                 engine.Think(board, timer, depth);

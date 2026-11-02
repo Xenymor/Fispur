@@ -1,5 +1,4 @@
 ﻿using FispurEngine.Chess;
-using FispurEngine.Example;
 using Raylib_cs;
 using System;
 using System.IO;
@@ -18,7 +17,6 @@ namespace FispurEngine.Application
         public enum PlayerType
         {
             Human,
-            Fispur_Exp,
             Fispur
         }
 
@@ -73,7 +71,7 @@ namespace FispurEngine.Application
             botMatchStartFens = FileHelper.ReadResourceFile("Fens.txt").Split('\n').Where(fen => fen.Length > 0).ToArray();
             botTaskWaitHandle = new AutoResetEvent(false);
 
-            StartNewGame(PlayerType.Human, PlayerType.Fispur_Exp);
+            StartNewGame(PlayerType.Human, PlayerType.Fispur);
         }
 
         public void StartNewGame(PlayerType whiteType, PlayerType blackType)
@@ -147,6 +145,7 @@ namespace FispurEngine.Application
             try
             {
                 API.Timer timer = new(PlayerToMove.TimeRemainingMs, PlayerNotOnMove.TimeRemainingMs, GameDurationMilliseconds, IncrementMilliseconds);
+                ((Fispur)PlayerToMove.Bot).PrepareSearch();
                 API.Move move = PlayerToMove.Bot.Think(botBoard, timer).move;
                 return new Move(move.RawValue);
             }
@@ -208,15 +207,14 @@ namespace FispurEngine.Application
         {
             return type switch
             {
-                PlayerType.Fispur_Exp => new ChessPlayer(new Fispur(), type, GameDurationMilliseconds),
-                PlayerType.Fispur => new ChessPlayer(new FispurEngine.Fispur0_13_2.Fispur0_13_2(), type, GameDurationMilliseconds),
+                PlayerType.Fispur => new ChessPlayer(new Fispur(), type, GameDurationMilliseconds),
                 _ => new ChessPlayer(new HumanPlayer(boardUI), type)
             };
         }
 
         static (int totalTokenCount, int debugTokenCount) GetTokenCount()
         {
-            string path = Path.Combine(Directory.GetCurrentDirectory(), "src", "Fispur-New", "Fispur.cs");
+            string path = Path.Combine(Directory.GetCurrentDirectory(), "src", "Fispur", "Fispur.cs");
 
             using StreamReader reader = new(path);
             string txt = reader.ReadToEnd();

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>FispurEngine</RootNamespace>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <FispurNet>$(MSBuildProjectDirectory)\Training\Nets\10kb-1024hl-8ob.bin</FispurNet>
+    <FispurNet Condition="'$(EVALFILE)' != ''">$([MSBuild]::NormalizePath('$(MSBuildStartupDirectory)', '$(EVALFILE)'))</FispurNet>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="$(FispurNet)" LogicalName="net.bin" />
+    <EmbeddedResource Include="Training\Calibration\eval-scale-ref.txt" LogicalName="eval-scale-ref.txt"
+                      Condition="Exists('Training\Calibration\eval-scale-ref.txt')" />
+  </ItemGroup>
+
+  <Target Name="CheckFispurNet" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(FispurNet)')" Text="NNUE net not found: $(FispurNet)" />
+  </Target>
+
+</Project>
