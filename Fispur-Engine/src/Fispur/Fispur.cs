@@ -11,7 +11,7 @@ namespace FispurEngine
 
         const int MATE_BOUND = MATE - 256;
 
-        const int NORMALIZE_TO_PAWN = 354;
+        const int NORMALIZE_TO_PAWN = 298;
 
         public const int DEFAULT_HASH_MB = 256;
         public const int MAX_HASH_MB = 1024;
