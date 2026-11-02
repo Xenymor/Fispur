@@ -12,7 +12,7 @@ namespace FispurEngine
     public static unsafe partial class NNUE
     {
         const int INPUT = 768;
-        const int HL = 1_024;
+        const int HL = 2_048;
         private const int OUTPUT_BUCKETS = 8;
         const int QA = 255;
         const int QB = 64;

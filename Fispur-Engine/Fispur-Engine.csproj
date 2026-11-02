@@ -9,10 +9,10 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <FispurNet>$(MSBuildProjectDirectory)\Training\Nets\10kb-1024hl-8ob.bin</FispurNet>
+    <FispurNet>$(MSBuildProjectDirectory)\Training\Nets\10kb-2048hl-8ob.bin</FispurNet>
     <FispurNet Condition="'$(EVALFILE)' != ''">$([MSBuild]::NormalizePath('$(MSBuildStartupDirectory)', '$(EVALFILE)'))</FispurNet>
   </PropertyGroup>
-
+	
   <ItemGroup>
     <EmbeddedResource Include="$(FispurNet)" LogicalName="net.bin" />
     <EmbeddedResource Include="Training\Calibration\eval-scale-ref.txt" LogicalName="eval-scale-ref.txt"
