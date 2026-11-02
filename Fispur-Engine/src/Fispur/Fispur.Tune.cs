@@ -16,20 +16,20 @@ namespace FispurEngine
             [Tunable(    3,     1,    16, poisoned = true)]
             public static readonly int LmrMinMoves = Tuning.resolve();
 
-            [Tunable(   93,     0,   400)]
+            [Tunable(   72,     0,   400)]
             public static readonly int LmrBase = Tuning.resolve();
 
-            [Tunable(  236,    50,  1000)]
+            [Tunable(  309,    50,  1000)]
             public static readonly int LmrDivisor = Tuning.resolve();
 
 
-            [Tunable( 2048,     0,  4096)]
+            [Tunable( 1927,     0,  4096)]
             public static readonly int CutNodeReduction = Tuning.resolve();
 
-            [Tunable(-1024, -4096,     0)]
+            [Tunable(-1165, -4096,     0)]
             public static readonly int PVNodeReduction = Tuning.resolve();
 
-            [Tunable( 1024,     0,  4096)]
+            [Tunable( 1121,     0,  4096)]
             public static readonly int TTCaptReduction = Tuning.resolve();
 
 
