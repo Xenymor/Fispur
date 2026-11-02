@@ -72,18 +72,26 @@ namespace FispurEngine
             }
 
             int rawEval = getRawEval(board, inCheck, hasEntry, in ttEntry);
-            int eval = correctEval(rawEval, corrHistEntry);
+            int staticEval = correctEval(rawEval, corrHistEntry);
 
+            int eval = staticEval;
+            if (hasEntry && Math.Abs(ttScore) < MATE_BOUND)
+            {
+                if (ttEntry.bound == Bound.BOUND_EXACT || (ttEntry.bound == Bound.BOUND_LOWER && ttScore > eval) || (ttEntry.bound == Bound.BOUND_UPPER && ttScore < eval))
+                {
+                    eval = ttScore;
+                }
+            }
 
-            ppEntry.staticEval = inCheck ? -INFINITY : eval;
+            ppEntry.staticEval = inCheck ? -INFINITY : staticEval;
 
-            bool improving = !inCheck && ply >= 2 ? eval > tpPrevPPE.staticEval : false;
+            bool improving = !inCheck && ply >= 2 ? staticEval > tpPrevPPE.staticEval : false;
 
             int rfpMargin = RfpMargin * depthLeft - (improving ? RFPImpMargin : 0);
 
             if (!inSE && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + rfpMargin)
             {
-                return eval;
+                return (eval + beta) / 2;
             }
 
             if (!inSE && eval >= beta && !pvNode && !inCheck && canNull && depthLeft >= NMPMinDepth && beta < MATE_BOUND)
@@ -266,7 +274,7 @@ namespace FispurEngine
 
                         storeTT(zobrist, score, depthLeft, ply, Bound.BOUND_LOWER, move, rawEval);
 
-                        if (!inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > eval)
+                        if (!inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > staticEval)
                         {
                             updateCorrHist(ref corrHistEntry, score, rawEval, depthLeft);
                         }
@@ -304,7 +312,7 @@ namespace FispurEngine
                 Bound bound = bestScore <= ogAlpha ? Bound.BOUND_UPPER : Bound.BOUND_EXACT;
                 storeTT(zobrist, bestScore, depthLeft, ply, bound, bestMove, rawEval);
                 if (!inCheck && !bestMove.IsCapture && !bestMove.IsPromotion && Math.Abs(bestScore) < MATE_BOUND
-                    && ((bound == Bound.BOUND_UPPER && bestScore < eval) || bound == Bound.BOUND_EXACT))
+                    && ((bound == Bound.BOUND_UPPER && bestScore < staticEval) || bound == Bound.BOUND_EXACT))
                 {
                     updateCorrHist(ref corrHistEntry, bestScore, rawEval, depthLeft);
                 }
