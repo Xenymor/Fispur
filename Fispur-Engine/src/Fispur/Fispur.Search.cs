@@ -72,18 +72,26 @@ namespace FispurEngine
             }
 
             int rawEval = getRawEval(board, inCheck, hasEntry, in ttEntry);
-            int eval = correctEval(rawEval, corrHistEntry);
+            int staticEval = correctEval(rawEval, corrHistEntry);
 
+            int eval = staticEval;
+            if (hasEntry && Math.Abs(ttScore) < MATE_BOUND)
+            {
+                if (ttEntry.bound == Bound.BOUND_EXACT || (ttEntry.bound == Bound.BOUND_LOWER && ttScore > eval) || (ttEntry.bound == Bound.BOUND_UPPER && ttScore < eval))
+                {
+                    eval = ttScore;
+                }
+            }
 
-            ppEntry.staticEval = inCheck ? -INFINITY : eval;
+            ppEntry.staticEval = inCheck ? -INFINITY : staticEval;
 
-            bool improving = !inCheck && ply >= 2 ? eval > tpPrevPPE.staticEval : false;
+            bool improving = !inCheck && ply >= 2 ? staticEval > tpPrevPPE.staticEval : false;
 
             int rfpMargin = RfpMargin * depthLeft - (improving ? RFPImpMargin : 0);
 
             if (!inSE && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + rfpMargin)
             {
-                return eval;
+                return (eval + beta) / 2;
             }
 
             if (!inSE && eval >= beta && !pvNode && !inCheck && canNull && depthLeft >= NMPMinDepth && beta < MATE_BOUND)
@@ -196,8 +204,20 @@ namespace FispurEngine
                     int reduction = 0;
                     if (depthLeft >= LmrMinDepth && searchedCount >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = lmrReduction(depthLeft, searchedCount) - quietHist / HHLMRDiv;
-                        reduction = Math.Clamp(reduction + (improving ? 0 : 1), 0, depthLeft);
+                        reduction = lmrReduction(depthLeft, searchedCount) * 1024 - quietHist * 1024 / HHLMRDiv;
+                        if (cutNode)
+                        {
+                            reduction += CutNodeReduction;
+                        }
+                        if (pvNode)
+                        {
+                            reduction += PVNodeReduction;
+                        }
+                        if (ttEntry.move.IsCapture)
+                        {
+                            reduction += TTCaptReduction;
+                        }
+                        reduction = Math.Clamp((reduction + (improving ? 0 : 1024)) / 1024, 0, depthLeft);
                     }
                     score = -alphaBeta(board, ply + 1, baseSearchDepth - reduction, -(alpha + 1), -alpha, cutNode: pvNode || !cutNode);
                     if (reduction > 0 && score > alpha)
@@ -254,7 +274,7 @@ namespace FispurEngine
 
                         storeTT(zobrist, score, depthLeft, ply, Bound.BOUND_LOWER, move, rawEval);
 
-                        if (!inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > eval)
+                        if (!inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > staticEval)
                         {
                             updateCorrHist(ref corrHistEntry, score, rawEval, depthLeft);
                         }
@@ -309,7 +329,7 @@ namespace FispurEngine
                 Bound bound = bestScore <= ogAlpha ? Bound.BOUND_UPPER : Bound.BOUND_EXACT;
                 storeTT(zobrist, bestScore, depthLeft, ply, bound, bestMove, rawEval);
                 if (!inCheck && !bestMove.IsCapture && !bestMove.IsPromotion && Math.Abs(bestScore) < MATE_BOUND
-                    && ((bound == Bound.BOUND_UPPER && bestScore < eval) || bound == Bound.BOUND_EXACT))
+                    && ((bound == Bound.BOUND_UPPER && bestScore < staticEval) || bound == Bound.BOUND_EXACT))
                 {
                     updateCorrHist(ref corrHistEntry, bestScore, rawEval, depthLeft);
                 }
