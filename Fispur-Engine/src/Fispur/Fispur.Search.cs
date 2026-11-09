@@ -483,7 +483,7 @@ namespace FispurEngine
                 return true;
             }
 
-            if ((++nodes & 2047) == 0 && timer.MillisecondsElapsedThisTurn >= hardLimit)
+            if ((++nodes & 2047) == 0 && (timer.MillisecondsElapsedThisTurn >= hardLimit || (nodeLimit != -1 && nodes > nodeLimit)))
             {
                 stopSearch = true;
                 return true;
