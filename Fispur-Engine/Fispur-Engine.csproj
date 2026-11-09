@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <FispurNet>$(MSBuildProjectDirectory)\Training\Nets\10kb-2048hl-8ob.bin</FispurNet>
+    <FispurNet>$(MSBuildProjectDirectory)\Training\Nets\32kb-1024hl-1ob.bin</FispurNet>
     <FispurNet Condition="'$(EVALFILE)' != ''">$([MSBuild]::NormalizePath('$(MSBuildStartupDirectory)', '$(EVALFILE)'))</FispurNet>
   </PropertyGroup>
 	

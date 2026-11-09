@@ -12,8 +12,9 @@ namespace FispurEngine
     public static unsafe partial class NNUE
     {
         const int INPUT = 768;
-        const int HL = 2_048;
-        private const int OUTPUT_BUCKETS = 8;
+        const int HL = 1_024;
+        const int OUTPUT_BUCKETS = 1;
+        private const int OB_DIVISOR = (32 + OUTPUT_BUCKETS - 1) / OUTPUT_BUCKETS;
         const int QA = 255;
         const int QB = 64;
         const int QAB = QA * QB;
@@ -34,15 +35,15 @@ namespace FispurEngine
         static readonly int[] KING_BUCKET_LAYOUT =
         {
             0, 1, 2, 3,
-            4, 4, 5, 5,
-            6, 6, 6, 6,
-            7, 7, 7, 7,
-            8, 8, 8, 8,
-            8, 8, 8, 8,
-            9, 9, 9, 9,
-            9, 9, 9, 9,
+            4, 5, 6, 7,
+            8, 9,10,11,
+           12,13,14,15,
+           16,17,18,19,
+           20,21,22,23,
+           24,25,26,27,
+           28,29,30,31,
         };
-        const int KING_BUCKETS = 10;
+        const int KING_BUCKETS = 32;
 
         static readonly int[] KING_BUCKET = new int[64];
 
@@ -157,7 +158,7 @@ namespace FispurEngine
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static long output(Board board)
         {
-            short bucket = (short)((ulong.PopCount(board.AllPiecesBitboard) - 2) / 4);
+            short bucket = (short)((ulong.PopCount(board.AllPiecesBitboard) - 2) / OB_DIVISOR);
 
             short* boys = getAcc(currPly, board.IsWhiteToMove ? 0 : 1);
             short* opps = getAcc(currPly, board.IsWhiteToMove ? 1 : 0);
