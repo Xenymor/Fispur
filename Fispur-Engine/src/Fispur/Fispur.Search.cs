@@ -48,7 +48,7 @@ namespace FispurEngine
             }
 
             int ogAlpha = alpha;
-            bool pvNode = beta - alpha > 1;
+            bool pvNode = beta > alpha + 1;
 
             if (ply > 0 && isDraw(board))
             {
@@ -378,7 +378,7 @@ namespace FispurEngine
                 return NNUE.evaluate(board) + corrHistEntry / CorrHistGrain;
             }
 
-            bool pvNode = beta - alpha > 1;
+            bool pvNode = beta > alpha + 1;
 
             if (isDraw(board))
             {
