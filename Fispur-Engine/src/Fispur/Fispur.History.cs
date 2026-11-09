@@ -71,8 +71,9 @@ namespace FispurEngine
         void updateCorrHist(ref int entry, int score, int rawEval, int depth)
         {
             int diff = (score - rawEval) * CorrHistGrain;
-            int w = Math.Min(depth + 1, 16);
-            entry = (entry * (CorrHistScale - w) + diff * w) / CorrHistScale;
+            long w = Math.Clamp(depth + ONE_PLY, 0, 16 * ONE_PLY);
+            long scale = (long)CorrHistScale * ONE_PLY;
+            entry = (int)((entry * (scale - w) + diff * w) / scale);
             entry = Math.Clamp(entry, -CorrHistMax, CorrHistMax);
         }
 

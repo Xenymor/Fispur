@@ -69,7 +69,7 @@ namespace FispurEngine
                     while (true)
                     {
                         int alpha = dl <= -ASPWindowReset ? -INFINITY : eval + dl, beta = dh >= ASPWindowReset ? INFINITY : eval + dh;
-                        score = alphaBeta(board, 0, depth, alpha, beta);
+                        score = alphaBeta(board, 0, depth * ONE_PLY, alpha, beta);
 
                         if (score <= alpha)
                         {
@@ -92,7 +92,7 @@ namespace FispurEngine
                 }
                 else
                 {
-                    score = alphaBeta(board, 0, depth, -INFINITY, INFINITY);
+                    score = alphaBeta(board, 0, depth * ONE_PLY, -INFINITY, INFINITY);
                 }
 
                 if (stopSearch || failed)

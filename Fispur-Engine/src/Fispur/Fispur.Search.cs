@@ -23,7 +23,7 @@ namespace FispurEngine
 
             if (inCheck && ply <= rootDepth * 2)
             {
-                depthLeft++;
+                depthLeft += ONE_PLY;
             }
 
             if (depthLeft <= 0)
@@ -68,7 +68,7 @@ namespace FispurEngine
 
             if (!inSE && !hasEntry && depthLeft >= MinIIRDepth)
             {
-                depthLeft--;
+                depthLeft -= ONE_PLY;
             }
 
             int rawEval = getRawEval(board, inCheck, hasEntry, in ttEntry);
@@ -87,7 +87,7 @@ namespace FispurEngine
 
             bool improving = !inCheck && ply >= 2 ? staticEval > tpPrevPPE.staticEval : false;
 
-            int rfpMargin = RfpMargin * depthLeft - (improving ? RFPImpMargin : 0);
+            int rfpMargin = RfpMargin * depthLeft / ONE_PLY - (improving ? RFPImpMargin : 0);
 
             if (!inSE && !inCheck && !pvNode && depthLeft <= RfpMaxDepth && Math.Abs(beta) < MATE_BOUND && eval >= beta + rfpMargin)
             {
@@ -100,12 +100,12 @@ namespace FispurEngine
                                                          : ((board.BlackPiecesBitboard ^ board.GetPieceBitboard(PieceType.Pawn, false) ^ board.GetPieceBitboard(PieceType.King, false)) == 0);
                 if (!isPawnEndgame)
                 {
-                    int reduction = NMPReductionB + depthLeft / NMPReductionDiv + Math.Min((eval - beta) / NMPEvalDiv, 3);
+                    int reduction = NMPReductionB + depthLeft / NMPReductionDiv + Math.Min((eval - beta) * ONE_PLY / NMPEvalDiv, 3 * ONE_PLY);
 
                     board.ForceSkipTurn();
                     ppEntry.pieceMoved = 0;
                     ppEntry.targetSquare = 1;
-                    int score = -alphaBeta(board, ply + 1, depthLeft - reduction - 1, -beta, -beta + 1, canNull: false, cutNode: !cutNode);
+                    int score = -alphaBeta(board, ply + 1, depthLeft - reduction - ONE_PLY, -beta, -beta + 1, canNull: false, cutNode: !cutNode);
                     board.UndoSkipTurn();
 
                     if (stopSearch)
@@ -123,9 +123,9 @@ namespace FispurEngine
 
             if (!inSE && ply <= rootDepth * 2 && hasEntry && ply > SEMinPly && depthLeft >= SEMinDepth && ttEntry.depth >= depthLeft - SEDepthMargin && !ttEntry.move.IsNull && (ttEntry.bound == Bound.BOUND_LOWER || ttEntry.bound == Bound.BOUND_EXACT) && Math.Abs(ttScore) < MATE_BOUND)
             {
-                int sBeta = ttScore - depthLeft * SEMargin / 16;
+                int sBeta = ttScore - depthLeft * SEMargin / (16 * ONE_PLY);
                 ppStack[ply].excludedMove = ttEntry.move.RawValue;
-                int score = alphaBeta(board, ply, (depthLeft - 1) / 2, sBeta - 1, sBeta, canNull, cutNode);
+                int score = alphaBeta(board, ply, (depthLeft - ONE_PLY) / 2, sBeta - 1, sBeta, canNull, cutNode);
                 ppStack[ply].excludedMove = 0;
 
                 if (stopSearch)
@@ -137,11 +137,11 @@ namespace FispurEngine
                 {
                     if (!pvNode && score < sBeta - SEDMargin)
                     {
-                        seExtension = 2;
+                        seExtension = 2 * ONE_PLY;
                     }
                     else
                     {
-                        seExtension = 1;
+                        seExtension = ONE_PLY;
                     }
                 }
                 else if (score >= beta)
@@ -150,7 +150,7 @@ namespace FispurEngine
                 }
                 else if (ttScore >= beta)
                 {
-                    seExtension = -1;
+                    seExtension = -ONE_PLY;
                 }
             }
 
@@ -175,7 +175,7 @@ namespace FispurEngine
 
             Move bestMove = Move.NullMove;
             int bestScore = -INFINITY;
-            int fpMargin = FpMargin * depthLeft;
+            int fpMargin = FpMargin * depthLeft / ONE_PLY;
 
             for (int i = 0; i < moveCount; i++)
             {
@@ -193,7 +193,7 @@ namespace FispurEngine
                 makeMove(board, move, ply);
 
                 int score;
-                int baseSearchDepth = depthLeft - 1 + (move.Equals(ttEntry.move) ? seExtension : 0);
+                int baseSearchDepth = depthLeft - ONE_PLY + (move.Equals(ttEntry.move) ? seExtension : 0);
 
                 if (searchedCount == 0)
                 {
@@ -204,7 +204,7 @@ namespace FispurEngine
                     int reduction = 0;
                     if (depthLeft >= LmrMinDepth && searchedCount >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = lmrReduction(depthLeft, searchedCount) * 1024 - quietHist * 1024 / HHLMRDiv;
+                        reduction = lmrReduction(depthLeft, searchedCount) - quietHist * ONE_PLY / HHLMRDiv;
                         if (cutNode)
                         {
                             reduction += CutNodeReduction;
@@ -217,7 +217,7 @@ namespace FispurEngine
                         {
                             reduction += TTCaptReduction;
                         }
-                        reduction = Math.Clamp((reduction + (improving ? 0 : 1024)) / 1024, 0, depthLeft);
+                        reduction = Math.Clamp(reduction + (improving ? 0 : ONE_PLY), 0, depthLeft);
                     }
                     score = -alphaBeta(board, ply + 1, baseSearchDepth - reduction, -(alpha + 1), -alpha, cutNode: pvNode || !cutNode);
                     if (reduction > 0 && score > alpha)
@@ -244,9 +244,9 @@ namespace FispurEngine
                 {
                     if (!inSE)
                     {
-                        int hhBonus = Math.Min(MaxHistBonus, HistBonusMult * depthLeft + HistBonusBase);
-                        int contBonus = Math.Min(MaxCHistBonus, CHistBonusMult * depthLeft + CHistBonusBase);
-                        int capBonus = Math.Min(CaptureMaxHistBonus, CaptureHistBonusMult * depthLeft + CaptureHistBonusBase);
+                        int hhBonus = Math.Min(MaxHistBonus, HistBonusMult * depthLeft / ONE_PLY + HistBonusBase);
+                        int contBonus = Math.Min(MaxCHistBonus, CHistBonusMult * depthLeft / ONE_PLY + CHistBonusBase);
+                        int capBonus = Math.Min(CaptureMaxHistBonus, CaptureHistBonusMult * depthLeft / ONE_PLY + CaptureHistBonusBase);
 
                         if (!move.IsCapture)
                         {
@@ -336,21 +336,21 @@ namespace FispurEngine
                     return true;
                 }
 
-                if (depthLeft <= LMPMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -MATE_BOUND && searchedCount >= (LMPBase + (depthLeft * depthLeft)) / (improving ? 1 : 2))
+                if (depthLeft <= LMPMaxDepth && !move.IsCapture && !move.IsPromotion && bestScore > -MATE_BOUND && searchedCount >= (LMPBase + (int)((long)depthLeft * depthLeft / ((long)ONE_PLY * ONE_PLY))) / (improving ? 1 : 2))
                 {
                     return true;
                 }
 
                 if (depthLeft <= SEEPMaxDepth && searchedCount > 0)
                 {
-                    if (move.IsCapture && !see(board, move, Math.Min(0, -SEEPCaptureThreshold * depthLeft - captureHist[getCaptureHistIndex(sideToMove, move)] * SEEPCaptureHistMult / 32_768)))
+                    if (move.IsCapture && !see(board, move, Math.Min(0, -SEEPCaptureThreshold * depthLeft / ONE_PLY - captureHist[getCaptureHistIndex(sideToMove, move)] * SEEPCaptureHistMult / 32_768)))
                     {
                         return true;
                     }
                     if (!move.IsCapture)
                     {
                         int seepHist = quietHistory(board, move, sideToMove, prevPiece, prevTo);
-                        if (!see(board, move, Math.Min(0, -SEEPThreshold * depthLeft - seepHist * SEEPHistMult / 32_768)))
+                        if (!see(board, move, Math.Min(0, -SEEPThreshold * depthLeft / ONE_PLY - seepHist * SEEPHistMult / 32_768)))
                         {
                             return true;
                         }
@@ -521,8 +521,11 @@ namespace FispurEngine
             board.UndoMove(move);
         }
 
-        const int LMR_DEPTHS = MAX_DEPTH, LMR_MOVES = 218;
-        static int[] lmrTable = new int[LMR_DEPTHS * LMR_MOVES]; // [depth][moves]
+        const int LMR_DEPTH_SHIFT = 4;
+        const int LMR_DEPTHS = (MAX_DEPTH * ONE_PLY) >> LMR_DEPTH_SHIFT, LMR_MOVES = 218;
+        static readonly double[] lmrLnDepth = new double[LMR_DEPTHS];
+        static readonly double[] lmrLnMoves = new double[LMR_MOVES];
+        static double lmrBase, lmrScale;
         static int lmrBuiltBase = int.MinValue, lmrBuiltDiv = int.MinValue;
 
         static void ensureLmrTable()
@@ -534,22 +537,28 @@ namespace FispurEngine
 
             for (int d = 1; d < LMR_DEPTHS; d++)
             {
-                for (int m = 1; m < LMR_MOVES; m++)
-                {
-                    lmrTable[d * LMR_MOVES + m] = (int)(LmrBase / 100.0 + Math.Log(d) * Math.Log(m) / (LmrDivisor / 100.0));
-                }
+                lmrLnDepth[d] = Math.Log(d / (double)(ONE_PLY >> LMR_DEPTH_SHIFT));
             }
+            for (int m = 1; m < LMR_MOVES; m++)
+            {
+                lmrLnMoves[m] = Math.Log(m);
+            }
+
+            lmrBase = ONE_PLY * (LmrBase / 100.0);
+            lmrScale = ONE_PLY / (LmrDivisor / 100.0);
 
             lmrBuiltBase = LmrBase;
             lmrBuiltDiv = LmrDivisor;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int lmrReduction(int depth, int moves)
+        static int lmrReduction(int depthLeft, int moves)
         {
-            return depth < LMR_DEPTHS && moves < LMR_MOVES
-                        ? lmrTable[depth * LMR_MOVES + moves]
-                        : (int)(LmrBase / 100.0 + Math.Log(depth) * Math.Log(moves) / (LmrDivisor / 100.0));
+            int d = depthLeft >> LMR_DEPTH_SHIFT;
+            double lnDepth = d < LMR_DEPTHS ? lmrLnDepth[d] : Math.Log(depthLeft / (double)ONE_PLY);
+            double lnMoves = moves < LMR_MOVES ? lmrLnMoves[moves] : Math.Log(moves);
+
+            return (int)(lmrBase + lnDepth * lnMoves * lmrScale);
         }
     }
 }
