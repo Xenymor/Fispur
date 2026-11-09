@@ -85,7 +85,24 @@ namespace FispurEngine
 
             ppEntry.staticEval = inCheck ? -INFINITY : staticEval;
 
-            bool improving = !inCheck && ply >= 2 ? staticEval > tpPrevPPE.staticEval : false;
+            bool improving;
+
+            if (ply >= 2 && !inCheck)
+            {
+                if (ply >= 4 && tpPrevPPE.staticEval == -INFINITY)
+                {
+                    var prevPrevPPE = ppStack[ply - 4];
+                    improving = staticEval > prevPrevPPE.staticEval;
+                }
+                else
+                {
+                    improving = staticEval > tpPrevPPE.staticEval;
+                }
+            }
+            else
+            {
+                improving = false;
+            }
 
             int rfpMargin = RfpMargin * depthLeft - (improving ? RFPImpMargin : 0);
 
