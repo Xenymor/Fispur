@@ -20,9 +20,26 @@ namespace FispurEngine
             public uint key; //first 32 bit
             public int score;
             public Move move;
-            public byte depth;
-            public Bound bound;
+            public ushort depthBound;
             public short staticEval; // NNUE eval of this position, NO_EVAL if unknown
+
+            public readonly Bound bound
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => (Bound)(depthBound & 3);
+            }
+
+            public readonly int depth
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => (depthBound >> 2) << TT_DEPTH_SHIFT;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static ushort pack(int depthLeft, Bound bound)
+            {
+                return (ushort)((Math.Clamp(depthLeft, 0, MAX_DEPTH * ONE_PLY - 1) >> TT_DEPTH_SHIFT) << 2 | (int)bound);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -60,9 +77,9 @@ namespace FispurEngine
         {
             ref TTEntry entry = ref transpositionTable[zobrist & ttMask];
             uint key = (uint)(zobrist >> 32);
-            byte depth = (byte)Math.Clamp(depthLeft, 0, 255);
+            ushort depthBound = TTEntry.pack(depthLeft, bound);
 
-            if (entry.bound != Bound.BOUND_NONE && entry.key == key && depth < entry.depth)
+            if (entry.bound != Bound.BOUND_NONE && entry.key == key && (depthBound >> 2) < (entry.depthBound >> 2))
             {
                 return;
             }
@@ -70,8 +87,7 @@ namespace FispurEngine
             entry.key = key;
             entry.score = scoreToTT(score, ply);
             entry.move = move;
-            entry.depth = depth;
-            entry.bound = bound;
+            entry.depthBound = depthBound;
             entry.staticEval = staticEval > short.MinValue && staticEval <= short.MaxValue ? (short)staticEval : NO_EVAL;
         }
         private static int scoreToTT(int score, int ply)

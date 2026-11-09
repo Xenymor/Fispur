@@ -10,7 +10,7 @@ namespace FispurEngine
     {
         public static class Tunables
         {
-            [Tunable(    2,     1,    16, poisoned = true)]
+            [Tunable( 2048,  1024, 16384)]
             public static readonly int LmrMinDepth = Tuning.resolve();
 
             [Tunable(    3,     1,    16, poisoned = true)]
@@ -33,7 +33,7 @@ namespace FispurEngine
             public static readonly int TTCaptReduction = Tuning.resolve();
 
 
-            [Tunable(    9,     1,    16, poisoned = true)]
+            [Tunable( 9216,  1024, 16384)]
             public static readonly int RfpMaxDepth = Tuning.resolve();
 
             [Tunable(  107,    10,   500)]
@@ -43,7 +43,7 @@ namespace FispurEngine
             public static readonly int RFPImpMargin = Tuning.resolve();
 
 
-            [Tunable(    7,     1,    16, poisoned = true)]
+            [Tunable( 7168,  1024, 16384)]
             public static readonly int FpMaxDepth = Tuning.resolve();
 
             [Tunable(  211,    10,   500)]
@@ -95,10 +95,10 @@ namespace FispurEngine
             public static readonly int CHistBonusBase = Tuning.resolve();
 
 
-            [Tunable(    3,     1,     8, poisoned = true)]
+            [Tunable( 3072,  1024,  8192)]
             public static readonly int NMPMinDepth = Tuning.resolve();
 
-            [Tunable(    3,     1,     6, poisoned = true)]
+            [Tunable( 3072,  1024,  6144)]
             public static readonly int NMPReductionB = Tuning.resolve();
 
             [Tunable(    4,     2,    10, poisoned = true)]
@@ -114,7 +114,7 @@ namespace FispurEngine
             public static readonly int ASPWindowReset = Tuning.resolve();
 
 
-            [Tunable(    4,     1,     8, poisoned = true)]
+            [Tunable( 4096,  1024,  8192)]
             public static readonly int SEEPMaxDepth = Tuning.resolve();
 
             [Tunable(   51,     0,  1415)]
@@ -145,20 +145,20 @@ namespace FispurEngine
             public static readonly int[] pieceVals = [0, 283, KnightValue, BishopValue, RookValue, QueenValue, 1_000_000];
 
 
-            [Tunable(    4,     1,     8, poisoned = true)]
+            [Tunable( 4096,  1024,  8192)]
             public static readonly int LMPMaxDepth = Tuning.resolve();
 
             [Tunable(    9,     1,    20, poisoned = true)]
             public static readonly int LMPBase = Tuning.resolve();
 
 
-            [Tunable(    4,     0,     8, poisoned = true)]
+            [Tunable( 4096,     0,  8192)]
             public static readonly int MinIIRDepth = Tuning.resolve();
 
 
             public static readonly int SEMinPly = 0;
 
-            [Tunable(    7,     4,    12, poisoned = true)]
+            [Tunable( 7168,  4096, 12288)]
             public static readonly int SEMinDepth = Tuning.resolve();
 
             [Tunable(   24,     8,    56)]
@@ -167,7 +167,7 @@ namespace FispurEngine
             [Tunable(   17,     0,    60)]
             public static readonly int SEDMargin = Tuning.resolve();
 
-            [Tunable(    3,     1,     6, poisoned = true)]
+            [Tunable( 3072,  1024,  6144)]
             public static readonly int SEDepthMargin = Tuning.resolve();
 
 
