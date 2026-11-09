@@ -1,5 +1,6 @@
 ﻿using FispurEngine.API;
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace FispurEngine
@@ -17,6 +18,10 @@ namespace FispurEngine
         public const int MAX_HASH_MB = 1024;
 
         public const int MAX_DEPTH = 256;
+
+        public const int ONE_PLY = 1024;
+
+        const int TT_DEPTH_SHIFT = 4;
 
         const short NO_EVAL = short.MinValue;
 
