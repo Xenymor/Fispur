@@ -22,6 +22,8 @@ namespace FispurEngine
 
         public static int MoveOverhead = 30;
 
+        readonly NNUE nnue;
+
         public string GetAuthor()
         {
             return "Xenymor";
@@ -35,6 +37,7 @@ namespace FispurEngine
         public Fispur()
         {
             SetHashSize(DEFAULT_HASH_MB);
+            nnue = new NNUE();
         }
 
         private static string ScoreToUCI(int score)

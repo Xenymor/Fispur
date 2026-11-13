@@ -44,7 +44,7 @@ namespace FispurEngine
 
             if (ply >= MAX_DEPTH - 1)
             {
-                return NNUE.evaluate(board) + corrHistEntry / CorrHistGrain;
+                return nnue.evaluate(board) + corrHistEntry / CorrHistGrain;
             }
 
             int ogAlpha = alpha;
@@ -375,7 +375,7 @@ namespace FispurEngine
 
             if (ply >= MAX_DEPTH - 1)
             {
-                return NNUE.evaluate(board) + corrHistEntry / CorrHistGrain;
+                return nnue.evaluate(board) + corrHistEntry / CorrHistGrain;
             }
 
             bool pvNode = beta - alpha > 1;
@@ -508,16 +508,16 @@ namespace FispurEngine
         {
             board.MakeMove(move);
             prefetchTT(board.ZobristKey);
-            NNUE.makeMove(board, move, !board.IsWhiteToMove);
+            nnue.makeMove(board, move, !board.IsWhiteToMove);
 
             ppStack[ply].pieceMoved = (byte)move.MovePieceType;
             ppStack[ply].targetSquare = (byte)move.TargetSquare.Index;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void undoMove(Board board, Move move)
+        void undoMove(Board board, Move move)
         {
-            NNUE.undoMove();
+            nnue.undoMove();
             board.UndoMove(move);
         }
 
