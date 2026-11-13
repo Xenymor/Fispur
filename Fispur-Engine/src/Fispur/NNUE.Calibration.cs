@@ -6,7 +6,7 @@ using System.Reflection;
 
 namespace FispurEngine
 {
-    public static unsafe partial class NNUE
+    public partial class NNUE
     {
         public const int EVAL_SCALE_ONE = 1024;
         const int MIN_EVAL_SCALE = EVAL_SCALE_ONE / 4;
@@ -21,7 +21,7 @@ namespace FispurEngine
 
         public readonly record struct CalibrationResult(int positions, double fittedScale, double correlation, double rmse);
 
-        static CalibrationResult calibrate()
+        CalibrationResult calibrate()
         {
             using Stream? s = Assembly.GetExecutingAssembly().GetManifestResourceStream(CALIBRATION_FILE);
             if (s == null)
@@ -66,20 +66,21 @@ namespace FispurEngine
             return new CalibrationResult(n, scale, correlation, rmse);
         }
 
-        static double rawEval(Board board)
+        double rawEval(Board board)
         {
             updateAccumulators(board);
             return output(board) * (double)SCALE / QAB;
         }
 
-        public static double exactEval(Board board)
+        public double exactEval(Board board)
         {
             return rawEval(board) * evalScale / EVAL_SCALE_ONE;
         }
 
-        public static int outputBucket(Board board)
+        public int outputBucket(Board board)
         {
-            return (int)((ulong.PopCount(board.AllPiecesBitboard) - 2) / 4);
+            // as bullet's MaterialCount: 32 / buckets (rounded up) pieces per bucket
+            return (int)((ulong.PopCount(board.AllPiecesBitboard) - 2) / (ulong)bucketDivisor);
         }
     }
 }

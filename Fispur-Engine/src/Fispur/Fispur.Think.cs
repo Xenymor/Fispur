@@ -47,11 +47,11 @@ namespace FispurEngine
 
             long softLimit = calculateTimeLimits(timer);
 
-            NNUE.updateAccumulators(board);
+            nnue.updateAccumulators(board);
 
             if (moves.Length == 1 && !timer.isInfinite)
             {
-                return (bestMove, NNUE.evaluate(board));
+                return (bestMove, nnue.evaluate(board));
             }
 
             int currMaxDepth = maxDepth < 0 ? MAX_DEPTH : Math.Min(MAX_DEPTH, maxDepth);

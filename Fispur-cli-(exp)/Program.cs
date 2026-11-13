@@ -8,7 +8,7 @@ internal class Program
     {
         if (args.Length > 0 && args[0].Equals("evalscale", StringComparison.OrdinalIgnoreCase))
         {
-            EvalScale.Run(args[1..]);
+            new EvalScale().Run(args[1..]);
             return;
         }
 
@@ -120,7 +120,7 @@ internal class Program
 
                 case "evalscale":
                     StopAndWait();
-                    EvalScale.Run(tokens[1..]);
+                    new EvalScale().Run(tokens[1..]);
                     break;
 
                 case "quit":
