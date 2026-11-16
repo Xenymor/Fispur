@@ -179,7 +179,12 @@ namespace FispurEngine
 
             [Tunable( 5461,     0, 50000)]
             public static readonly int CorrHistMax = Tuning.resolve();
-
+            [Tunable(  341,     0,  1024)]
+            public static readonly int PawnCorrHistWeight = Tuning.resolve();
+            [Tunable(  341,     0,  1024)]
+            public static readonly int NonPawnCorrHistSelfWeight = Tuning.resolve();
+            [Tunable(  341,     0,  1024)]
+            public static readonly int NonPawnCorrHistOppWeight = Tuning.resolve();
 
             [Tunable(10262,   512, 49152)]
             public static readonly int HHLMRDiv = Tuning.resolve();

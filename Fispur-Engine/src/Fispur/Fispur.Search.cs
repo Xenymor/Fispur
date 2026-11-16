@@ -278,9 +278,9 @@ namespace FispurEngine
 
                         if (!inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > staticEval)
                         {
-                            updateCorrHist(ref pawnCorrHistEntry, score, rawEval, depthLeft);
-                            updateCorrHist(ref nonPawnCorrHistEntrySelf, score, rawEval, depthLeft);
-                            updateCorrHist(ref nonPawnCorrHistEntryOpp, score, rawEval, depthLeft);
+                            updateCorrHist(ref pawnCorrHistEntry, score, rawEval, depthLeft, PawnCorrHistWeight);
+                            updateCorrHist(ref nonPawnCorrHistEntrySelf, score, rawEval, depthLeft, NonPawnCorrHistSelfWeight);
+                            updateCorrHist(ref nonPawnCorrHistEntryOpp, score, rawEval, depthLeft, NonPawnCorrHistOppWeight);
                         }
                     }
 
@@ -318,9 +318,9 @@ namespace FispurEngine
                 if (!inCheck && !bestMove.IsCapture && !bestMove.IsPromotion && Math.Abs(bestScore) < MATE_BOUND
                     && ((bound == Bound.BOUND_UPPER && bestScore < staticEval) || bound == Bound.BOUND_EXACT))
                 {
-                    updateCorrHist(ref pawnCorrHistEntry, bestScore, rawEval, depthLeft);
-                    updateCorrHist(ref nonPawnCorrHistEntrySelf, bestScore, rawEval, depthLeft);
-                    updateCorrHist(ref nonPawnCorrHistEntryOpp, bestScore, rawEval, depthLeft);
+                    updateCorrHist(ref pawnCorrHistEntry, bestScore, rawEval, depthLeft, PawnCorrHistWeight);
+                    updateCorrHist(ref nonPawnCorrHistEntrySelf, bestScore, rawEval, depthLeft, NonPawnCorrHistSelfWeight);
+                    updateCorrHist(ref nonPawnCorrHistEntryOpp, bestScore, rawEval, depthLeft, NonPawnCorrHistOppWeight);
                 }
             }
 

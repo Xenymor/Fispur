@@ -90,9 +90,9 @@ namespace FispurEngine
             return ((sideToMove * 7 + (int)move.MovePieceType) * 64 + move.TargetSquare.Index) * 7 + (int)move.CapturePieceType;
         }
 
-        void updateCorrHist(ref int entry, int score, int rawEval, int depth)
+        void updateCorrHist(ref int entry, int score, int rawEval, int depth, int weight)
         {
-            int diff = (score - rawEval) * CorrHistGrain;
+            int diff = (int)((long)(score - rawEval) * CorrHistGrain * weight / 1024);
             int w = Math.Min(depth + 1, 16);
             entry = (entry * (CorrHistScale - w) + diff * w) / CorrHistScale;
             entry = Math.Clamp(entry, -CorrHistMax, CorrHistMax);
