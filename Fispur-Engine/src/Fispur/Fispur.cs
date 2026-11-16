@@ -85,7 +85,8 @@ namespace FispurEngine
             Array.Clear(transpositionTable);
             Array.Clear(historyHeuristic);
             Array.Clear(killers);
-            Array.Clear(correctionHist);
+            Array.Clear(pawnCorrectionHist);
+            Array.Clear(nonPawnCorrectionHist);
             Array.Clear(continuationHist);
             Array.Clear(captureHist);
             eval = 0;

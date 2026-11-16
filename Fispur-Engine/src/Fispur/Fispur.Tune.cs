@@ -177,7 +177,7 @@ namespace FispurEngine
             [Tunable(  256,    16,   500)]
             public static readonly int CorrHistScale = Tuning.resolve();
 
-            [Tunable(16384,     0, 50000)]
+            [Tunable( 5461,     0, 50000)]
             public static readonly int CorrHistMax = Tuning.resolve();
 
 

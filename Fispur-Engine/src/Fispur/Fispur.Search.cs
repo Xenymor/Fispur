@@ -36,7 +36,9 @@ namespace FispurEngine
                 return 0;
             }
 
-            ref int corrHistEntry = ref getCorrHistEntry(board);
+            ref int pawnCorrHistEntry = ref getPawnCorrHistEntry(board);
+            ref int nonPawnCorrHistEntryOpp = ref getNonPawnCorrHistEntry(board, !board.IsWhiteToMove);
+            ref int nonPawnCorrHistEntrySelf = ref getNonPawnCorrHistEntry(board, board.IsWhiteToMove);
 
             ref var ppEntry = ref ppStack[ply];
             var prevPPE = ply > 0 ? ppStack[ply - 1] : default;
@@ -44,7 +46,7 @@ namespace FispurEngine
 
             if (ply >= MAX_DEPTH - 1)
             {
-                return NNUE.evaluate(board) + corrHistEntry / CorrHistGrain;
+                return NNUE.evaluate(board) + (pawnCorrHistEntry + nonPawnCorrHistEntryOpp + nonPawnCorrHistEntrySelf) / CorrHistGrain;
             }
 
             int ogAlpha = alpha;
@@ -72,7 +74,7 @@ namespace FispurEngine
             }
 
             int rawEval = getRawEval(board, inCheck, hasEntry, in ttEntry);
-            int staticEval = correctEval(rawEval, corrHistEntry);
+            int staticEval = correctEval(rawEval, pawnCorrHistEntry, nonPawnCorrHistEntryOpp, nonPawnCorrHistEntrySelf);
 
             int eval = staticEval;
             if (hasEntry && Math.Abs(ttScore) < MATE_BOUND)
@@ -276,7 +278,9 @@ namespace FispurEngine
 
                         if (!inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > staticEval)
                         {
-                            updateCorrHist(ref corrHistEntry, score, rawEval, depthLeft);
+                            updateCorrHist(ref pawnCorrHistEntry, score, rawEval, depthLeft);
+                            updateCorrHist(ref nonPawnCorrHistEntrySelf, score, rawEval, depthLeft);
+                            updateCorrHist(ref nonPawnCorrHistEntryOpp, score, rawEval, depthLeft);
                         }
                     }
 
@@ -314,7 +318,9 @@ namespace FispurEngine
                 if (!inCheck && !bestMove.IsCapture && !bestMove.IsPromotion && Math.Abs(bestScore) < MATE_BOUND
                     && ((bound == Bound.BOUND_UPPER && bestScore < staticEval) || bound == Bound.BOUND_EXACT))
                 {
-                    updateCorrHist(ref corrHistEntry, bestScore, rawEval, depthLeft);
+                    updateCorrHist(ref pawnCorrHistEntry, bestScore, rawEval, depthLeft);
+                    updateCorrHist(ref nonPawnCorrHistEntrySelf, bestScore, rawEval, depthLeft);
+                    updateCorrHist(ref nonPawnCorrHistEntryOpp, bestScore, rawEval, depthLeft);
                 }
             }
 
@@ -369,13 +375,15 @@ namespace FispurEngine
                 return 0;
             }
 
-            ref int corrHistEntry = ref getCorrHistEntry(board);
+            ref int pawnCorrHistEntry = ref getPawnCorrHistEntry(board);
+            ref int nonPawnCorrHistEntryOpp = ref getNonPawnCorrHistEntry(board, !board.IsWhiteToMove);
+            ref int nonPawnCorrHistEntrySelf = ref getNonPawnCorrHistEntry(board, board.IsWhiteToMove);
 
             var prevPPE = ppStack[ply - 1];
 
             if (ply >= MAX_DEPTH - 1)
             {
-                return NNUE.evaluate(board) + corrHistEntry / CorrHistGrain;
+                return NNUE.evaluate(board) + (pawnCorrHistEntry + nonPawnCorrHistEntrySelf + nonPawnCorrHistEntryOpp) / CorrHistGrain;
             }
 
             bool pvNode = beta - alpha > 1;
@@ -393,7 +401,7 @@ namespace FispurEngine
                 return ttScore;
             }
 
-            int eval = correctEval(getRawEval(board, inCheck, hasEntry, in ttEntry), corrHistEntry);
+            int eval = correctEval(getRawEval(board, inCheck, hasEntry, in ttEntry), pawnCorrHistEntry, nonPawnCorrHistEntryOpp, nonPawnCorrHistEntrySelf);
 
             if (!inCheck)
             {

@@ -10,7 +10,8 @@ namespace FispurEngine
         int[] historyHeuristic = new int[2 * 64 * 64];
         private const int CORR_HIST_EXP = 14;
         private const int CORR_HIST_ENTRIES = 1 << CORR_HIST_EXP;
-        int[] correctionHist = new int[2 * CORR_HIST_ENTRIES]; // [stm][pawnKey]
+        int[] pawnCorrectionHist = new int[2 * CORR_HIST_ENTRIES]; // [stm][pawnKey]
+        int[] nonPawnCorrectionHist = new int[2 * CORR_HIST_ENTRIES]; // [stm][nonPawnKey]
 
         int[] continuationHist = new int[2 * 7 * 64 * 7 * 64]; // [stm][prevPiece][prevTo][piece][to]
         int[] captureHist = new int[2 * 7 * 64 * 7]; // [stm][movingPiece][to][captured]
@@ -22,18 +23,39 @@ namespace FispurEngine
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ref int getCorrHistEntry(Board board)
+        ref int getPawnCorrHistEntry(Board board)
         {
-            ulong x = board.GetPieceBitboard(PieceType.Pawn, true) * 0x9E3779B97F4A7C15UL ^ board.GetPieceBitboard(PieceType.Pawn, false) * 0xC2B2AE3D27D4EB4FUL;
-            uint idx = (uint)(x >> (64 - CORR_HIST_EXP));
+            ulong key = board.GetPieceBitboard(PieceType.Pawn, true) * 0x9E3779B97F4A7C15UL ^ board.GetPieceBitboard(PieceType.Pawn, false) * 0xC2B2AE3D27D4EB4FUL;
+            uint index = (uint)(key >> (64 - CORR_HIST_EXP));
 
-            return ref correctionHist[(board.IsWhiteToMove ? 0 : CORR_HIST_ENTRIES) + (int)idx];
+            return ref pawnCorrectionHist[(board.IsWhiteToMove ? 0 : CORR_HIST_ENTRIES) + (int)index];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int correctEval(int rawEval, int corrHistEntry)
+        ref int getNonPawnCorrHistEntry(Board board, bool white)
         {
-            return rawEval + (rawEval > -INFINITY ? corrHistEntry / CorrHistGrain : 0);
+            ulong key = 0;
+
+            for (PieceType p = PieceType.Knight; p <= PieceType.King; p++)
+            {
+                ulong pieces = board.GetPieceBitboard(p, white);
+
+                while (pieces != 0)
+                {
+                    int square = BitboardHelper.ClearAndGetIndexOfLSB(ref pieces);
+                    key ^= Chess.Zobrist.PieceKey(Chess.PieceHelper.MakePiece((int)p, white), square);
+                }
+            }
+
+            uint index = (uint)(key >> (64 - CORR_HIST_EXP));
+
+            return ref nonPawnCorrectionHist[(board.IsWhiteToMove ? 0 : CORR_HIST_ENTRIES) + index];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static int correctEval(int rawEval, int pawnCorrHistEntry, int nonPawnCorrHistEntryOpp, int nonPawnCorrHistEntrySelf)
+        {
+            return rawEval + (rawEval > -INFINITY ? (pawnCorrHistEntry + nonPawnCorrHistEntrySelf + nonPawnCorrHistEntryOpp) / CorrHistGrain : 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
