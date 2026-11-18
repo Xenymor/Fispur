@@ -164,6 +164,7 @@ internal class Program
                     int time = -1;
                     int depth = -1;
                     int nodes = -1;
+                    int movesToGo = -1;
                     bool infinite = false;
 
                     for (int i = 1; i < tokens.Length; i++)
@@ -222,6 +223,12 @@ internal class Program
                                     nodes = int.Parse(tokens[i + 1]);
                                 }
                                 break;
+                            case "movestogo":
+                                if (hasValue)
+                                {
+                                    movesToGo = int.Parse(tokens[i + 1]);
+                                }
+                                break;
                         }
                     }
 
@@ -230,7 +237,7 @@ internal class Program
                     int oppRemaining = whiteToMove ? btime : wtime;
                     int increment = time != -1 ? 0 : (whiteToMove ? winc : binc);
 
-                    var timer = new FispurEngine.API.Timer(remaining, oppRemaining, remaining, increment, time, nodes, infinite || depth != -1);
+                    var timer = new FispurEngine.API.Timer(remaining, oppRemaining, remaining, increment, time, nodes, infinite || depth != -1, movesToGo);
 
                     StartSearch(board, timer, depth);
 
