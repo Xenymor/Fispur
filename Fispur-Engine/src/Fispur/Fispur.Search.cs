@@ -100,7 +100,7 @@ namespace FispurEngine
                                                          : ((board.BlackPiecesBitboard ^ board.GetPieceBitboard(PieceType.Pawn, false) ^ board.GetPieceBitboard(PieceType.King, false)) == 0);
                 if (!isPawnEndgame)
                 {
-                    int reduction = NMPReductionB + depthLeft / NMPReductionDiv + Math.Min((eval - beta) * ONE_PLY / NMPEvalDiv, 3 * ONE_PLY);
+                    int reduction = NMPReductionB + depthLeft * NMPReductionMult / 1024 + (int)Math.Min((long)(eval - beta) * NMPEvalMult / 1024, 3 * ONE_PLY);
 
                     board.ForceSkipTurn();
                     ppEntry.pieceMoved = 0;
@@ -204,7 +204,7 @@ namespace FispurEngine
                     int reduction = 0;
                     if (depthLeft >= LmrMinDepth && searchedCount >= LmrMinMoves && !inCheck && !move.IsCapture && !move.IsPromotion)
                     {
-                        reduction = lmrReduction(depthLeft, searchedCount) - quietHist * ONE_PLY / HHLMRDiv;
+                        reduction = lmrReduction(depthLeft, searchedCount) - quietHist * HHLMRMult / 1024;
                         if (cutNode)
                         {
                             reduction += CutNodeReduction;
@@ -526,11 +526,11 @@ namespace FispurEngine
         static readonly double[] lmrLnDepth = new double[LMR_DEPTHS];
         static readonly double[] lmrLnMoves = new double[LMR_MOVES];
         static double lmrBase, lmrScale;
-        static int lmrBuiltBase = int.MinValue, lmrBuiltDiv = int.MinValue;
+        static int lmrBuiltBase = int.MinValue, lmrBuiltMult = int.MinValue;
 
         static void ensureLmrTable()
         {
-            if (lmrBuiltBase == LmrBase && lmrBuiltDiv == LmrDivisor)
+            if (lmrBuiltBase == LmrBase && lmrBuiltMult == LmrMult)
             {
                 return;
             }
@@ -545,10 +545,10 @@ namespace FispurEngine
             }
 
             lmrBase = ONE_PLY * (LmrBase / 100.0);
-            lmrScale = ONE_PLY / (LmrDivisor / 100.0);
+            lmrScale = ONE_PLY * LmrMult / 1024.0;
 
             lmrBuiltBase = LmrBase;
-            lmrBuiltDiv = LmrDivisor;
+            lmrBuiltMult = LmrMult;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -92,7 +92,7 @@ continuation history) > SEE-bad captures.
 (`Fispur.History.cs`).
 
 **Time management** (`Fispur.Think.cs`) — soft/hard limits derived from
-`remaining / TmBaseDiv + increment * TmIncPct`; the soft limit is scaled by the
+`remaining * TmBaseMult / 1024 + increment * TmIncPct` (with `movestogo`, at least `remaining / movestogo`); the soft limit is scaled by the
 best move's node fraction and best-move stability. `MoveOverhead` is subtracted
 from every budget. `go movetime` and `go depth` / `infinite` are handled separately.
 

@@ -19,8 +19,8 @@ namespace FispurEngine
             [Tunable(   72,     0,   400)]
             public static readonly int LmrBase = Tuning.resolve();
 
-            [Tunable(  309,    50,  1000)]
-            public static readonly int LmrDivisor = Tuning.resolve();
+            [Tunable(  331,   102,  2048)]
+            public static readonly int LmrMult = Tuning.resolve();
 
 
             [Tunable( 1927,     0,  4096)]
@@ -101,11 +101,11 @@ namespace FispurEngine
             [Tunable( 3072,  1024,  6144)]
             public static readonly int NMPReductionB = Tuning.resolve();
 
-            [Tunable(    4,     2,    10, poisoned = true)]
-            public static readonly int NMPReductionDiv = Tuning.resolve();
+            [Tunable(  256,   102,   512)]
+            public static readonly int NMPReductionMult = Tuning.resolve();
 
-            [Tunable(  200,    80,   400)]
-            public static readonly int NMPEvalDiv = Tuning.resolve();
+            [Tunable( 5243,  2621, 13107)]
+            public static readonly int NMPEvalMult = Tuning.resolve();
 
             [Tunable(   80,     5,   200)]
             public static readonly int ASPWindowDelta = Tuning.resolve();
@@ -181,12 +181,12 @@ namespace FispurEngine
             public static readonly int CorrHistMax = Tuning.resolve();
 
 
-            [Tunable(10262,   512, 49152)]
-            public static readonly int HHLMRDiv = Tuning.resolve();
+            [Tunable(  102,    21,  2048)]
+            public static readonly int HHLMRMult = Tuning.resolve();
 
 
-            [Tunable(   18,    10,    40)]
-            public static readonly int TmBaseDiv = Tuning.resolve();
+            [Tunable(   57,    26,   102)]
+            public static readonly int TmBaseMult = Tuning.resolve();
 
             [Tunable(   92,    25,   150)]
             public static readonly int TmIncPct = Tuning.resolve();
