@@ -61,7 +61,7 @@ namespace FispurEngine
             TTEntry ttEntry = probeTT(zobrist, out bool hasEntry);
             int ttScore = hasEntry ? scoreFromTT(ttEntry.score, ply) : -INFINITY;
 
-            if (!pvNode && !inSE && hasEntry && ply > 0 && ttEntry.depth >= depthLeft && isTTCutoff(ttEntry.bound, ttScore, alpha, beta))
+            if (!pvNode && !inSE && hasEntry && ply > 0 && ttEntry.depthBucketStored >= TTEntry.depthBucket(depthLeft) && isTTCutoff(ttEntry.bound, ttScore, alpha, beta))
             {
                 return ttScore;
             }
@@ -121,7 +121,7 @@ namespace FispurEngine
 
             int seExtension = 0;
 
-            if (!inSE && ply <= rootDepth * 2 && hasEntry && ply > SEMinPly && depthLeft >= SEMinDepth && ttEntry.depth >= depthLeft - SEDepthMargin && !ttEntry.move.IsNull && (ttEntry.bound == Bound.BOUND_LOWER || ttEntry.bound == Bound.BOUND_EXACT) && Math.Abs(ttScore) < MATE_BOUND)
+            if (!inSE && ply <= rootDepth * 2 && hasEntry && ply > SEMinPly && depthLeft >= SEMinDepth && ttEntry.depthBucketStored >= TTEntry.depthBucket(depthLeft - SEDepthMargin) && !ttEntry.move.IsNull && (ttEntry.bound == Bound.BOUND_LOWER || ttEntry.bound == Bound.BOUND_EXACT) && Math.Abs(ttScore) < MATE_BOUND)
             {
                 int sBeta = ttScore - depthLeft * SEMargin / (16 * ONE_PLY);
                 ppStack[ply].excludedMove = ttEntry.move.RawValue;
