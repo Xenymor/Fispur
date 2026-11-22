@@ -29,10 +29,19 @@ namespace FispurEngine
                 get => (Bound)(depthBound & 3);
             }
 
-            public readonly int depth
+            // Stored depth in buckets of 2^TT_DEPTH_SHIFT depth units (1/64 ply).
+            // Always compare against depthBucket(depthLeft), never against the raw depth:
+            // the stored depth is rounded down, so a raw comparison misses equal-depth entries.
+            public readonly int depthBucketStored
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => (depthBound >> 2) << TT_DEPTH_SHIFT;
+                get => depthBound >> 2;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static int depthBucket(int depthLeft)
+            {
+                return depthLeft >> TT_DEPTH_SHIFT;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -79,7 +88,7 @@ namespace FispurEngine
             uint key = (uint)(zobrist >> 32);
             ushort depthBound = TTEntry.pack(depthLeft, bound);
 
-            if (entry.bound != Bound.BOUND_NONE && entry.key == key && (depthBound >> 2) < (entry.depthBound >> 2))
+            if (entry.bound != Bound.BOUND_NONE && entry.key == key && (depthBound >> 2) < entry.depthBucketStored)
             {
                 return;
             }
