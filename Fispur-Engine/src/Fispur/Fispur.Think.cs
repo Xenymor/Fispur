@@ -47,11 +47,11 @@ namespace FispurEngine
 
             long softLimit = calculateTimeLimits(timer);
 
-            NNUE.updateAccumulators(board);
+            nnue.updateAccumulators(board);
 
             if (moves.Length == 1 && !timer.isInfinite)
             {
-                return (bestMove, NNUE.evaluate(board));
+                return (bestMove, nnue.evaluate(board));
             }
 
             int currMaxDepth = maxDepth < 0 ? MAX_DEPTH : Math.Min(MAX_DEPTH, maxDepth);
@@ -170,7 +170,7 @@ namespace FispurEngine
             else
             {
                 long remaining = Math.Max(1, timer.MillisecondsRemaining - MoveOverhead);
-                int movesToGo = TmBaseDiv;
+                int movesToGo = timer.movesToGo > 0 ? Math.Min(timer.movesToGo, TmBaseDiv) : TmBaseDiv;
                 long baseTime = remaining / movesToGo + timer.IncrementMilliseconds * TmIncPct / 100;
                 hardLimit = Math.Min(baseTime * TmHardPct / 100, remaining * 3 / 4);
                 softLimit = Math.Min(baseTime * TmSoftPct / 100, hardLimit);

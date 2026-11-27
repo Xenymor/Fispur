@@ -46,11 +46,11 @@ namespace FispurEngine
 
             if (ply >= MAX_DEPTH - 1)
             {
-                return correctEval(NNUE.evaluate(board), pawnCorrHistEntry, nonPawnCorrHistEntryOpp, nonPawnCorrHistEntrySelf);
+                return correctEval(nnue.evaluate(board), pawnCorrHistEntry, nonPawnCorrHistEntryOpp, nonPawnCorrHistEntrySelf);
             }
 
             int ogAlpha = alpha;
-            bool pvNode = beta - alpha > 1;
+            bool pvNode = beta > alpha + 1;
 
             if (ply > 0 && isDraw(board))
             {
@@ -87,7 +87,24 @@ namespace FispurEngine
 
             ppEntry.staticEval = inCheck ? -INFINITY : staticEval;
 
-            bool improving = !inCheck && ply >= 2 ? staticEval > tpPrevPPE.staticEval : false;
+            bool improving;
+
+            if (ply >= 2 && !inCheck)
+            {
+                if (ply >= 4 && tpPrevPPE.staticEval == -INFINITY)
+                {
+                    var prevPrevPPE = ppStack[ply - 4];
+                    improving = staticEval > prevPrevPPE.staticEval;
+                }
+                else
+                {
+                    improving = staticEval > tpPrevPPE.staticEval;
+                }
+            }
+            else
+            {
+                improving = false;
+            }
 
             int rfpMargin = RfpMargin * depthLeft - (improving ? RFPImpMargin : 0);
 
@@ -278,9 +295,9 @@ namespace FispurEngine
 
                         if (!inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > staticEval)
                         {
-                            updateCorrHist(ref pawnCorrHistEntry, score, eval, depthLeft);
-                            updateCorrHist(ref nonPawnCorrHistEntrySelf, score, eval, depthLeft);
-                            updateCorrHist(ref nonPawnCorrHistEntryOpp, score, eval, depthLeft);
+                            updateCorrHist(ref pawnCorrHistEntry, score, staticEval, depthLeft);
+                            updateCorrHist(ref nonPawnCorrHistEntrySelf, score, staticEval, depthLeft);
+                            updateCorrHist(ref nonPawnCorrHistEntryOpp, score, staticEval, depthLeft);
                         }
                     }
 
@@ -318,9 +335,9 @@ namespace FispurEngine
                 if (!inCheck && !bestMove.IsCapture && !bestMove.IsPromotion && Math.Abs(bestScore) < MATE_BOUND
                     && ((bound == Bound.BOUND_UPPER && bestScore < staticEval) || bound == Bound.BOUND_EXACT))
                 {
-                    updateCorrHist(ref pawnCorrHistEntry, bestScore, rawEval, depthLeft);
-                    updateCorrHist(ref nonPawnCorrHistEntrySelf, bestScore, rawEval, depthLeft);
-                    updateCorrHist(ref nonPawnCorrHistEntryOpp, bestScore, rawEval, depthLeft);
+                    updateCorrHist(ref pawnCorrHistEntry, bestScore, staticEval, depthLeft);
+                    updateCorrHist(ref nonPawnCorrHistEntrySelf, bestScore, staticEval, depthLeft);
+                    updateCorrHist(ref nonPawnCorrHistEntryOpp, bestScore, staticEval, depthLeft);
                 }
             }
 
@@ -380,20 +397,20 @@ namespace FispurEngine
             ref int nonPawnCorrHistEntrySelf = ref getNonPawnCorrHistEntry(board, board.IsWhiteToMove);
 
             var prevPPE = ppStack[ply - 1];
+            TTEntry ttEntry = probeTT(board.ZobristKey, out bool hasEntry);
 
             if (ply >= MAX_DEPTH - 1)
             {
-                return NNUE.evaluate(board) + (pawnCorrHistEntry + nonPawnCorrHistEntrySelf + nonPawnCorrHistEntryOpp) / CorrHistGrain;
+                return correctEval(getRawEval(board, inCheck, hasEntry, in ttEntry), pawnCorrHistEntry, nonPawnCorrHistEntryOpp, nonPawnCorrHistEntrySelf);
             }
 
-            bool pvNode = beta - alpha > 1;
+            bool pvNode = beta > alpha + 1;
 
             if (isDraw(board))
             {
                 return 0;
             }
 
-            TTEntry ttEntry = probeTT(board.ZobristKey, out bool hasEntry);
             int ttScore = hasEntry ? scoreFromTT(ttEntry.score, ply) : -INFINITY;
 
             if (!pvNode && hasEntry && isTTCutoff(ttEntry.bound, ttScore, alpha, beta))
@@ -516,16 +533,16 @@ namespace FispurEngine
         {
             board.MakeMove(move);
             prefetchTT(board.ZobristKey);
-            NNUE.makeMove(board, move, !board.IsWhiteToMove);
+            nnue.makeMove(board, move, !board.IsWhiteToMove);
 
             ppStack[ply].pieceMoved = (byte)move.MovePieceType;
             ppStack[ply].targetSquare = (byte)move.TargetSquare.Index;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void undoMove(Board board, Move move)
+        void undoMove(Board board, Move move)
         {
-            NNUE.undoMove();
+            nnue.undoMove();
             board.UndoMove(move);
         }
 

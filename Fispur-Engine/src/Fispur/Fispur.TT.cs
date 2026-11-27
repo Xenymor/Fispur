@@ -42,11 +42,11 @@ namespace FispurEngine
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int getRawEval(Board board, bool inCheck, bool hasEntry, in TTEntry entry)
+        int getRawEval(Board board, bool inCheck, bool hasEntry, in TTEntry entry)
         {
             return inCheck ? -INFINITY
                      : hasEntry && entry.staticEval != NO_EVAL ? entry.staticEval
-                     : NNUE.evaluate(board);
+                     : nnue.evaluate(board);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -66,22 +66,22 @@ namespace FispurEngine
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void updateHist(ref int entry, int bonus, int divisor, bool malus)
+        static void updateHist(ref int entry, int bonus, int divisor)
         {
-            entry += (malus ? -bonus : bonus) - entry * bonus / divisor;
+            entry += bonus - entry * Math.Abs(bonus) / divisor;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void updateQuietHist(Board board, Move move, int sideToMove, int prevPiece, int prevTo, int hhBonus, int contBonus, bool malus)
         {
-            updateHist(ref historyHeuristic[getHistoryHeuristicIndex(board, move)], hhBonus, HistoryDivisor, malus);
-            updateHist(ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)], contBonus, CHistoryDivisor, malus);
+            updateHist(ref historyHeuristic[getHistoryHeuristicIndex(board, move)], malus ? -hhBonus : hhBonus, HistoryDivisor);
+            updateHist(ref continuationHist[getContinuationHistoryIndex(sideToMove, prevPiece, prevTo, (int)move.MovePieceType, move.TargetSquare.Index)], malus ? -contBonus : contBonus, CHistoryDivisor);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void updateCaptHist(int sideToMove, Move move, int capBonus, bool malus)
         {
-            updateHist(ref captureHist[getCaptureHistIndex(sideToMove, move)], capBonus, CaptureHistDivisor, malus);
+            updateHist(ref captureHist[getCaptureHistIndex(sideToMove, move)], malus ? -capBonus : capBonus, CaptureHistDivisor);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -92,7 +92,7 @@ namespace FispurEngine
 
         void updateCorrHist(ref int entry, int score, int eval, int depth)
         {
-            updateHist(ref entry, (score - eval) * depth * CorrHistBonusMult, CorrHistDivisor, false);
+            updateHist(ref entry, Math.Clamp((score - eval) * depth * CorrHistBonusMult, -CorrHistDivisor/4, CorrHistDivisor/4), CorrHistDivisor);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

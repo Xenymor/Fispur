@@ -3,14 +3,15 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using ApiBoard = FispurEngine.API.Board;
 
-internal static class EvalScale
+internal class EvalScale
 {
     private const int PER_BUCKET = 512;
     private const double MAX_REF_EVAL = 1500;
     private const int OUTPUT_BUCKETS = 8;
     private const int SEED = 1_024;
+    private readonly NNUE nnue = new NNUE();
 
-    public static void Run(string[] args)
+    public void Run(string[] args)
     {
         if (args.Length > 0 && args[0].Equals("gen", StringComparison.OrdinalIgnoreCase))
         {
@@ -27,7 +28,7 @@ internal static class EvalScale
         Print();
     }
 
-    private static void Print()
+    private void Print()
     {
         NNUE.CalibrationResult c = NNUE.calibration;
 
@@ -42,7 +43,7 @@ internal static class EvalScale
             + $" fitted {c.fittedScale:0.0000} on {c.positions} positions, correlation {c.correlation:0.0000}, rmse {c.rmse:0.0} cp"));
     }
 
-    private static void Generate(string output, string[] inputs)
+    private void Generate(string output, string[] inputs)
     {
         var seen = new HashSet<string>();
         var fens = new List<string>();
@@ -77,13 +78,13 @@ internal static class EvalScale
                 continue;
             }
 
-            int bucket = NNUE.outputBucket(board);
+            int bucket = nnue.outputBucket(board);
             if (bucket < 0 || bucket >= OUTPUT_BUCKETS || buckets[bucket].Count >= PER_BUCKET || board.board.IsInCheck())
             {
                 continue;
             }
 
-            double eval = NNUE.exactEval(board);
+            double eval = nnue.exactEval(board);
             if (Math.Abs(eval) > MAX_REF_EVAL)
             {
                 continue;
@@ -107,7 +108,7 @@ internal static class EvalScale
             + ", per output bucket: " + string.Join(" ", buckets.Select(b => b.Count)));
     }
 
-    private static string? ParseFen(string line)
+    private string? ParseFen(string line)
     {
         int sep = line.IndexOf('|');
         string[] fields = (sep < 0 ? line : line[..sep]).Split(' ', StringSplitOptions.RemoveEmptyEntries);
