@@ -92,7 +92,7 @@ namespace FispurEngine
 
         void updateCorrHist(ref int entry, int score, int eval, int depth)
         {
-            updateHist(ref entry, Math.Clamp((score - eval) * depth * CorrHistBonusMult, -CorrHistDivisor/4, CorrHistDivisor/4), CorrHistDivisor);
+            updateHist(ref entry, Math.Clamp((score - eval) * depth * CorrHistBonusMult / 256, -CorrHistDivisor/4, CorrHistDivisor/4), CorrHistDivisor);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

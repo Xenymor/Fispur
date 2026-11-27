@@ -401,7 +401,7 @@ namespace FispurEngine
 
             if (ply >= MAX_DEPTH - 1)
             {
-                return correctEval(getRawEval(board, inCheck, hasEntry, in ttEntry), pawnCorrHistEntry, nonPawnCorrHistEntryOpp, nonPawnCorrHistEntrySelf);
+                return correctEval(nnue.evaluate(board), pawnCorrHistEntry, nonPawnCorrHistEntryOpp, nonPawnCorrHistEntrySelf);
             }
 
             bool pvNode = beta > alpha + 1;
