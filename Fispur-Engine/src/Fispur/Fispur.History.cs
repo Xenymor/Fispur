@@ -11,7 +11,7 @@ namespace FispurEngine
         private const int CORR_HIST_EXP = 14;
         private const int CORR_HIST_ENTRIES = 1 << CORR_HIST_EXP;
         int[] pawnCorrectionHist = new int[2 * CORR_HIST_ENTRIES]; // [stm][pawnKey]
-        int[] nonPawnCorrectionHist = new int[2 * CORR_HIST_ENTRIES]; // [stm][nonPawnKey]
+        int[] nonPawnCorrectionHist = new int[2 * 2 * CORR_HIST_ENTRIES]; // [color][stm][nonPawnKey]
 
         int[] continuationHist = new int[2 * 7 * 64 * 7 * 64]; // [stm][prevPiece][prevTo][piece][to]
         int[] captureHist = new int[2 * 7 * 64 * 7]; // [stm][movingPiece][to][captured]
@@ -49,13 +49,13 @@ namespace FispurEngine
 
             uint index = (uint)(key >> (64 - CORR_HIST_EXP));
 
-            return ref nonPawnCorrectionHist[(board.IsWhiteToMove ? 0 : CORR_HIST_ENTRIES) + index];
+            return ref nonPawnCorrectionHist[((white ? 0 : 2) + (board.IsWhiteToMove ? 0 : 1)) * CORR_HIST_ENTRIES + index];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int correctEval(int rawEval, int pawnCorrHistEntry, int nonPawnCorrHistEntryOpp, int nonPawnCorrHistEntrySelf)
         {
-            return rawEval + (rawEval > -INFINITY ? (pawnCorrHistEntry + nonPawnCorrHistEntrySelf + nonPawnCorrHistEntryOpp) / CorrHistGrain : 0);
+            return rawEval + (rawEval > -INFINITY ? (pawnCorrHistEntry * PawnCorrHistWeight + nonPawnCorrHistEntrySelf * NonPawnCorrHistSelfWeight + nonPawnCorrHistEntryOpp * NonPawnCorrHistOppWeight) / (1024 * CorrHistGrain) : 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -90,12 +90,9 @@ namespace FispurEngine
             return ((sideToMove * 7 + (int)move.MovePieceType) * 64 + move.TargetSquare.Index) * 7 + (int)move.CapturePieceType;
         }
 
-        void updateCorrHist(ref int entry, int score, int rawEval, int depth, int weight)
+        void updateCorrHist(ref int entry, int score, int eval, int depth)
         {
-            int diff = (int)((long)(score - rawEval) * CorrHistGrain * weight / 1024);
-            int w = Math.Min(depth + 1, 16);
-            entry = (entry * (CorrHistScale - w) + diff * w) / CorrHistScale;
-            entry = Math.Clamp(entry, -CorrHistMax, CorrHistMax);
+            updateHist(ref entry, (score - eval) * depth * CorrHistBonusMult, CorrHistDivisor, false);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

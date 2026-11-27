@@ -46,7 +46,7 @@ namespace FispurEngine
 
             if (ply >= MAX_DEPTH - 1)
             {
-                return NNUE.evaluate(board) + (pawnCorrHistEntry + nonPawnCorrHistEntryOpp + nonPawnCorrHistEntrySelf) / CorrHistGrain;
+                return correctEval(NNUE.evaluate(board), pawnCorrHistEntry, nonPawnCorrHistEntryOpp, nonPawnCorrHistEntrySelf);
             }
 
             int ogAlpha = alpha;
@@ -278,9 +278,9 @@ namespace FispurEngine
 
                         if (!inCheck && !move.IsCapture && !move.IsPromotion && Math.Abs(score) < MATE_BOUND && score > staticEval)
                         {
-                            updateCorrHist(ref pawnCorrHistEntry, score, rawEval, depthLeft, PawnCorrHistWeight);
-                            updateCorrHist(ref nonPawnCorrHistEntrySelf, score, rawEval, depthLeft, NonPawnCorrHistSelfWeight);
-                            updateCorrHist(ref nonPawnCorrHistEntryOpp, score, rawEval, depthLeft, NonPawnCorrHistOppWeight);
+                            updateCorrHist(ref pawnCorrHistEntry, score, eval, depthLeft);
+                            updateCorrHist(ref nonPawnCorrHistEntrySelf, score, eval, depthLeft);
+                            updateCorrHist(ref nonPawnCorrHistEntryOpp, score, eval, depthLeft);
                         }
                     }
 
@@ -318,9 +318,9 @@ namespace FispurEngine
                 if (!inCheck && !bestMove.IsCapture && !bestMove.IsPromotion && Math.Abs(bestScore) < MATE_BOUND
                     && ((bound == Bound.BOUND_UPPER && bestScore < staticEval) || bound == Bound.BOUND_EXACT))
                 {
-                    updateCorrHist(ref pawnCorrHistEntry, bestScore, rawEval, depthLeft, PawnCorrHistWeight);
-                    updateCorrHist(ref nonPawnCorrHistEntrySelf, bestScore, rawEval, depthLeft, NonPawnCorrHistSelfWeight);
-                    updateCorrHist(ref nonPawnCorrHistEntryOpp, bestScore, rawEval, depthLeft, NonPawnCorrHistOppWeight);
+                    updateCorrHist(ref pawnCorrHistEntry, bestScore, rawEval, depthLeft);
+                    updateCorrHist(ref nonPawnCorrHistEntrySelf, bestScore, rawEval, depthLeft);
+                    updateCorrHist(ref nonPawnCorrHistEntryOpp, bestScore, rawEval, depthLeft);
                 }
             }
 

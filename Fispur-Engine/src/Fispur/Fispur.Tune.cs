@@ -175,15 +175,15 @@ namespace FispurEngine
             public static readonly int CorrHistGrain = Tuning.resolve();
 
             [Tunable(  256,    16,   500)]
-            public static readonly int CorrHistScale = Tuning.resolve();
+            public static readonly int CorrHistBonusMult = Tuning.resolve();
 
             [Tunable( 5461,     0, 50000)]
-            public static readonly int CorrHistMax = Tuning.resolve();
-            [Tunable(  341,     0,  1024)]
+            public static readonly int CorrHistDivisor = Tuning.resolve();
+            [Tunable( 1024,     0,  1024)]
             public static readonly int PawnCorrHistWeight = Tuning.resolve();
-            [Tunable(  341,     0,  1024)]
+            [Tunable( 1024,     0,  1024)]
             public static readonly int NonPawnCorrHistSelfWeight = Tuning.resolve();
-            [Tunable(  341,     0,  1024)]
+            [Tunable( 1024,     0,  1024)]
             public static readonly int NonPawnCorrHistOppWeight = Tuning.resolve();
 
             [Tunable(10262,   512, 49152)]
